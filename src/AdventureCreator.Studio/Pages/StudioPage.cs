@@ -967,7 +967,7 @@ public sealed class StudioPage : ContentPage
         help.Add(Item("Parser & Command Reference", () => Navigation.PushModalAsync(new ReportPage("Parser & command reference", HelpText.ParserReference(document.Adventure)))));
         help.Add(Item("Triggers, Conditions & Actions", () => Navigation.PushModalAsync(new ReportPage("Triggers, conditions & actions", HelpText.TriggerReference()))));
         help.Add(Item("About Adventure Creator Studio", () => DisplayAlertAsync("Adventure Creator Studio",
-            $"Version {AppInfo.Current.VersionString}\nCreate text and graphic adventures, import PAWS, Quill (+ Illustrator) and GAC games, and export them as standalone apps.", "OK")));
+            $"Version {AppInfo.Current.VersionString}\nCopyright © 2026 Paul F.Johnson\n\nCreate text and graphic adventures, import PAWS, Quill (+ Illustrator) and GAC games, and export them as standalone apps.", "OK")));
 
         MenuBarItems.Add(file);
         MenuBarItems.Add(edit);

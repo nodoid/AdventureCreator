@@ -1,5 +1,7 @@
 # Adventure Creator
 
+Version 1.0 · Copyright © 2026 Paul F.Johnson
+
 A .NET 10 / .NET MAUI system for writing, importing and publishing text and graphic adventure games.
 
 * **Adventure Creator Studio**: the editor, for **macOS**, **Windows** and **iPad**. It has a desktop-style menu bar, keyboard shortcuts and a sidebar, list and detail layout.

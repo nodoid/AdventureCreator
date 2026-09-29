@@ -47,7 +47,7 @@ try
 
     if (game == null)
     {
-        Console.WriteLine("AdventureCreator Player");
+        Console.WriteLine("Adventure Creator Player 1.0 – Copyright © 2026 Paul F.Johnson");
         Console.WriteLine("usage: adventure-player <game.adventure> | --example | --write-example <path> | --parse <game|example> \"command\"");
         return 1;
     }

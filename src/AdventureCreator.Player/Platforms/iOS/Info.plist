@@ -45,5 +45,7 @@
 	</dict>
 	<key>XSAppIconAssets</key>
 	<string>Assets.xcassets/appicon.appiconset</string>
+	<key>NSHumanReadableCopyright</key>
+	<string>Copyright © 2026 Paul F.Johnson</string>
 </dict>
 </plist>

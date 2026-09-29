@@ -1,5 +1,7 @@
 # Adventure Creator — User Guide
 
+Version 1.0 · Copyright © 2026 Paul F.Johnson
+
 Adventure Creator is a system for writing text and graphic adventure games, importing classic 8-bit adventures, and
 publishing games as standalone apps.
 
