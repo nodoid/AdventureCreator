@@ -27,6 +27,8 @@
 
 		<!-- App Identifier -->
 		<ApplicationId>com.adventurecreator.studio</ApplicationId>
+		<!-- Mac Catalyst shares the iOS App ID; Apple's convention prefixes the Mac bundle id with "maccatalyst." -->
+		<ApplicationId Condition="$(TargetFramework.Contains('-maccatalyst'))">maccatalyst.com.adventurecreator.studio</ApplicationId>
 
 		<!-- Versions -->
 		<ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
@@ -44,14 +46,14 @@
 
 	<ItemGroup>
 		<!-- App Icon -->
-		<MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#512BD4" />
+		<MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" ForegroundScale="0.8" Color="#1B2A49" />
 
 		<!-- Splash Screen -->
-		<MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#512BD4" BaseSize="128,128" />
+		<MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#1B2A49" BaseSize="160,160" />
 
 		<!-- Images -->
 		<MauiImage Include="Resources\Images\*" />
-		<MauiImage Update="Resources\Images\dotnet_bot.png" Resize="True" BaseSize="300,185" />
+		<MauiImage Update="Resources\Images\*.svg" BaseSize="200,200" />
 		
 		<!-- Custom Fonts -->
 		<MauiFont Include="Resources\Fonts\*" />
@@ -63,7 +65,18 @@
 	<ItemGroup>
 		<PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0" />
+		<PackageReference Include="CommunityToolkit.Maui" Version="15.0.1" />
 	</ItemGroup>
+
+	<!-- Code signing (team TEAMID). Release = Mac App Store build, sandboxed (building standalone games with
+	     the .NET SDK is then unavailable; see README). Debug builds are unsigned until a studio-dev-profile profile exists. -->
+	<PropertyGroup Condition="$(TargetFramework.Contains('-maccatalyst')) And '$(Configuration)' == 'Release'">
+		<EnableCodeSigning>true</EnableCodeSigning>
+		<CodesignKey>Apple Distribution</CodesignKey>
+		<CodesignProvision>studio-release-mac-profile</CodesignProvision>
+		<CodesignEntitlements>Platforms/MacCatalyst/Entitlements.Release.plist</CodesignEntitlements>
+		<UseHardenedRuntime>true</UseHardenedRuntime>
+	</PropertyGroup>
 
 	<ItemGroup>
 		<ProjectReference Include="..\AdventureCreator.Core\AdventureCreator.Core.csproj" />

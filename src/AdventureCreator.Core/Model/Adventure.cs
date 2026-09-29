@@ -100,8 +100,8 @@ public sealed class GameSettings
     /// <summary>Picture used when a room has no picture of its own (e.g. a title card). Optional.</summary>
     public string? DefaultPictureId { get; set; }
     /// <summary>Text colour / background for players, as #RRGGBB.</summary>
-    public string TextColor { get; set; } = "#E8E8E8";
-    public string BackgroundColor { get; set; } = "#101018";
+    public string TextColor { get; set; } = "#1F1F1F";
+    public string BackgroundColor { get; set; } = "#FBFAF6";
     public string FontFamily { get; set; } = "";
     public string Prompt { get; set; } = "> ";
 

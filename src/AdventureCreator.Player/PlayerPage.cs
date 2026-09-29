@@ -20,7 +20,7 @@ public sealed class PlayerPage : ContentPage
 	public PlayerPage()
 	{
 		Title = "Adventure Player";
-		BackgroundColor = Color.FromArgb("#0E1420");
+		BackgroundColor = Color.FromArgb(Theme.GameBackground);
 		player.ShowShortcuts = DeviceInfo.Idiom == DeviceIdiom.Phone;
 		player.PictureHeightFraction = DeviceInfo.Idiom == DeviceIdiom.Phone ? 0.34 : 0.45;
 		player.QuitRequested += (_, _) => Quit();
@@ -39,14 +39,16 @@ public sealed class PlayerPage : ContentPage
 			Children =
 			{
 				new Image { Source = "splash_logo.png", HeightRequest = 140 },
-				new Label { Text = "Adventure Player", FontSize = 28, FontAttributes = FontAttributes.Bold, TextColor = Color.FromArgb("#E0B050"), HorizontalTextAlignment = TextAlignment.Center },
-				new Label { Text = "Play text and graphic adventures made with Adventure Creator Studio.", TextColor = Colors.WhiteSmoke, HorizontalTextAlignment = TextAlignment.Center },
+				new Label { Text = "Adventure Player", FontSize = 28, FontAttributes = FontAttributes.Bold, TextColor = Theme.Accent, HorizontalTextAlignment = TextAlignment.Center },
+				new Label { Text = "Play text and graphic adventures made with Adventure Creator Studio.", TextColor = Theme.Text, HorizontalTextAlignment = TextAlignment.Center },
 				open,
 				example,
 			},
 		};
 
 		Content = new Grid { Children = { player, chooser } };
+		// Desktop windows already show the title in the title bar.
+		NavigationPage.SetHasNavigationBar(this, DeviceInfo.Idiom != DeviceIdiom.Desktop);
 		BuildMenus();
 	}
 

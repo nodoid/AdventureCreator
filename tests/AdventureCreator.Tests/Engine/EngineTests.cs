@@ -373,4 +373,26 @@ public class EngineTests
         r = e.Submit("u");
         Assert.Contains(r.Events, ev => ev.Kind == OutputKind.StopSound);
     }
+
+    [Fact]
+    public void ContentsOfSceneryShelvesAreDescribed()
+    {
+        var a = World();
+        a.Items.Add(new Item { Id = "shelf", Name = "shelf", Nouns = { "shelf" }, Supporter = true, Scenery = true, Portable = false, Location = "hall" });
+        a.Items.Add(new Item { Id = "vase", Name = "vase", Nouns = { "vase" }, Location = "shelf" });
+        var e = new GameEngine(a);
+        Assert.Contains("On the shelf you can see a vase.", e.Start().Text);
+    }
+
+    [Fact]
+    public void ValidatorFindsBrokenReferences()
+    {
+        var a = World();
+        a.Rooms[0].Exits.Add(new Exit { Direction = "west", TargetRoomId = "nowhere" });
+        a.Triggers.Add(new Trigger { Id = "t", Verb = "take", Actions = { new GameAction(ActionType.GoTo, "missing") } });
+        var issues = AdventureValidator.Validate(a);
+        Assert.Contains(issues, i => i.Message.Contains("nowhere"));
+        Assert.Contains(issues, i => i.Message.Contains("missing"));
+        Assert.DoesNotContain(AdventureValidator.Validate(AdventureCreator.Core.Samples.ExampleAdventures.Lighthouse()), i => i.Severity == IssueSeverity.Error);
+    }
 }

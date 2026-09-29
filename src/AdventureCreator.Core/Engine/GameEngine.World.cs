@@ -201,7 +201,17 @@ public sealed partial class GameEngine
             var listed = new List<string>();
             foreach (var item in ItemsAt(room.Id))
             {
-                if (item.Scenery) continue;
+                if (item.Scenery)
+                {
+                    // Things on/in scenery (the can on the table) are still worth mentioning.
+                    if (ContentsVisible(item) && !item.IsCharacter)
+                    {
+                        var inside = ItemsAt(item.Id).Where(i => !i.Scenery).Select(i => i.WithArticle()).ToList();
+                        if (inside.Count > 0)
+                            Say(Msg(item.Supporter ? Engine.Msg.On : Engine.Msg.Inside, WithItem(ctx ?? new CommandContext(this, null), item), ("list", JoinList(inside))));
+                    }
+                    continue;
+                }
                 if (!string.IsNullOrWhiteSpace(item.RoomDescription) && !State.TakenOnce.Contains(item.Id))
                 {
                     Say(Format(item.RoomDescription, ctx));

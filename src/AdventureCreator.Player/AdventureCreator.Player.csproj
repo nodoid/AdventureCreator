@@ -26,6 +26,8 @@
 		<ApplicationTitle Condition="'$(GameTitle)' == ''">Adventure Player</ApplicationTitle>
 		<ApplicationTitle Condition="'$(GameTitle)' != ''">$(GameTitle)</ApplicationTitle>
 		<ApplicationId Condition="'$(GameId)' == ''">com.adventurecreator.player</ApplicationId>
+		<!-- Mac Catalyst shares the iOS App ID; Apple's convention prefixes the Mac bundle id with "maccatalyst." -->
+		<ApplicationId Condition="'$(GameId)' == '' And $(TargetFramework.Contains('-maccatalyst'))">maccatalyst.com.adventurecreator.player</ApplicationId>
 		<ApplicationId Condition="'$(GameId)' != ''">$(GameId)</ApplicationId>
 
 		<!-- Versions -->
@@ -44,14 +46,14 @@
 
 	<ItemGroup>
 		<!-- App Icon -->
-		<MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#512BD4" />
+		<MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" ForegroundScale="0.8" Color="#0E1420" />
 
 		<!-- Splash Screen -->
-		<MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#512BD4" BaseSize="128,128" />
+		<MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#0E1420" BaseSize="160,160" />
 
 		<!-- Images -->
 		<MauiImage Include="Resources\Images\*" />
-		<MauiImage Update="Resources\Images\dotnet_bot.png" Resize="True" BaseSize="300,185" />
+		<MauiImage Update="Resources\Images\*.svg" BaseSize="200,200" />
 		
 		<!-- Custom Fonts -->
 		<MauiFont Include="Resources\Fonts\*" />
@@ -69,6 +71,23 @@
 		<ProjectReference Include="..\AdventureCreator.Core\AdventureCreator.Core.csproj" />
 		<ProjectReference Include="..\AdventureCreator.Maui\AdventureCreator.Maui.csproj" />
 	</ItemGroup>
+
+	<!-- Code signing (team TEAMID). Applies to the Player itself; exported games built with their own
+	     GameId need their own profiles and are signed ad hoc otherwise. -->
+	<PropertyGroup Condition="'$(GameId)' == '' And $(TargetFramework.Contains('-ios')) And '$(Configuration)' == 'Debug'">
+		<CodesignKey>Apple Development</CodesignKey>
+		<CodesignProvision>player-dev-profile</CodesignProvision>
+	</PropertyGroup>
+	<PropertyGroup Condition="'$(GameId)' == '' And $(TargetFramework.Contains('-ios')) And '$(Configuration)' == 'Release'">
+		<CodesignKey>Apple Distribution</CodesignKey>
+		<CodesignProvision>player-release-profile</CodesignProvision>
+	</PropertyGroup>
+	<PropertyGroup Condition="'$(GameId)' == '' And $(TargetFramework.Contains('-maccatalyst')) And '$(Configuration)' == 'Debug'">
+		<EnableCodeSigning>true</EnableCodeSigning>
+		<CodesignKey>Apple Development</CodesignKey>
+		<CodesignProvision>player-dev-mac-profile</CodesignProvision>
+		<CodesignEntitlements>Platforms/MacCatalyst/Entitlements.plist</CodesignEntitlements>
+	</PropertyGroup>
 
 	<!-- The game to embed: dotnet publish -p:EmbeddedGame=/path/to/game.adventure -->
 	<ItemGroup Condition="'$(EmbeddedGame)' != ''">

@@ -24,8 +24,8 @@ public sealed class GamePlayerView : ContentView
     private readonly RowDefinition pictureRow = new(GridLength.Auto);
 
     private GameEngine? engine;
-    private Color textColor = Colors.WhiteSmoke;
-    private Color accent = Color.FromArgb("#E0B050");
+    private Color textColor = Color.FromArgb(Theme.GameText);
+    private Color accent = Theme.Accent;
     private Label? currentLine;
     private bool busy;
 
@@ -35,6 +35,9 @@ public sealed class GamePlayerView : ContentView
 
     /// <summary>Raised when the game asks to quit (the Player app closes, the Studio closes its test window).</summary>
     public event EventHandler? QuitRequested;
+
+    /// <summary>Raised after each command's output has been shown.</summary>
+    public event EventHandler? TurnCompleted;
 
     /// <summary>Show direction/look/inventory buttons (useful on phones).</summary>
     public bool ShowShortcuts
@@ -103,19 +106,21 @@ public sealed class GamePlayerView : ContentView
 
     private void ApplyTheme(GameSettings s)
     {
-        var bg = PictureImages.ParseColor(s.BackgroundColor, Color.FromArgb("#101018"));
-        textColor = PictureImages.ParseColor(s.TextColor, Colors.WhiteSmoke);
+        var bg = PictureImages.ParseColor(s.BackgroundColor, Color.FromArgb(Theme.GameBackground));
+        textColor = PictureImages.ParseColor(s.TextColor, Color.FromArgb(Theme.GameText));
+        // Keep headings readable on both light and dark game backgrounds.
+        accent = bg.GetLuminosity() > 0.5f ? Theme.Accent : Color.FromArgb("#E0B050");
         BackgroundColor = bg;
         root.BackgroundColor = bg;
         statusRoom.TextColor = textColor;
         statusScore.TextColor = textColor.WithAlpha(0.8f);
         input.TextColor = textColor;
         input.PlaceholderColor = textColor.WithAlpha(0.45f);
-        input.BackgroundColor = bg.AddLuminosity(0.06f);
-        root.Children.OfType<Grid>().First().BackgroundColor = bg.AddLuminosity(0.04f);
+        input.BackgroundColor = Theme.Shade(bg, 0.04f);
+        root.Children.OfType<Grid>().First().BackgroundColor = Theme.Shade(bg, 0.05f);
         foreach (var b in shortcuts.Children.OfType<Button>())
         {
-            b.BackgroundColor = bg.AddLuminosity(0.1f);
+            b.BackgroundColor = Theme.Shade(bg, 0.1f);
             b.TextColor = textColor;
         }
     }
@@ -149,6 +154,7 @@ public sealed class GamePlayerView : ContentView
         }
         AddParagraph((engine.Adventure.Settings.Prompt ?? "> ") + text, TextStyle.Echo);
         await RenderAsync(engine.Submit(text));
+        TurnCompleted?.Invoke(this, EventArgs.Empty);
         input.Focus();
     }
 

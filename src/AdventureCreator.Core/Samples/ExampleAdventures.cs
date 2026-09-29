@@ -27,8 +27,8 @@ public static class ExampleAdventures
         };
         a.Settings.MaxCarriedItems = 6;
         a.Settings.AutoListExits = true;
-        a.Settings.BackgroundColor = "#0E1420";
-        a.Settings.TextColor = "#E6E1D3";
+        a.Settings.BackgroundColor = "#F7F3E8";
+        a.Settings.TextColor = "#2B2620";
 
         // ------------------------------------------------------------ rooms
         a.Rooms.Add(new Room
