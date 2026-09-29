@@ -243,6 +243,12 @@ public class ParserTests
     {
         var c = One("drop it");
         Assert.Equal("it", c.Object1!.Pronoun);
+        var her = One("ask her about the coin");
+        Assert.Equal("her", her.Object1!.Pronoun);
+        Assert.Equal("the coin", her.Text);
+        var possessive = One("take her gold coin");
+        Assert.Null(possessive.Object1!.Pronoun);
+        Assert.Equal("coin", possessive.Object1.Noun);
     }
 
     [Fact]

@@ -916,6 +916,8 @@ public sealed class StudioPage : ContentPage
         play.Add(Sync("Next Command", () => testPlayer?.RecallNext(), "Down", CmdAlt));
 
         var help = new MenuBarItem { Text = "Help" };
+        help.Add(Item("User Guide…", ShowUserGuideAsync, "?", CmdShift));
+        help.Add(new MenuFlyoutSeparator());
         help.Add(Item("Parser & Command Reference", () => Navigation.PushModalAsync(new ReportPage("Parser & command reference", HelpText.ParserReference(document.Adventure)))));
         help.Add(Item("Triggers, Conditions & Actions", () => Navigation.PushModalAsync(new ReportPage("Triggers, conditions & actions", HelpText.TriggerReference()))));
         help.Add(Item("About Adventure Creator Studio", () => DisplayAlertAsync("Adventure Creator Studio",
@@ -927,6 +929,37 @@ public sealed class StudioPage : ContentPage
         MenuBarItems.Add(adv);
         MenuBarItems.Add(play);
         MenuBarItems.Add(help);
+    }
+
+    private static readonly (string File, string Title)[] GuideChapters =
+    {
+        ("README.md", "Contents"),
+        ("01-getting-started.md", "1. Getting started"),
+        ("02-creating-an-adventure.md", "2. Creating an adventure (tutorial)"),
+        ("03-world-reference.md", "3. Rooms, items and characters"),
+        ("04-triggers.md", "4. Triggers, conditions and actions"),
+        ("05-parser-and-commands.md", "5. The parser and custom commands"),
+        ("06-pictures-and-sound.md", "6. Pictures and sound"),
+        ("07-importing.md", "7. Importing PAWS, Quill/Illustrator and GAC"),
+        ("08-exporting.md", "8. Testing, exporting and publishing"),
+        ("09-file-format.md", "9. File format"),
+    };
+
+    private async Task ShowUserGuideAsync()
+    {
+        var choice = await DisplayActionSheetAsync("User Guide", "Cancel", null, GuideChapters.Select(c => c.Title).ToArray());
+        var chapter = GuideChapters.FirstOrDefault(c => c.Title == choice);
+        if (chapter.File == null) return;
+        try
+        {
+            await using var stream = await FileSystem.OpenAppPackageFileAsync("docs/" + chapter.File);
+            using var reader = new StreamReader(stream);
+            await Navigation.PushModalAsync(new ReportPage(chapter.Title, HelpText.MarkdownToText(await reader.ReadToEndAsync())));
+        }
+        catch (Exception ex)
+        {
+            await DisplayAlertAsync("User Guide", "The guide could not be opened: " + ex.Message, "OK");
+        }
     }
 
     protected override void OnDisappearing()

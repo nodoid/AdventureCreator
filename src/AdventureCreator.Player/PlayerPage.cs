@@ -141,19 +141,20 @@ public sealed class PlayerPage : ContentPage
 			return item;
 		}
 
+		// Shortcuts must not collide with macOS system menu items (⌘Z Undo, ⌘I Italic…), or UIKit drops the whole menu.
 		var file = new MenuBarItem { Text = "Game" };
 		if (!embedded) file.Add(Item("Open Game…", () => _ = OpenGameAsync(), "O"));
 		file.Add(Item("Save Position", () => _ = player.SubmitAsync("save"), "S"));
-		file.Add(Item("Restore Position", () => _ = player.SubmitAsync("restore"), "L"));
+		file.Add(Item("Restore Position", () => _ = player.SubmitAsync("restore"), "L", KeyboardAcceleratorModifiers.Cmd | KeyboardAcceleratorModifiers.Alt));
 		file.Add(Item("Restart", () => _ = player.SubmitAsync("restart"), "R", KeyboardAcceleratorModifiers.Cmd | KeyboardAcceleratorModifiers.Shift));
-		file.Add(Item("Undo Move", () => _ = player.SubmitAsync("undo"), "Z"));
+		file.Add(Item("Undo Move", () => _ = player.SubmitAsync("undo"), "Z", KeyboardAcceleratorModifiers.Cmd | KeyboardAcceleratorModifiers.Alt));
 
 		var commands = new MenuBarItem { Text = "Commands" };
-		commands.Add(Item("Previous Command", player.RecallPrevious, "Up"));
-		commands.Add(Item("Next Command", player.RecallNext, "Down"));
+		commands.Add(Item("Previous Command", player.RecallPrevious, "Up", KeyboardAcceleratorModifiers.Cmd | KeyboardAcceleratorModifiers.Alt));
+		commands.Add(Item("Next Command", player.RecallNext, "Down", KeyboardAcceleratorModifiers.Cmd | KeyboardAcceleratorModifiers.Alt));
 		commands.Add(new MenuFlyoutSeparator());
 		commands.Add(Item("Look", () => _ = player.SubmitAsync("look"), "L", KeyboardAcceleratorModifiers.Cmd | KeyboardAcceleratorModifiers.Shift));
-		commands.Add(Item("Inventory", () => _ = player.SubmitAsync("inventory"), "I"));
+		commands.Add(Item("Inventory", () => _ = player.SubmitAsync("inventory"), "I", KeyboardAcceleratorModifiers.Cmd | KeyboardAcceleratorModifiers.Shift));
 		commands.Add(Item("Hint", () => _ = player.SubmitAsync("hint"), "H", KeyboardAcceleratorModifiers.Cmd | KeyboardAcceleratorModifiers.Shift));
 		commands.Add(Item("Score", () => _ = player.SubmitAsync("score")));
 

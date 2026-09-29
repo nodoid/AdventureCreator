@@ -74,4 +74,47 @@ public static class HelpText
         sb.AppendLine("  Variables @score @turns @room @carried can be tested and (except @carried) changed.");
         return sb.ToString();
     }
+
+    /// <summary>Turns the Markdown user guide into readable plain text for the in-app viewer.</summary>
+    public static string MarkdownToText(string markdown)
+    {
+        var sb = new StringBuilder();
+        bool code = false;
+        foreach (var raw in markdown.Replace("\r", "").Split('\n'))
+        {
+            var line = raw;
+            if (line.TrimStart().StartsWith("```")) { code = !code; continue; }
+            if (code) { sb.AppendLine("    " + line); continue; }
+            if (System.Text.RegularExpressions.Regex.IsMatch(line, @"^\s*\|?\s*:?-{3,}")) continue;       // table separator
+            var heading = System.Text.RegularExpressions.Regex.Match(line, @"^(#+)\s+(.*)$");
+            if (heading.Success)
+            {
+                var text = Inline(heading.Groups[2].Value);
+                sb.AppendLine();
+                sb.AppendLine(heading.Groups[1].Length <= 2 ? text.ToUpperInvariant() : text);
+                if (heading.Groups[1].Length <= 2) sb.AppendLine(new string('═', Math.Min(60, text.Length)));
+                continue;
+            }
+            if (line.TrimStart().StartsWith('|'))
+            {
+                var cells = line.Trim().Trim('|').Split(" | ").Select(c => Inline(c.Trim().Replace("\\|", "|")));
+                sb.AppendLine("  • " + string.Join("  —  ", cells.Where(c => c.Length > 0)));
+                continue;
+            }
+            if (line.TrimStart().StartsWith("---")) { sb.AppendLine(); continue; }
+            if (line.TrimStart().StartsWith("> ")) line = "   " + line.TrimStart()[2..];
+            var bullet = System.Text.RegularExpressions.Regex.Match(line, @"^(\s*)[*-] (.*)$");
+            if (bullet.Success) line = bullet.Groups[1].Value + "  • " + bullet.Groups[2].Value;
+            sb.AppendLine(Inline(line));
+        }
+        return sb.ToString().Trim();
+
+        static string Inline(string s)
+        {
+            s = System.Text.RegularExpressions.Regex.Replace(s, @"\[([^\]]+)\]\([^)]+\)", "$1");   // links
+            s = s.Replace("**", "").Replace("`", "");
+            s = System.Text.RegularExpressions.Regex.Replace(s, @"(?<![\w*])\*([^*\s][^*]*?)\*(?![\w*])", "$1");  // *italic*
+            return s.Replace("\\|", "|");
+        }
+    }
 }

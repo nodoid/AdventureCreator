@@ -44,6 +44,7 @@ internal sealed partial class GacConverter
         var s = adv.Settings;
         s.LegacyTableSemantics = true;
         s.AutoListExits = false;         // GAC never lists exits by itself
+        s.ExitsBeforeTriggers = true;    // GAC moves the player (connection table) before scanning the local/low priority tables
         s.AutoListItems = true;          // "I can also see" (message 253)
         s.SignificantLetters = 0;        // GAC matches any typed prefix of a stored word, not a fixed length
         s.SpellingCorrection = false;

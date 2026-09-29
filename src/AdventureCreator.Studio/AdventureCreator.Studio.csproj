@@ -60,6 +60,9 @@
 
 		<!-- Raw Assets (also remove the "Resources\Raw" prefix) -->
 		<MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
+
+		<!-- The user guide (docs/*.md), shown by Help › User Guide. -->
+		<MauiAsset Include="..\..\docs\*.md" LogicalName="docs/%(Filename)%(Extension)" />
 	</ItemGroup>
 
 	<ItemGroup>

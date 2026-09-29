@@ -86,9 +86,16 @@ public sealed class NounPhrase
     {
         var np = new NounPhrase { Words = words.ToList() };
         var content = new List<string>();
-        foreach (var w in words)
+        for (int wi = 0; wi < words.Count; wi++)
         {
+            var w = words[wi];
             var kind = lex.KindOf(w);
+            // "her" is a pronoun at the end of a phrase ("ask her") but an article before a noun ("her locket").
+            if ((kind & WordKind.Pronoun) != 0 && (kind & WordKind.Article) != 0 && wi == words.Count - 1 && content.Count == 0)
+            {
+                np.Pronoun = w;
+                continue;
+            }
             if ((kind & (WordKind.Noun | WordKind.Adjective)) != 0) { content.Add(w); continue; }
             if ((kind & WordKind.Article) != 0 || (kind & WordKind.Ignored) != 0 || w == "of") continue;
             if ((kind & WordKind.Quantifier) != 0) { np.All = true; continue; }

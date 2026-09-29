@@ -6,6 +6,17 @@ A .NET 10 / .NET MAUI system for writing, importing and publishing text and grap
 * **Adventure Player**: plays games on **Android**, **iPhone/iPad**, **macOS** and **Windows**. Exported games are copies of the Player with the game built in.
 * **Console player**: a single-file terminal executable that runs any game, or a game appended to it.
 
+## Documentation
+
+The full **[User Guide](docs/README.md)** covers:
+* getting started, and a step-by-step tutorial for creating an adventure
+* a reference for rooms, items, triggers, the parser and custom commands
+* pictures and sound
+* **importing PAWS, Quill/Illustrator and GAC games, with their limitations**
+* exporting standalone games, and the file format
+
+The same guide is available in the Studio under **Help › User Guide…** (⇧⌘?).
+
 ## Solution layout
 
 | Project | What it is |
