@@ -63,9 +63,43 @@ Options 2–4 need the desktop Studio running outside the Mac App Store sandbox.
 
 ### Option 2: native apps with the .NET SDK
 
+The launch screen of an exported game shows the game's own picture, title and author on its background colour. The exporter generates it. Android 12 and later only show the app icon while launching, but the Player's title screen still shows the name.
+
 1. **Player project**: the path to `src/AdventureCreator.Player/AdventureCreator.Player.csproj`. It is found automatically when the Studio runs from a source checkout.
-2. Choose the **Target** (Android, iOS, MacCatalyst, Windows) and click **Build with .NET SDK…**, then choose an output folder.
-3. The log shows the `dotnet publish` output. The result is in `<folder>/<Game Title>-<Target>/`.
+2. Choose the **Target** and click **Build with .NET SDK…**, then choose an output folder. The targets are:
+   * **Android**: an `.apk`
+   * **iOS**: a signed `.ipa` for devices
+   * **iOSSimulator**: an `.app` for the iOS Simulator; no signing needed
+   * **MacCatalyst**: a macOS `.app`
+   * **Windows**: a folder with an `.exe`
+3. The log shows the build output. The finished app is copied to `<folder>/<Game Title>-<Target>/<Game Title>.apk|.ipa|.app`.
+
+### Trying an export in the iOS Simulator
+
+Build with the **iOSSimulator** target. The Studio can then install and launch the game in a simulator:
+* it boots an iPhone simulator
+* it opens the simulator window: **DeviceHub** in Xcode 27 (which replaced the Simulator app), or **Simulator** in older Xcode
+* it installs and starts the game
+
+To do the same by hand:
+
+```bash
+xcrun simctl boot "iPhone 16 Pro"
+open /Applications/Xcode.app/Contents/Applications/DeviceHub.app     # Xcode 27; older Xcode: open -a Simulator
+xcrun simctl install booted "My Game.app"
+xcrun simctl launch booted com.adventurecreator.game.mygame
+```
+
+### Trying an export on Android
+
+Start an emulator (Android Studio › Device Manager, or `emulator -avd <name>`), then:
+
+```bash
+adb install -r "My Game.apk"
+adb shell monkey -p com.adventurecreator.game.mygame -c android.intent.category.LAUNCHER 1
+```
+
+If the install fails with `INSTALL_FAILED_INSUFFICIENT_STORAGE`, the emulator is full. Create a separate test emulator with a bigger data partition rather than deleting apps.
 
 Behind the scenes the Studio:
 * saves the game as `game.adventure`

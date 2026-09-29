@@ -74,7 +74,7 @@ On iPad, the same menus appear in the iPadOS menu bar or keyboard shortcut overl
 
 ## The Player
 
-When the Player has a game built in, it opens straight into it. Otherwise it offers **Open a game…** (any `.adventure` or `.json` file) and the example game.
+When the Player has a game built in, it opens straight into it with a **title screen**: the game's picture, title and author. It disappears when tapped or after a few seconds. Otherwise it offers **Open a game…** (any `.adventure` or `.json` file) and the example game.
 
 The Player shows:
 * a status bar with the location, score, turns (and health, if the game uses it), and a **☰** game menu
@@ -82,7 +82,11 @@ The Player shows:
 * the transcript
 * a command box
 
-On phones, a row of shortcut buttons (N S E W U D, Look, Inv) appears above the command box.
+On phones, a row of shortcut buttons (N S E W U D, Look, Inv) appears above the command box. The keyboard only appears when you tap the command box, so it never hides the game.
+
+**Paged text (*more*).** Each turn's text starts at the top of the text area. When there's more than fits, a ***more*** button appears at the bottom: tap it, or press Enter with an empty command box, to see the next page. You can always scroll back through earlier text. Authors can turn this off with **Game › Settings › Paged Output**.
+
+**Quitting.** QUIT (typed, from the menu, or ☰ › Quit) asks *"Are you sure?"*, saves your position, and closes the app on every platform. In the Studio's Test Play it shows a *Thanks for playing* screen instead.
 
 | Menu (desktop) | Command | Shortcut |
 |---|---|---|
@@ -90,6 +94,7 @@ On phones, a row of shortcut buttons (N S E W U D, Look, Inv) appears above the 
 | | Save Game… / Load Game… | ⌘S / ⌥⌘L |
 | | Restart | ⇧⌘R |
 | | Undo Move | ⌥⌘Z |
+| | Quit Game… | |
 | Commands | Previous / Next Command | ⌥⌘↑ / ⌥⌘↓ (on Windows also plain ↑ / ↓) |
 | | Look, Inventory, Hint, Score | ⇧⌘L, ⇧⌘I, ⇧⌘H, — |
 | Sound | Mute / Unmute | ⇧⌘M |

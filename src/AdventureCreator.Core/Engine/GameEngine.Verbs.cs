@@ -443,6 +443,12 @@ public sealed partial class GameEngine
                 DoRestart();
                 return true;
             case "quit":
+                if (HostHandlesSaveDialogs)
+                {
+                    // The host asks "Are you sure?" and then closes (or shows its quit screen).
+                    Emit(new OutputEvent(OutputKind.Quit, QuitConfirm));
+                    return true;
+                }
                 Say("Thanks for playing.", TextStyle.System);
                 State.GameOver = true;
                 Emit(new OutputEvent(OutputKind.Quit));
@@ -633,6 +639,9 @@ public sealed partial class GameEngine
     // ================================================================ saving and loading
 
     public const string AutosaveSlot = "autosave";
+
+    /// <summary>Text of a <see cref="OutputKind.Quit"/> event that the host should confirm with the player first.</summary>
+    public const string QuitConfirm = "confirm";
 
     /// <summary>
     /// Set by hosts that show their own save/load dialogs: SAVE or RESTORE without a name then raises

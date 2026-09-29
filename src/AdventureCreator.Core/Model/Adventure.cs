@@ -133,6 +133,11 @@ public sealed class GameSettings
     public string DeathMessage { get; set; } = "Your injuries are too much for you.";
     /// <summary>Text shown in the status/title bar of players.</summary>
     public bool ShowStatusBar { get; set; } = true;
+    /// <summary>
+    /// Classic paged output: each turn's text starts at the top of the text area, and a *more* prompt appears when it
+    /// doesn't fit (tap it or press Enter to continue). Off = the transcript simply scrolls to the newest text.
+    /// </summary>
+    public bool PagedOutput { get; set; } = true;
 }
 
 public sealed class Room

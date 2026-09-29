@@ -77,4 +77,20 @@ public class RendererTests
         var img = PictureRenderer.Render(p);
         Assert.Contains(img.Pixels, px => px == Palettes.Spectrum[0]);
     }
+
+    [Fact]
+    public void SplashShowsPictureAndTitle()
+    {
+        var game = ExampleAdventures.Lighthouse();
+        var img = AdventureCreator.Core.Graphics.SplashRenderer.Render(game, 480);
+        Assert.Equal(480, img.Width);
+        var accent = 0xFFA0661B;                                   // title colour on a light background
+        Assert.Contains(img.Pixels, p => p == accent);            // the title was drawn
+        Assert.True(img.Pixels.Distinct().Count() > 8);           // and the picture
+        Assert.True(RasterImage.IsPng(img.ToPng()));
+        var svg = AdventureCreator.Core.Graphics.SplashRenderer.RenderSvg(game);
+        Assert.StartsWith("<svg", svg);
+        Assert.Contains("fill=\"#A0661B\"", svg);                // title pixels
+        Assert.True(svg.Length < 400_000, $"SVG is {svg.Length} bytes");
+    }
 }

@@ -104,7 +104,11 @@ public sealed class PlayerPage : ContentPage
 		if (Window != null) Window.Title = game.Title;
 		var saveDir = Path.Combine(FileSystem.AppDataDirectory, "Saves", StandaloneExporter.SafeFileName(game.Title));
 		player.Load(game, new FileSaveStorage(saveDir));
-		Dispatcher.DispatchDelayed(TimeSpan.FromMilliseconds(400), async () => await player.OfferContinueAsync());
+		Dispatcher.Dispatch(async () =>
+		{
+			await player.ShowTitleScreenAsync();
+			await player.OfferContinueAsync();
+		});
 	}
 
 	private async Task OpenGameAsync()
@@ -126,10 +130,11 @@ public sealed class PlayerPage : ContentPage
 		}
 	}
 
+	/// <summary>Called after the player confirmed QUIT (the position has been autosaved): end the process.</summary>
 	private void Quit()
 	{
-		if (DeviceInfo.Platform == DevicePlatform.iOS) return; // iOS apps never quit themselves
-		Application.Current?.Quit();
+		player.Stop();
+		Environment.Exit(0);
 	}
 
 	private void BuildMenus()
@@ -149,6 +154,8 @@ public sealed class PlayerPage : ContentPage
 		file.Add(Item("Load Game…", () => _ = player.ShowLoadDialogAsync(), "L", KeyboardAcceleratorModifiers.Cmd | KeyboardAcceleratorModifiers.Alt));
 		file.Add(Item("Restart", () => _ = player.SubmitAsync("restart"), "R", KeyboardAcceleratorModifiers.Cmd | KeyboardAcceleratorModifiers.Shift));
 		file.Add(Item("Undo Move", () => _ = player.SubmitAsync("undo"), "Z", KeyboardAcceleratorModifiers.Cmd | KeyboardAcceleratorModifiers.Alt));
+		file.Add(new MenuFlyoutSeparator());
+		file.Add(Item("Quit Game…", () => _ = player.ConfirmQuitAsync()));
 
 		var commands = new MenuBarItem { Text = "Commands" };
 		commands.Add(Item("Previous Command", player.RecallPrevious, "Up", KeyboardAcceleratorModifiers.Cmd | KeyboardAcceleratorModifiers.Alt));

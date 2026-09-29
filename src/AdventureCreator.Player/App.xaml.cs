@@ -6,6 +6,9 @@ public partial class App : Application
 	{
 		InitializeComponent();
 		UserAppTheme = AppTheme.Light;
+		// Android: shrink the layout above the on-screen keyboard instead of panning the whole window off-screen.
+		Microsoft.Maui.Controls.PlatformConfiguration.AndroidSpecific.Application.SetWindowSoftInputModeAdjust(
+			this, Microsoft.Maui.Controls.PlatformConfiguration.AndroidSpecific.WindowSoftInputModeAdjust.Resize);
 	}
 
 	protected override Window CreateWindow(IActivationState? activationState)

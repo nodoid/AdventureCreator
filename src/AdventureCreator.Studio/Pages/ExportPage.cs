@@ -12,7 +12,16 @@ public sealed class ExportPage : ContentPage
     private readonly Entry playerProject = new() { Placeholder = "…/src/AdventureCreator.Player/AdventureCreator.Player.csproj" };
     private readonly Entry consoleTemplate = new() { Placeholder = "Published single-file console player (see build/build-templates.sh)" };
     private readonly Entry appTemplate = new() { Placeholder = "Prebuilt player: Adventure Player.app (macOS) or its folder (Windows)" };
-    private readonly Picker target = new() { ItemsSource = Enum.GetNames<StandaloneExporter.BuildTarget>(), SelectedIndex = OperatingSystem.IsWindows() ? 3 : 2 };
+    private readonly Picker target = new()
+    {
+        ItemsSource = Enum.GetNames<StandaloneExporter.BuildTarget>(),
+        SelectedItem = OperatingSystem.IsWindows() ? nameof(StandaloneExporter.BuildTarget.Windows) : nameof(StandaloneExporter.BuildTarget.MacCatalyst),
+    };
+    private readonly Entry bundleId = new() { Placeholder = "Bundle id (default com.adventurecreator.game.<title>)" };
+    private readonly Entry signingIdentity = new() { Placeholder = "Signing identity, e.g. Apple Development: Name (TEAMID) – iOS devices" };
+    private readonly Entry provisioningProfile = new() { Placeholder = "Provisioning profile name – iOS devices" };
+    private readonly Button runInSimulator = new() { Text = "▶ Run in iOS Simulator", IsVisible = false };
+    private string? lastSimulatorApp;
     private CancellationTokenSource? cts;
 
     private static bool CanRunProcesses => (OperatingSystem.IsMacCatalyst() || OperatingSystem.IsWindows()) && Environment.GetEnvironmentVariable("APP_SANDBOX_CONTAINER_ID") == null;
@@ -65,7 +74,9 @@ public sealed class ExportPage : ContentPage
                     Section("1. Game package", "A single .adventure file containing the game, pictures and sounds. Opens in the Adventure Player on any platform.", package),
                     Section("2. Native app (all platforms)", "Builds the Adventure Player with this game built in, using the .NET SDK: Android (.apk), iOS/iPadOS, macOS (.app) or Windows (.exe). Requires the .NET SDK with the MAUI workload, and signing identities for Apple platforms." + desktopOnly,
                         new Label { Text = "Player project", FontSize = 12 }, Row(playerProject, BrowseFile(playerProject, "export.playerProject")),
-                        new HorizontalStackLayout { Spacing = 8, Children = { new Label { Text = "Target", VerticalOptions = LayoutOptions.Center }, target, build, cancel } }),
+                        new HorizontalStackLayout { Spacing = 8, Children = { new Label { Text = "Target", VerticalOptions = LayoutOptions.Center }, target, build, cancel, runInSimulator } },
+                        new Label { Text = "Optional – for iOS devices and store builds (the profile must match the bundle id):", FontSize = 12, Opacity = 0.7 },
+                        bundleId, signingIdentity, provisioningProfile),
                     Section("3. Desktop app from a template", "Fast, no SDK needed: copies a prebuilt Adventure Player and puts the game inside it (macOS .app is re-signed ad hoc)." + desktopOnly,
                         Row(appTemplate, BrowseFile(appTemplate, "export.appTemplate")), fromTemplate),
                     Section("4. Console executable", "A single self-contained terminal program (text only) with the game appended. Build the template once for each OS with build/build-templates.sh." + desktopOnly,
@@ -77,6 +88,19 @@ public sealed class ExportPage : ContentPage
             },
         };
         foreach (var b in new[] { console, fromTemplate, build, cancel }) b.IsEnabled = CanRunProcesses;
+        bundleId.Text = Preferences.Default.Get("export.bundleId", "");
+        signingIdentity.Text = Preferences.Default.Get("export.signingIdentity", "");
+        provisioningProfile.Text = Preferences.Default.Get("export.provisioningProfile", "");
+        bundleId.TextChanged += (_, e) => Preferences.Default.Set("export.bundleId", e.NewTextValue ?? "");
+        signingIdentity.TextChanged += (_, e) => Preferences.Default.Set("export.signingIdentity", e.NewTextValue ?? "");
+        provisioningProfile.TextChanged += (_, e) => Preferences.Default.Set("export.provisioningProfile", e.NewTextValue ?? "");
+        runInSimulator.Clicked += async (_, _) =>
+        {
+            if (lastSimulatorApp == null) return;
+            Log("Starting the iOS Simulator…");
+            var ok = await StandaloneExporter.RunInSimulatorAsync(lastSimulatorApp, Log);
+            Log(ok ? "✔ Running in the simulator (see the DeviceHub / Simulator window)." : "✖ Could not start it in the simulator.");
+        };
     }
 
     private static View Row(View main, View button)
@@ -175,8 +199,19 @@ public sealed class ExportPage : ContentPage
         var output = Path.Combine(folder, StandaloneExporter.SafeFileName(adventure.Title) + "-" + t);
         try
         {
-            int code = await StandaloneExporter.BuildAsync(playerProject.Text!, adventure, output, t, Log, cts.Token);
-            Log(code == 0 ? $"✔ Build succeeded: {output}" : $"✖ Build failed (exit code {code}).");
+            var options = new StandaloneExporter.BuildOptions
+            {
+                BundleId = string.IsNullOrWhiteSpace(bundleId.Text) ? null : bundleId.Text.Trim(),
+                CodesignKey = t == StandaloneExporter.BuildTarget.iOSSimulator || string.IsNullOrWhiteSpace(signingIdentity.Text) ? null : signingIdentity.Text.Trim(),
+                CodesignProvision = t == StandaloneExporter.BuildTarget.iOSSimulator || string.IsNullOrWhiteSpace(provisioningProfile.Text) ? null : provisioningProfile.Text.Trim(),
+            };
+            var result = await StandaloneExporter.BuildAsync(playerProject.Text!, adventure, output, t, Log, cts.Token, options);
+            Log(result.Succeeded ? $"✔ Build succeeded: {result.ProductPath}" : $"✖ Build failed (exit code {result.ExitCode}).");
+            if (result.Succeeded && t == StandaloneExporter.BuildTarget.iOSSimulator)
+            {
+                lastSimulatorApp = result.ProductPath;
+                runInSimulator.IsVisible = true;
+            }
         }
         catch (OperationCanceledException)
         {

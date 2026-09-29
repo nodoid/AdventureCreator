@@ -441,4 +441,19 @@ public class NpcAndEventTests
         e.Submit("e");
         Assert.Equal("kitchen", e.Loc(e.Adventure.FindItem("dog")!));
     }
+
+    [Fact]
+    public void QuitAsksHostToConfirmOrEndsGame()
+    {
+        var e = Start();
+        e.HostHandlesSaveDialogs = true;
+        var r = e.Submit("quit");
+        Assert.Contains(r.Events, ev => ev.Kind == OutputKind.Quit && ev.Text == GameEngine.QuitConfirm);
+        Assert.False(e.IsGameOver);                       // nothing happens until the player confirms
+
+        var console = Start();                            // hosts without dialogs (console) quit straight away
+        var r2 = console.Submit("quit");
+        Assert.Contains(r2.Events, ev => ev.Kind == OutputKind.Quit && ev.Text == null);
+        Assert.True(console.IsGameOver);
+    }
 }

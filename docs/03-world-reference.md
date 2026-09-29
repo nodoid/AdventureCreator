@@ -35,6 +35,7 @@ This chapter lists every property you can edit. Property names match the labels 
 | Player Health | 0 | Hit points. 0 = no health system. NPC attacks, traps and HurtPlayer reduce it; at 0 the player dies. See [chapter 10](10-npcs-and-events.md#combat-and-health). |
 | Death Message | "Your injuries are too much for you." | Printed when health runs out (an NPC's Kill Message takes precedence). |
 | Show Status Bar | on | Players show location / score / turns. |
+| Paged Output | on | Each turn's text starts at the top of the text area, with a *more* prompt when it doesn't fit. Off = the text simply scrolls. |
 
 **Maximum score** (automatic) = puzzle Points + item Score On Take + room Score On First Visit + every positive AwardScore action in triggers, conversation topics, puzzle On Solved actions and command default actions. Awards that share a key are counted once.
 

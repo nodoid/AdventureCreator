@@ -63,6 +63,21 @@ public class PackagingTests
         Assert.Contains("net10.0-android", args);
         Assert.Contains("EmbeddedGame=", args);
         Assert.Contains("GameId=com.adventurecreator.game.thelighthouse", args);
+        Assert.Contains("--artifacts-path", args);
+
+        var sim = StandaloneExporter.BuildArguments("Player.csproj", "g", "/tmp/out", StandaloneExporter.BuildTarget.iOSSimulator, ExampleAdventures.Lighthouse());
+        Assert.StartsWith("build ", sim);
+        Assert.Contains("--no-incremental", sim);
+        Assert.Contains("-r iossimulator-", sim);
+
+        var device = StandaloneExporter.BuildArguments("Player.csproj", "g", "/tmp/out", StandaloneExporter.BuildTarget.iOS, ExampleAdventures.Lighthouse(),
+            new StandaloneExporter.BuildOptions { BundleId = "uk.co.example.game", CodesignKey = "Apple Development: X", CodesignProvision = "devel-x" });
+        Assert.Contains("-r ios-arm64", device);
+        Assert.DoesNotContain("--artifacts-path", device);        // the Apple SDK mis-places the executable with it
+        var mac = StandaloneExporter.BuildArguments("Player.csproj", "g", "/tmp/out", StandaloneExporter.BuildTarget.MacCatalyst, ExampleAdventures.Lighthouse());
+        Assert.DoesNotContain("--artifacts-path", mac);
+        Assert.Contains("GameId=uk.co.example.game", device);
+        Assert.Contains("-p:CodesignProvision=\"devel-x\"", device);
     }
 
     [Fact]

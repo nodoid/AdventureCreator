@@ -574,7 +574,7 @@ public sealed class StudioPage : ContentPage
         testPlayer?.Stop();
         var clone = AdventurePackage.Clone(document.Adventure);
         testPlayer = new GamePlayerView { AutosaveEnabled = false };
-        testPlayer.QuitRequested += (_, _) => testPlayer?.Stop();
+        testPlayer.QuitRequested += (_, _) => testPlayer?.ShowQuitScreen();
         var watch = new Label { FontFamily = "Menlo", FontSize = 11, TextColor = Theme.SecondaryText };
         var restart = new Button { Text = "↻ Restart with latest edits" };
         restart.Clicked += (_, _) => ShowTestPlay();
