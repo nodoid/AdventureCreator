@@ -20,6 +20,10 @@ events and cut-scenes.
 | **AfterDescribe** | After every room description (arrival, LOOK, even "It is pitch dark"). | PAWS "Process 1". |
 | **Subroutine** | Never automatically; only through the **RunTrigger** action. | Reusable action lists. RunTrigger runs every Subroutine trigger whose Id **or Name** matches, in list order, so several triggers sharing a Name form one subroutine table. |
 | **Unhandled** | When the parser can't understand the input (unknown word, no verb). | If any Unhandled trigger fires, the normal error isn't shown. `{word}` is the unknown word. |
+| **NpcArrives / NpcLeaves** | When an NPC enters / leaves the player's room. | Subject = the NPC (empty = any). |
+| **NpcDefeated** | When the player defeats an NPC in combat. | Subject = the NPC. |
+| **ItemGiven** | When an NPC accepts an item it wants. | Subject = the NPC, Noun1 = the item. |
+| **PlayerHurt** | When the player loses health. | Subject = the attacking NPC, if any. |
 
 ## The pattern
 
@@ -96,6 +100,15 @@ Wherever an item is expected you can use `$noun1` / `$noun2` (the item the playe
 | Noun1Is / Noun2Is | the first / second object is this item or word | A = item id or word |
 | IsDark | the player is in darkness | — |
 | ExitOpen | the room's exit in that direction exists and its door (if any) is open | A = room, B = direction |
+| NpcFollowing / NpcHostile / NpcDefeated | the NPC is following the player / hostile / defeated | A = NPC |
+| NpcIn | the NPC is in the room | A = NPC, B = room |
+| NpcHasItem | the NPC holds the item | A = NPC, B = item |
+| HealthAtLeast | the player's health ≥ N | N |
+| RoomHasFlag | the room has a flag set with SetRoomFlag | A = room, B = flag |
+| RoomFlooded / RoomTrapped | the room is flooded / has a trap | A = room |
+| EventHappened | the random event has happened at least once | A = random event |
+
+Room fields also accept `@here`, `@eventroom` (in random events) and `@randomroom`.
 
 ## Actions
 
@@ -121,7 +134,7 @@ Actions run in order. Fields: **A**, **B**, **N**, **Text**. Item fields accept 
 | DropItem, WearItem, UnwearItem | the same, for dropping, wearing and removing | A = item |
 | DropAll | drops everything held | — |
 | MoveItem | puts the item anywhere, with no checks | A = item, B = location |
-| CreateItem | brings the item into the player's room | A = item |
+| CreateItem | brings the item into play | A = item, B = optional location (default: the player's room; in random events, the event's room) |
 | DestroyItem | removes the item from the game | A = item |
 | SwapItems | exchanges two items' locations (a lamp for a lit lamp…) | A, B = items |
 | SetOpen / SetLocked / SetLit | changes an item's state | A = item, N = 1 or 0 |
@@ -145,6 +158,19 @@ Actions run in order. Fields: **A**, **B**, **N**, **Text**. Item fields accept 
 | RandomVar | sets A to a random number 1…N | A = variable, N |
 | AwardScore | adds N points. If A (a key) is set, the award is given only once per game. | N, A = optional key |
 | SolvePuzzle | solves a puzzle now | A = puzzle |
+
+**NPCs, health and the world** (see [chapter 10](10-npcs-and-events.md))
+
+| Action | Does | Fields |
+|---|---|---|
+| SetNpc | changes an NPC's behaviour | A = NPC, B = Movement / Hostile / Following / Blocking / Active / Health, N = value, Text = movement mode |
+| NpcGoTo | sends an NPC walking to a room (through exits, one room per turn) | A = NPC, B = room |
+| NpcSay | the NPC says something (if the player is there) | A = NPC, Text |
+| HurtPlayer / HealPlayer | changes the player's health | N = amount (Heal 0 = full), Text = message |
+| Flood | floods or drains a room | A = room, N = 1/0 |
+| SetTrap / ClearTrap | places or removes a trap | A = room, N = damage (−1 = deadly), Text = when sprung, B = when found |
+| SetRoomFlag | sets or clears a room flag | A = room, B = flag, N = 1/0 |
+| RunRandomEvent | makes a random event happen now | A = event |
 
 **Sound**
 
@@ -184,6 +210,9 @@ Any text shown to the player (descriptions, messages, responses, hints) can cont
 | `{item:id}` `{room:id}` | the name of an item / room |
 | `{word}` | the unknown word (in Unhandled triggers and the UnknownWord message) |
 | `{newline}` | a line break |
+| `{npc}` `{The npc}` `{a npc}` | the NPC concerned (NPC messages and NPC events) |
+| `{health}` `{maxhealth}` | the player's health |
+| `{eventroom}` | the random event's room name |
 
 ## Recipes
 

@@ -31,7 +31,7 @@ The Studio window has three panes, like other desktop editors:
 1. **Sidebar** (left). Choose what to edit:
    * **Game**: title, author, introduction, start room and settings.
    * **Map**: a map drawn automatically from the exits. Click a room to edit it.
-   * **Rooms**, **Items & People**, **Puzzles**, **Triggers**, **Variables**.
+   * **Rooms**, **Items & People** (including NPC behaviour), **Puzzles**, **Triggers**, **Random Events**, **Variables**.
    * **Commands**: your own verbs.
    * **Vocabulary**: extra words.
    * **Pictures**, **Sounds**.
@@ -59,7 +59,7 @@ Some fields also accept patterns: for example, a trigger's Verb can be `take|get
 | | Save As… | ⌥⇧⌘S |
 | | Import PAWS / Quill / GAC Game… | ⇧⌘I |
 | | Export Standalone Game… | ⇧⌘E |
-| Edit | New Room / Item / Trigger / Puzzle | ⌥⌘R / ⌥⌘I / ⌥⌘T / ⌥⌘P |
+| Edit | New Room / Item / Trigger / Puzzle / Random Event | ⌥⌘R / ⌥⌘I / ⌥⌘T / ⌥⌘P / ⌥⌘E |
 | | New Picture, New Command | |
 | | Duplicate Selected | ⌘D |
 | | Delete Selected… | |
@@ -77,7 +77,7 @@ On iPad, the same menus appear in the iPadOS menu bar or keyboard shortcut overl
 When the Player has a game built in, it opens straight into it. Otherwise it offers **Open a game…** (any `.adventure` or `.json` file) and the example game.
 
 The Player shows:
-* a status bar with the location, score and turns
+* a status bar with the location, score, turns (and health, if the game uses it), and a **☰** game menu
 * the current picture
 * the transcript
 * a command box
@@ -87,14 +87,24 @@ On phones, a row of shortcut buttons (N S E W U D, Look, Inv) appears above the 
 | Menu (desktop) | Command | Shortcut |
 |---|---|---|
 | Game | Open Game… (only when no game is built in) | ⌘O |
-| | Save Position / Restore Position | ⌘S / ⌥⌘L |
+| | Save Game… / Load Game… | ⌘S / ⌥⌘L |
 | | Restart | ⇧⌘R |
 | | Undo Move | ⌥⌘Z |
 | Commands | Previous / Next Command | ⌥⌘↑ / ⌥⌘↓ (on Windows also plain ↑ / ↓) |
 | | Look, Inventory, Hint, Score | ⇧⌘L, ⇧⌘I, ⇧⌘H, — |
 | Sound | Mute / Unmute | ⇧⌘M |
 
-Saved positions are stored per game in the app's data folder.
+### Saving and loading games
+
+Every game can be saved and loaded, on every platform.
+
+* **Save Game…** (menu, the ☰ button, or typing **SAVE**) asks for a name, suggesting the current location and turn. Saving under an existing name asks before replacing it.
+* **Load Game…** (menu, ☰, or typing **RESTORE** / **LOAD**) lists the saved games, newest first, with location, score, turn and date. It also offers **Delete a saved game…**.
+* Players can type a name directly: **SAVE castle**, **RESTORE "before the troll"**.
+* **Autosave**: the Player saves automatically after every move. Next time the game is opened it offers **Continue where you left off?**, showing the location, turn and score. The autosave is removed when a game ends.
+* In the console player, SAVE without a name uses a default slot. RESTORE lists the saves when there are several.
+
+Saves are stored per game in the app's data folder (see [chapter 9](09-file-format.md#save-games)).
 
 ## The console player
 

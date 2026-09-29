@@ -13,7 +13,7 @@ using CommunityToolkit.Maui.Storage;
 
 namespace AdventureCreator.Studio.Pages;
 
-public enum Section { Game, Map, Rooms, Items, Puzzles, Triggers, Variables, Commands, Vocabulary, Pictures, Sounds, Messages, TestPlay }
+public enum Section { Game, Map, Rooms, Items, Puzzles, Triggers, Events, Variables, Commands, Vocabulary, Pictures, Sounds, Messages, TestPlay }
 
 /// <summary>
 /// The Studio's main window: a desktop-style source list on the left, a master list, and a detail editor,
@@ -193,7 +193,7 @@ public sealed class StudioPage : ContentPage
             int? count = s switch
             {
                 Section.Rooms => a.Rooms.Count, Section.Items => a.Items.Count, Section.Puzzles => a.Puzzles.Count,
-                Section.Triggers => a.Triggers.Count, Section.Variables => a.Variables.Count, Section.Commands => a.Vocabulary.Verbs.Count,
+                Section.Triggers => a.Triggers.Count, Section.Events => a.RandomEvents.Count, Section.Variables => a.Variables.Count, Section.Commands => a.Vocabulary.Verbs.Count,
                 Section.Pictures => a.Pictures.Count, Section.Sounds => a.Sounds.Count, _ => null,
             };
             b.Label.Text = SectionTitle(s) + (count.HasValue ? $"  ({count})" : "");
@@ -230,6 +230,7 @@ public sealed class StudioPage : ContentPage
         Section.Items => "🗝  Items & People",
         Section.Puzzles => "🧩  Puzzles",
         Section.Triggers => "⚡  Triggers",
+        Section.Events => "🎲  Random Events",
         Section.Variables => "🔢  Variables",
         Section.Commands => "💬  Commands",
         Section.Vocabulary => "📖  Vocabulary",
@@ -240,7 +241,7 @@ public sealed class StudioPage : ContentPage
         _ => s.ToString(),
     };
 
-    private static bool HasList(Section s) => s is Section.Rooms or Section.Items or Section.Puzzles or Section.Triggers or Section.Variables
+    private static bool HasList(Section s) => s is Section.Rooms or Section.Items or Section.Puzzles or Section.Triggers or Section.Events or Section.Variables
         or Section.Commands or Section.Pictures or Section.Sounds;
 
     public void ShowSection(Section s)
@@ -273,6 +274,7 @@ public sealed class StudioPage : ContentPage
         Section.Items => document.Adventure.Items,
         Section.Puzzles => document.Adventure.Puzzles,
         Section.Triggers => document.Adventure.Triggers,
+        Section.Events => document.Adventure.RandomEvents,
         Section.Variables => document.Adventure.Variables,
         Section.Commands => document.Adventure.Vocabulary.Verbs,
         Section.Pictures => document.Adventure.Pictures,
@@ -283,7 +285,10 @@ public sealed class StudioPage : ContentPage
     private ListRow MakeRow(object o) => o switch
     {
         Room r => new ListRow { Item = r, Title = string.IsNullOrWhiteSpace(r.Name) ? r.Id : r.Name, Subtitle = $"{r.Id} · {r.Exits.Count} exits{(r.IsDark ? " · dark" : "")}" },
-        Item i => new ListRow { Item = i, Title = (i.IsCharacter ? "👤 " : "") + (string.IsNullOrWhiteSpace(i.Name) ? i.Id : i.Name), Subtitle = $"{i.Id} · {DescribeLocation(i.Location)}" },
+        Item i => new ListRow { Item = i, Title = (i.Npc != null ? "🧍 " : i.IsCharacter ? "👤 " : "") + (string.IsNullOrWhiteSpace(i.Name) ? i.Id : i.Name),
+            Subtitle = $"{i.Id} · {DescribeLocation(i.Location)}{(i.Npc != null ? " · " + i.Npc.Movement.ToString().ToLowerInvariant() + (i.Npc.Hostile ? " · hostile" : "") : "")}" },
+        RandomEvent ev => new ListRow { Item = ev, Title = string.IsNullOrWhiteSpace(ev.Name) ? ev.Id : ev.Name,
+            Subtitle = $"{ev.Chance}%{(ev.ChancePerThousand > 0 ? $" +{ev.ChancePerThousand}‰" : "")} · {ev.Where}{(ev.Enabled ? "" : " · disabled")}" },
         Puzzle p => new ListRow { Item = p, Title = string.IsNullOrWhiteSpace(p.Name) ? p.Id : p.Name, Subtitle = $"{p.Points} points · {p.Hints.Count} hints" },
         Trigger t => new ListRow { Item = t, Title = string.IsNullOrWhiteSpace(t.Name) ? t.Id : t.Name, Subtitle = $"{t.Event}{(t.Verb != null ? " · " + t.Verb : "")}{(t.Noun1 != null ? " " + t.Noun1 : "")}{(t.Enabled ? "" : " · disabled")}" },
         Variable v => new ListRow { Item = v, Title = v.Name, Subtitle = $"starts at {v.InitialValue}" },
@@ -376,6 +381,18 @@ public sealed class StudioPage : ContentPage
                 };
             case Variable v:
                 return new VerticalStackLayout { Children = { Heading(v.Name, "Variable (a number that triggers can test and change)"), new ObjectEditor(v, ctx) } };
+            case RandomEvent ev:
+                return new VerticalStackLayout
+                {
+                    Spacing = 10,
+                    Children =
+                    {
+                        Heading(string.IsNullOrWhiteSpace(ev.Name) ? ev.Id : ev.Name, "Random event — may happen by chance each turn, even where the player isn't"),
+                        new Label { FontSize = 12, Opacity = 0.7, Text = "In conditions and actions, @eventroom is the room the event happens in; $randomitem is a random portable item there. " +
+                            "Witness Message is shown if the player is there (or for Global events); Distant Message if they're elsewhere." },
+                        new ObjectEditor(ev, ctx),
+                    },
+                };
             case VerbDefinition verb:
                 return CommandEditor(verb);
             case Picture pic2:
@@ -479,7 +496,7 @@ public sealed class StudioPage : ContentPage
                     Children =
                     {
                         Heading(a.Title, "Game settings"),
-                        new ObjectEditor(a, ctx, exclude: new[] { "Rooms", "Items", "Puzzles", "Triggers", "Variables", "Pictures", "Sounds", "Vocabulary", "Messages", "Notes" }),
+                        new ObjectEditor(a, ctx, exclude: new[] { "Rooms", "Items", "Puzzles", "Triggers", "RandomEvents", "Variables", "Pictures", "Sounds", "Vocabulary", "Messages", "Notes" }),
                     },
                 };
                 if (a.Notes.Count > 0)
@@ -556,11 +573,15 @@ public sealed class StudioPage : ContentPage
     {
         testPlayer?.Stop();
         var clone = AdventurePackage.Clone(document.Adventure);
-        testPlayer = new GamePlayerView();
+        testPlayer = new GamePlayerView { AutosaveEnabled = false };
         testPlayer.QuitRequested += (_, _) => testPlayer?.Stop();
         var watch = new Label { FontFamily = "Menlo", FontSize = 11, TextColor = Theme.SecondaryText };
         var restart = new Button { Text = "↻ Restart with latest edits" };
         restart.Clicked += (_, _) => ShowTestPlay();
+        var saveBtn = new Button { Text = "Save position…" };
+        saveBtn.Clicked += async (_, _) => { if (testPlayer != null) await testPlayer.ShowSaveDialogAsync(); };
+        var loadBtn = new Button { Text = "Load position…" };
+        loadBtn.Clicked += async (_, _) => { if (testPlayer != null) await testPlayer.ShowLoadDialogAsync(); };
         var walkthrough = new Button { Text = "Run commands…" };
         walkthrough.Clicked += async (_, _) =>
         {
@@ -578,6 +599,28 @@ public sealed class StudioPage : ContentPage
             sb.AppendLine($"Score:  {e.State.Score}/{e.Adventure.ComputeMaxScore()}");
             sb.AppendLine($"Turns:  {e.State.Turns}");
             sb.AppendLine($"Dark:   {e.IsDark()}");
+            if (e.Adventure.Settings.PlayerHealth > 0) sb.AppendLine($"Health: {e.State.Health}/{e.Adventure.Settings.PlayerHealth}");
+            if (e.State.Traps.Count > 0) sb.AppendLine($"Traps:  {string.Join(", ", e.State.Traps.Keys)}");
+            var flooded = e.State.RoomFlags.Where(kv => kv.Value.Contains("flooded")).Select(kv => kv.Key).ToList();
+            if (flooded.Count > 0) sb.AppendLine($"Flooded: {string.Join(", ", flooded)}");
+            var npcs = e.Npcs().ToList();
+            if (npcs.Count > 0)
+            {
+                sb.AppendLine();
+                sb.AppendLine("NPCs:");
+                foreach (var n in npcs)
+                {
+                    var ns = e.NpcStateOf(n);
+                    var flags = (ns.Defeated ? " defeated" : "") + (ns.Following ? " following" : "") + (e.NpcHostile(n) ? " hostile" : "") + (ns.Destination != null ? " → " + ns.Destination : "");
+                    sb.AppendLine($"  {n.Id} @ {e.Loc(n)}{flags}");
+                }
+            }
+            if (e.State.EventCounts.Count > 0)
+            {
+                sb.AppendLine();
+                sb.AppendLine("Random events:");
+                foreach (var (id, count) in e.State.EventCounts) sb.AppendLine($"  {id} ×{count}");
+            }
             sb.AppendLine();
             sb.AppendLine("Carried:");
             foreach (var i in e.Carried()) sb.AppendLine($"  {i.Id}{(e.IsWorn(i) ? " (worn)" : "")}");
@@ -598,11 +641,11 @@ public sealed class StudioPage : ContentPage
         {
             Spacing = 8,
             Padding = 10,
-            Children = { restart, walkthrough, new Label { Text = "Watch", FontAttributes = FontAttributes.Bold }, watch },
+            Children = { restart, walkthrough, saveBtn, loadBtn, new Label { Text = "Watch", FontAttributes = FontAttributes.Bold }, watch },
         };
         grid.Add(new ScrollView { Content = side, BackgroundColor = PaneBg }, 1);
         ShowDetail(grid);
-        testPlayer.Load(clone);
+        testPlayer.Load(clone, new FileSaveStorage(Path.Combine(FileSystem.AppDataDirectory, "TestSaves", StandaloneExporter.SafeFileName(clone.Title))));
         testPlayer.TurnCompleted += (_, _) => UpdateWatch();
         Dispatcher.DispatchDelayed(TimeSpan.FromMilliseconds(300), UpdateWatch);
     }
@@ -618,6 +661,7 @@ public sealed class StudioPage : ContentPage
             Section.Items => new Item { Id = a.NewId("item"), Name = "new item", Location = (selected as Room)?.Id ?? a.StartRoomId },
             Section.Puzzles => new Puzzle { Id = a.NewId("puzzle"), Name = "New puzzle", Points = 10 },
             Section.Triggers => new Trigger { Id = a.NewId("trigger"), Name = "New trigger", Verb = "", Actions = { GameAction.Say("Something happens.") } },
+            Section.Events => new RandomEvent { Id = a.NewId("event"), Name = "New event", Chance = 5, DistantMessage = "You hear something in the distance." },
             Section.Variables => new Variable { Name = UniqueVariableName(a) },
             Section.Commands => new VerbDefinition { Id = "newverb", Words = { "newverb" }, Grammar = { "*", "* {noun}" }, DefaultResponse = "Nothing happens." },
             Section.Pictures => new Picture { Id = a.NewId("pic"), Name = "New picture", Palette = Palettes.Extended.ToList(), InitialPaper = 15, InitialInk = 0 },
@@ -654,6 +698,7 @@ public sealed class StudioPage : ContentPage
             case Item i: i.Id = a.NewId(i.Id + "_"); break;
             case Puzzle p: p.Id = a.NewId(p.Id + "_"); break;
             case Trigger t: t.Id = a.NewId(t.Id + "_"); break;
+            case RandomEvent ev: ev.Id = a.NewId(ev.Id + "_"); break;
             case Picture p: p.Id = a.NewId(p.Id + "_"); p.Name += " (copy)"; break;
             case Variable v: v.Name = UniqueVariableName(a); break;
             case VerbDefinition v: v.Id += "2"; break;
@@ -889,6 +934,7 @@ public sealed class StudioPage : ContentPage
         edit.Add(Sync("New Item", () => { ShowSection(Section.Items); AddNew(); }, "I", CmdAlt));
         edit.Add(Sync("New Trigger", () => { ShowSection(Section.Triggers); AddNew(); }, "T", CmdAlt));
         edit.Add(Sync("New Puzzle", () => { ShowSection(Section.Puzzles); AddNew(); }, "P", CmdAlt));
+        edit.Add(Sync("New Random Event", () => { ShowSection(Section.Events); AddNew(); }, "E", CmdAlt));
         edit.Add(Sync("New Picture", () => { ShowSection(Section.Pictures); AddNew(); }));
         edit.Add(Sync("New Command", () => { ShowSection(Section.Commands); AddNew(); }));
         edit.Add(new MenuFlyoutSeparator());
@@ -943,6 +989,7 @@ public sealed class StudioPage : ContentPage
         ("07-importing.md", "7. Importing PAWS, Quill/Illustrator and GAC"),
         ("08-exporting.md", "8. Testing, exporting and publishing"),
         ("09-file-format.md", "9. File format"),
+        ("10-npcs-and-events.md", "10. NPCs, random events, traps and flooding"),
     };
 
     private async Task ShowUserGuideAsync()

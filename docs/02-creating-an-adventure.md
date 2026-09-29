@@ -116,7 +116,7 @@ Players can type *talk to the ghost*, *ask her about the locket* or *say "hello"
 
 ## Step 6 — A custom command and an adverb
 
-Players will want to comfort the ghost. Open **Commands** (⌘8) and add a command:
+Players will want to comfort the ghost. Open **Commands** (⌘9) and add a command:
 * **Id** `comfort`.
 * **Words** `comfort, console, soothe, reassure`.
 * **Grammar** (one line each):
@@ -137,7 +137,7 @@ Players who add *gently* (anywhere in the sentence) get this response; anyone el
 
 ## Step 7 — The puzzle, scoring and the ending
 
-1. **Variables** (⌘7): add `rested`, Initial Value `0`.
+1. **Variables** (⌘8): add `rested`, Initial Value `0`.
 2. **Triggers**: add
    * **Name** `Give the locket`, **Event** `BeforeCommand`, **Verb** `give|show`, **Noun1** `locket`, **Noun2** `ghost`.
    * **Conditions**: `ItemCarried` A = `locket`.

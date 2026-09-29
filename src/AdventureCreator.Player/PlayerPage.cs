@@ -104,6 +104,7 @@ public sealed class PlayerPage : ContentPage
 		if (Window != null) Window.Title = game.Title;
 		var saveDir = Path.Combine(FileSystem.AppDataDirectory, "Saves", StandaloneExporter.SafeFileName(game.Title));
 		player.Load(game, new FileSaveStorage(saveDir));
+		Dispatcher.DispatchDelayed(TimeSpan.FromMilliseconds(400), async () => await player.OfferContinueAsync());
 	}
 
 	private async Task OpenGameAsync()
@@ -144,8 +145,8 @@ public sealed class PlayerPage : ContentPage
 		// Shortcuts must not collide with macOS system menu items (⌘Z Undo, ⌘I Italic…), or UIKit drops the whole menu.
 		var file = new MenuBarItem { Text = "Game" };
 		if (!embedded) file.Add(Item("Open Game…", () => _ = OpenGameAsync(), "O"));
-		file.Add(Item("Save Position", () => _ = player.SubmitAsync("save"), "S"));
-		file.Add(Item("Restore Position", () => _ = player.SubmitAsync("restore"), "L", KeyboardAcceleratorModifiers.Cmd | KeyboardAcceleratorModifiers.Alt));
+		file.Add(Item("Save Game…", () => _ = player.ShowSaveDialogAsync(), "S"));
+		file.Add(Item("Load Game…", () => _ = player.ShowLoadDialogAsync(), "L", KeyboardAcceleratorModifiers.Cmd | KeyboardAcceleratorModifiers.Alt));
 		file.Add(Item("Restart", () => _ = player.SubmitAsync("restart"), "R", KeyboardAcceleratorModifiers.Cmd | KeyboardAcceleratorModifiers.Shift));
 		file.Add(Item("Undo Move", () => _ = player.SubmitAsync("undo"), "Z", KeyboardAcceleratorModifiers.Cmd | KeyboardAcceleratorModifiers.Alt));
 

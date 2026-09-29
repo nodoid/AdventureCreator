@@ -11,6 +11,7 @@ A .NET 10 / .NET MAUI system for writing, importing and publishing text and grap
 The full **[User Guide](docs/README.md)** covers:
 * getting started, and a step-by-step tutorial for creating an adventure
 * a reference for rooms, items, triggers, the parser and custom commands
+* NPCs, random events, traps, flooding and health
 * pictures and sound
 * **importing PAWS, Quill/Illustrator and GAC games, with their limitations**
 * exporting standalone games, and the file format
@@ -64,6 +65,12 @@ The same guide is available in the Studio under **Help › User Guide…** (⇧�
 * **Puzzles** solve themselves when their conditions are met. They award points and give progressive hints.
 * **Score**, turns, save/restore, undo, restart, and verbose/brief modes.
 * All built-in messages can be overridden.
+
+### NPCs and random events
+* **NPCs** can wander, patrol, follow or hunt the player. They move only through real exits, and can open unlocked doors if allowed.
+* They can greet the player, chat, want items (and follow or calm down when given them), steal, collect things, block exits, fight (with player health and weapons) and obey orders.
+* **Random events** can happen anywhere, including out of sight. They can move, create or remove items, set traps, turn lights on or off, flood rooms or change exits, and they show different messages to a witness and to a distant listener.
+* **Saving:** named save slots with a load list, a ☰ game menu and an autosave that offers *Continue where you left off?*.
 
 ### Graphics
 * Vector pictures: lines, rectangles, ellipses, polygons, freehand strokes, flood fill, pattern shading, text, sub-picture calls, bitmap stamps and Spectrum attribute blocks.

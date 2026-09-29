@@ -96,6 +96,36 @@ public static class AdventureValidator
             foreach (var t in i.Topics) { CheckConditions(where + " topic", t.Conditions); CheckActions(where + " topic", t.Actions); }
         }
 
+        foreach (var npc in a.Items.Where(i => i.Npc != null))
+        {
+            var where = $"NPC {npc.Id}";
+            var b = npc.Npc!;
+            if (!npc.IsCharacter) Warn(where, "Has NPC behaviour but 'Is Character' is off, so it won't act.");
+            foreach (var r in b.Route.Concat(b.AllowedRooms))
+                if (a.FindRoom(r) == null) Error(where, $"Room \"{r}\" (route / allowed rooms) does not exist.");
+            if (b.Movement == NpcMovement.Patrol && b.Route.Count < 2) Warn(where, "Patrol needs at least two rooms in its Route.");
+            foreach (var w in b.Wants.Concat(b.StealsItems).Concat(b.CollectsOnly))
+                if (a.FindItem(w) == null) Error(where, $"Item \"{w}\" does not exist.");
+            if ((b.Hostile || b.RetaliatesWhenAttacked) && a.Settings.PlayerHealth <= 0)
+                Warn(where, "Hostile, but Game › Settings › Player Health is 0, so its attacks do no harm.");
+            if (b.Movement == NpcMovement.Patrol)
+                for (int k = 0; k + 1 < b.Route.Count; k++)
+                    if (a.FindRoom(b.Route[k]) is { } rk && !rk.Exits.Any(e => string.Equals(e.TargetRoomId, b.Route[k + 1], StringComparison.OrdinalIgnoreCase)))
+                        issues.Add(new(IssueSeverity.Info, where, $"No direct exit from {b.Route[k]} to {b.Route[k + 1]}; it will walk the shortest route if there is one (NPCs only move through exits)."));
+            CheckActions(where, b.OnAccept.Concat(b.OnDefeat));
+        }
+
+        foreach (var ev in a.RandomEvents)
+        {
+            var where = $"Random event {ev.Id}";
+            foreach (var r in ev.Rooms) if (a.FindRoom(r) == null) Error(where, $"Room \"{r}\" does not exist.");
+            if (ev.Chance <= 0 && ev.ChancePerThousand <= 0) Warn(where, "Chance is 0, so it will only happen through RunRandomEvent.");
+            if (ev.Actions.Count == 0 && string.IsNullOrWhiteSpace(ev.WitnessMessage) && string.IsNullOrWhiteSpace(ev.DistantMessage)) Warn(where, "Does nothing.");
+            CheckConditions(where, ev.Conditions);
+            CheckActions(where, ev.Actions);
+        }
+        Duplicates(a.RandomEvents, e => e.Id, "Random events");
+
         foreach (var t in a.Triggers)
         {
             var where = $"Trigger {t.Id}";
@@ -144,7 +174,7 @@ public static class AdventureValidator
                     case ConditionType.PlayerIn:
                     case ConditionType.RoomVisited:
                         foreach (var r in (c.A ?? "").Split('|', StringSplitOptions.RemoveEmptyEntries))
-                            if (a.FindRoom(r.Trim()) == null) Error(where, $"Condition {c.Type}: room \"{r}\" does not exist.");
+                            if (!IsRoomPseudo(r.Trim()) && a.FindRoom(r.Trim()) == null) Error(where, $"Condition {c.Type}: room \"{r}\" does not exist.");
                         break;
                     case ConditionType.ItemCarried or ConditionType.ItemWorn or ConditionType.ItemPresent or ConditionType.ItemIn
                         or ConditionType.ItemExists or ConditionType.ItemOpen or ConditionType.ItemLocked or ConditionType.ItemLit:
@@ -167,7 +197,17 @@ public static class AdventureValidator
                 switch (x.Type)
                 {
                     case ActionType.GoTo:
-                        if (x.A != Locations.Here && a.FindRoom(x.A) == null) Error(where, $"GoTo: room \"{x.A}\" does not exist.");
+                        if (!IsRoomPseudo(x.A) && a.FindRoom(x.A) == null) Error(where, $"GoTo: room \"{x.A}\" does not exist.");
+                        break;
+                    case ActionType.SetNpc or ActionType.NpcGoTo or ActionType.NpcSay:
+                        if (!IsDynamic(x.A) && a.FindItem(x.A) is not { IsCharacter: true }) Error(where, $"{x.Type}: character \"{x.A}\" does not exist.");
+                        if (x.Type == ActionType.NpcGoTo && !IsRoomPseudo(x.B) && a.FindRoom(x.B) == null) Error(where, $"NpcGoTo: room \"{x.B}\" does not exist.");
+                        break;
+                    case ActionType.Flood or ActionType.SetTrap or ActionType.ClearTrap or ActionType.SetRoomFlag or ActionType.SetDark:
+                        if (!IsRoomPseudo(x.A) && a.FindRoom(x.A) == null) Error(where, $"{x.Type}: room \"{x.A}\" does not exist.");
+                        break;
+                    case ActionType.RunRandomEvent:
+                        if (a.FindRandomEvent(x.A) == null) Error(where, $"RunRandomEvent: event \"{x.A}\" does not exist.");
                         break;
                     case ActionType.MoveItem or ActionType.TakeItem or ActionType.DropItem or ActionType.WearItem or ActionType.UnwearItem
                         or ActionType.DestroyItem or ActionType.CreateItem or ActionType.SwapItems or ActionType.SetOpen
@@ -192,6 +232,7 @@ public static class AdventureValidator
         }
 
         bool IsDynamic(string? id) => id != null && id.StartsWith('$');
+        bool IsRoomPseudo(string? id) => id is Locations.Here or Locations.EventRoom or Locations.RandomRoom or "$npcroom";
         bool IsVariable(string? name) => name != null && (name.StartsWith('@') || a.FindVariable(name) != null);
     }
 }

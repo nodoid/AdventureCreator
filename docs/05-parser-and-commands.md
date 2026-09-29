@@ -23,6 +23,10 @@ your items and triggers.
 | Filler and idioms | *I want to open the door*, *please look*, *where am I?*, *what am I carrying?* |
 | Mistakes | *exmaine* is corrected; *OOPS lamp* fixes the last unknown word; *AGAIN* (G) repeats; *UNDO* takes back a move |
 
+**NPC, trap and health commands:** FOLLOW (someone who just left), SEARCH (with no object: finds traps), DISARM, DIAGNOSE (HEALTH), *robot, go north* (orders).
+
+**Saving:** SAVE / RESTORE (LOAD) accept an optional name: *save before the troll*, *restore "castle"*.
+
 **Game commands:**
 * LOOK (L), INVENTORY (I), EXITS
 * SCORE, TURNS, HINT, HELP, VOCABULARY

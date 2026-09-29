@@ -33,7 +33,7 @@ public sealed class ObjectEditor : ContentView
         "ShortDescription", "Notes", "Help", "BlockedMessage", "TravelMessage",
     };
 
-    private static readonly HashSet<string> LineLists = new() { "Hints", "Grammar", "Notes" };
+    private static readonly HashSet<string> LineLists = new() { "Hints", "Grammar", "Notes", "IdleMessages" };
 
     private static readonly HashSet<string> Hidden = new()
     {
@@ -103,8 +103,18 @@ public sealed class ObjectEditor : ContentView
             .Where(p => p.GetCustomAttribute<JsonIgnoreAttribute>() == null)
             .Where(p => !Hidden.Contains(p.Name));
 
+    private static string SectionTitle(string name) => name == "Npc" ? "NPC behaviour" : Humanize(name);
+
+    private static string SectionHelp(string name) => name switch
+    {
+        "Npc" => "Make this character act on its own: wander, patrol, follow or hunt the player (always through real exits), " +
+                 "chat, want things, steal, block exits, fight, and obey orders.",
+        _ => "Optional settings.",
+    };
+
     public static string Humanize(string name)
     {
+        if (name == "Npc") return "NPC behaviour";
         var s = System.Text.RegularExpressions.Regex.Replace(name, "(?<=[a-z0-9])([A-Z])", " $1");
         s = s.Replace(" Id", " id").Replace("Item Id", "item").Replace("Room Id", "room");
         return s;
@@ -123,7 +133,7 @@ public sealed class ObjectEditor : ContentView
             var kind = References.KindOf(target, prop.Name);
             if (kind != RefKind.None)
                 return new ReferenceField(ctx, (string?)value, kind, v => { prop.SetValue(target, string.IsNullOrEmpty(v) && Nullable(prop) ? null : v ?? ""); Changed(); },
-                    allowFreeText: kind is RefKind.Verb or RefKind.Adverb or RefKind.Preposition or RefKind.Item or RefKind.Direction or RefKind.Location or RefKind.Variable or RefKind.Room);
+                    allowFreeText: kind is RefKind.Verb or RefKind.Adverb or RefKind.Preposition or RefKind.Item or RefKind.Direction or RefKind.Location or RefKind.Variable or RefKind.Room or RefKind.Npc);
             if (MultiLine.Contains(prop.Name))
             {
                 var ed = new Editor { Text = (string?)value, AutoSize = EditorAutoSizeOption.TextChanges, MinimumHeightRequest = 70 };
@@ -227,7 +237,35 @@ public sealed class ObjectEditor : ContentView
         }
 
         if (type.IsClass && type.Namespace == typeof(Adventure).Namespace && value != null)
-            return new SectionView(Humanize(prop.Name), new ObjectEditor(value, ctx));
+        {
+            if (!prop.CanWrite || !Nullable(prop)) return new SectionView(Humanize(prop.Name), new ObjectEditor(value, ctx));
+            // Optional section (e.g. an item's NPC behaviour): can be removed again.
+            var remove = new Button { Text = $"Remove {Humanize(prop.Name)}", HorizontalOptions = LayoutOptions.Start, FontSize = 12 };
+            remove.Clicked += async (_, _) =>
+            {
+                if (!await ctx.PageProvider().DisplayAlertAsync("Remove", $"Remove the {Humanize(prop.Name).ToLowerInvariant()} settings?", "Remove", "Cancel")) return;
+                prop.SetValue(target, null);
+                Changed();
+                Build();
+            };
+            return new SectionView(SectionTitle(prop.Name), new VerticalStackLayout { Spacing = 8, Children = { new ObjectEditor(value, ctx), remove } });
+        }
+        if (type.IsClass && type.Namespace == typeof(Adventure).Namespace && value == null && prop.CanWrite && type.GetConstructor(Type.EmptyTypes) != null)
+        {
+            var add = new Button { Text = $"+ Add {Humanize(prop.Name)}", HorizontalOptions = LayoutOptions.Start };
+            add.Clicked += (_, _) =>
+            {
+                prop.SetValue(target, Activator.CreateInstance(type));
+                if (target is Item item && type == typeof(NpcBehaviour)) { item.IsCharacter = true; item.Portable = false; }
+                Changed();
+                Build();
+            };
+            return new SectionView(SectionTitle(prop.Name), new VerticalStackLayout
+            {
+                Spacing = 6,
+                Children = { new Label { Text = SectionHelp(prop.Name), FontSize = 12, Opacity = 0.7 }, add },
+            });
+        }
 
         return null;
     }

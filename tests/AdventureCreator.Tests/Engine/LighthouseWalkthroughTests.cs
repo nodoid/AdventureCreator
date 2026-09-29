@@ -29,7 +29,7 @@ public class LighthouseWalkthroughTests
             Assert.False(last.GameOver && !last.Won, "Lost unexpectedly:\n" + log);
         }
         Assert.True(last!.Won, log.ToString());
-        Assert.Equal(e.Adventure.ComputeMaxScore(), e.State.Score);
+        Assert.Equal(e.Adventure.ComputeMaxScore() - 2, e.State.Score); // befriending Skipper (2 points) is optional
     }
 
     [Fact]
@@ -80,5 +80,29 @@ public class LighthouseWalkthroughTests
         var second = e.Submit("hint").Text;
         Assert.NotEqual(first, second);
         Assert.Contains("1/3", first);
+    }
+
+    [Fact]
+    public void SkipperFollowsAfterABiscuit()
+    {
+        var e = new GameEngine(ExampleAdventures.Lighthouse(), randomSeed: 5);
+        e.Start();
+        e.Submit("n. e");
+        var dog = e.Adventure.FindItem("dog")!;
+        e.SetLoc(dog, "cottage");
+        e.Submit("take biscuit");
+        Assert.Contains("adoringly", e.Submit("give the biscuit to skipper").Text);
+        Assert.Contains("Skipper trots after you", e.Submit("w").Text);
+        Assert.Equal("path", e.Loc(dog));
+    }
+
+    [Fact]
+    public void GullCanBeShooedAway()
+    {
+        var e = new GameEngine(ExampleAdventures.Lighthouse(), randomSeed: 5);
+        e.Start();
+        var r = e.Submit("shoo the gull");
+        Assert.Contains("flies off", r.Text);
+        Assert.Equal("", e.Loc(e.Adventure.FindItem("gull")!));
     }
 }

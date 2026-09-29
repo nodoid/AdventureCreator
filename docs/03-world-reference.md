@@ -32,6 +32,8 @@ This chapter lists every property you can edit. Property names match the labels 
 | Legacy Table Semantics | off | PAWS/Quill/GAC behaviour (set by importers; see [chapter 7](07-importing.md#how-imported-games-behave)). |
 | Darkness Variable | — | If set, the room is dark while this variable is non-zero (Quill/PAWS flag 0). |
 | Exits Before Triggers | off | Movement is tried before BeforeCommand triggers (GAC behaviour). |
+| Player Health | 0 | Hit points. 0 = no health system. NPC attacks, traps and HurtPlayer reduce it; at 0 the player dies. See [chapter 10](10-npcs-and-events.md#combat-and-health). |
+| Death Message | "Your injuries are too much for you." | Printed when health runs out (an NPC's Kill Message takes precedence). |
 | Show Status Bar | on | Players show location / score / turns. |
 
 **Maximum score** (automatic) = puzzle Points + item Score On Take + room Score On First Visit + every positive AwardScore action in triggers, conversation topics, puzzle On Solved actions and command default actions. Awards that share a key are counted once.
@@ -89,6 +91,9 @@ The room editor's **Add return exits from destination rooms** button creates the
 | Weight | For Max Carried Weight. |
 | Score On Take | Points the first time it is taken. |
 | Is Character | A person or creature: can be talked to and given orders; cannot be taken. |
+| NPC behaviour | Optional (**+ Add NPC behaviour**): makes the character move, react, want things, steal, block exits, fight and obey orders. See [chapter 10](10-npcs-and-events.md). |
+| Damage | Makes the item a weapon: extra damage when the player attacks with it. |
+| Allows Water | While carried or worn, the player can enter flooded rooms (a boat, a diving suit). |
 | Plural | Grammar help ("some crates"): *them* refers to it. |
 | Picture id | Shown when the item is examined. |
 | Topics | Conversation (characters). |
@@ -140,6 +145,7 @@ Built-in pseudo-variables:
 | `@room` | position of the current room in the Rooms list (0 = first) | yes (moves the player) |
 | `@carried` | number of items held (not worn) | no |
 | `@maxscore` | maximum score | no |
+| `@health` | the player's health (when Player Health is on) | yes |
 
 ## Messages
 

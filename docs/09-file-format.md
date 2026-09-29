@@ -79,11 +79,22 @@ Their fields:
 
 ## Save games
 
-Saved positions are JSON snapshots of the game state:
+Each save is one file, `<name>.sav`. The autosave is `autosave.sav`. Each file contains a small JSON object with:
+* the save's name and the game's title
+* the date saved
+* the room name, score, maximum score and turns (shown in the Load list)
+* `State`: a JSON snapshot of the game state
+
+Saves from earlier versions, which contain only the state, are still accepted.
+
+The game state includes:
 * item locations and item states
 * variables and score
 * visited rooms and solved puzzles
 * fired and enabled triggers
 * changed descriptions and exits
+* NPC states (health, following, hostility, destinations)
+* player health, traps, flooded rooms and room flags
+* how often each random event has happened
 
-The Player stores them in its application-data folder (`Saves/<game title>/`). The console player stores them under the user's application-data folder (`AdventureCreator/Saves/<game title>/`).
+The Player stores them in its application-data folder (`Saves/<game title>/`). The Studio's Test Play uses `TestSaves/<game title>/`. The console player stores them under the user's application-data folder (`AdventureCreator/Saves/<game title>/`).

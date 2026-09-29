@@ -13,6 +13,8 @@ The **Watch** panel updates after every move. It shows:
 * solved puzzles
 * every trigger that has fired
 
+**Save position… / Load position…** keep named test saves (stored separately from players' saves), so you can jump back to a tricky point.
+
 **Run commands…** takes a semicolon-separated list (`n; take lamp; light it; e`) and plays it. This is handy for replaying a walkthrough after each change.
 
 **Previous / Next Command** (⌥⌘↑ / ⌥⌘↓) recall earlier commands.

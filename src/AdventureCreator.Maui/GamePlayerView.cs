@@ -20,6 +20,7 @@ public sealed class GamePlayerView : ContentView
     private readonly Grid shortcuts = new() { ColumnSpacing = 4, IsVisible = false };
     private readonly Grid root;
     private readonly List<string> history = new();
+    private readonly Button gameMenuButton;
     private int historyIndex;
     private readonly RowDefinition pictureRow = new(GridLength.Auto);
 
@@ -46,6 +47,9 @@ public sealed class GamePlayerView : ContentView
         set => shortcuts.IsVisible = value;
     }
 
+    /// <summary>Save the position automatically after every move so players can continue later (Player app).</summary>
+    public bool AutosaveEnabled { get; set; } = true;
+
     /// <summary>Maximum picture height as a fraction of the view height (0..1).</summary>
     public double PictureHeightFraction { get; set; } = 0.42;
 
@@ -64,9 +68,15 @@ public sealed class GamePlayerView : ContentView
 
         BuildShortcuts();
 
-        var status = new Grid { ColumnDefinitions = { new(GridLength.Star), new(GridLength.Auto) }, Padding = new Thickness(14, 6) };
+        var menu = new Button { Text = "☰", WidthRequest = 40, Padding = 0, FontSize = 16, BackgroundColor = Colors.Transparent, Margin = new Thickness(8, 0, 0, 0) };
+        SemanticProperties.SetDescription(menu, "Game menu: save, load, restart, undo, hint, sound");
+        ToolTipProperties.SetText(menu, "Save, load, restart…");
+        menu.Clicked += async (_, _) => await ShowGameMenuAsync();
+        gameMenuButton = menu;
+        var status = new Grid { ColumnDefinitions = { new(GridLength.Star), new(GridLength.Auto), new(GridLength.Auto) }, Padding = new Thickness(14, 6) };
         status.Add(statusRoom, 0);
         status.Add(statusScore, 1);
+        status.Add(menu, 2);
 
         root = new Grid
         {
@@ -114,6 +124,7 @@ public sealed class GamePlayerView : ContentView
         root.BackgroundColor = bg;
         statusRoom.TextColor = textColor;
         statusScore.TextColor = textColor.WithAlpha(0.8f);
+        gameMenuButton.TextColor = textColor;
         input.TextColor = textColor;
         input.PlaceholderColor = textColor.WithAlpha(0.45f);
         input.BackgroundColor = Theme.Shade(bg, 0.04f);
@@ -130,7 +141,7 @@ public sealed class GamePlayerView : ContentView
     public void Load(Adventure adventure, ISaveStorage? saves = null)
     {
         Audio.StopAll();
-        engine = new GameEngine(adventure);
+        engine = new GameEngine(adventure) { HostHandlesSaveDialogs = true };
         if (saves != null) engine.SaveStorage = saves;
         ApplyTheme(adventure.Settings);
         transcript.Children.Clear();
@@ -154,11 +165,109 @@ public sealed class GamePlayerView : ContentView
         }
         AddParagraph((engine.Adventure.Settings.Prompt ?? "> ") + text, TextStyle.Echo);
         await RenderAsync(engine.Submit(text));
+        if (AutosaveEnabled) engine.Autosave();
         TurnCompleted?.Invoke(this, EventArgs.Empty);
         input.Focus();
     }
 
     public void Stop() => Audio.StopAll();
+
+    // ------------------------------------------------------------------ saving and loading
+
+    private Page? HostPage
+    {
+        get
+        {
+            Element? e = this;
+            while (e != null && e is not Page) e = e.Parent;
+            return e as Page ?? Window?.Page;
+        }
+    }
+
+    /// <summary>Asks for a name and saves the current position.</summary>
+    public async Task ShowSaveDialogAsync()
+    {
+        if (engine == null || HostPage is not { } page) return;
+        if (engine.IsGameOver) { await page.DisplayAlertAsync("Save game", "The game is over – there's nothing to save.", "OK"); return; }
+        var suggestion = $"{engine.CurrentRoom?.Name} (turn {engine.State.Turns})";
+        var name = await page.DisplayPromptAsync("Save game", "Name this saved position:", "Save", "Cancel", initialValue: suggestion, maxLength: 60);
+        if (string.IsNullOrWhiteSpace(name)) return;
+        name = name.Replace("\"", "'").Trim();
+        if (engine.HasSave(name) && !await page.DisplayAlertAsync("Save game", $"Replace the saved game “{name}”?", "Replace", "Cancel")) return;
+        try
+        {
+            var save = engine.SaveToSlot(name);
+            AddParagraph($"Game saved as “{save.Name}”.", TextStyle.System);
+        }
+        catch (Exception ex)
+        {
+            await page.DisplayAlertAsync("Save failed", ex.Message, "OK");
+        }
+        await ScrollToEndAsync();
+    }
+
+    /// <summary>Lists saved positions (newest first) and restores the chosen one, or deletes saves.</summary>
+    public async Task ShowLoadDialogAsync()
+    {
+        if (engine == null || HostPage is not { } page) return;
+        var saves = engine.ListSaves();
+        if (saves.Count == 0) { await page.DisplayAlertAsync("Load game", "There are no saved games yet.", "OK"); return; }
+        const string deleteOption = "Delete a saved game…";
+        var labels = saves.Select(s => s.Summary).ToList();
+        var choice = await page.DisplayActionSheetAsync("Load game", "Cancel", null, labels.Append(deleteOption).ToArray());
+        if (choice == deleteOption)
+        {
+            var del = await page.DisplayActionSheetAsync("Delete which saved game?", "Cancel", null, labels.ToArray());
+            var victim = saves.FirstOrDefault(s => s.Summary == del);
+            if (victim != null && await page.DisplayAlertAsync("Delete", $"Delete “{victim.Name}”?", "Delete", "Cancel"))
+                engine.DeleteSave(victim.Name);
+            return;
+        }
+        var chosen = saves.FirstOrDefault(s => s.Summary == choice);
+        if (chosen == null) return;
+        Audio.StopAll();
+        await RenderAsync(engine.Submit($"restore \"{chosen.Name}\""));
+        TurnCompleted?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>If an autosave exists, offers to continue from it. Returns true if the player continued.</summary>
+    public async Task<bool> OfferContinueAsync()
+    {
+        if (engine == null || HostPage is not { } page || engine.ReadSave(GameEngine.AutosaveSlot) is not { Turns: > 0 } auto) return false;
+        if (!await page.DisplayAlertAsync("Continue?", $"Continue where you left off?\n{auto.RoomName}, turn {auto.Turns}, score {auto.Score}/{auto.MaxScore}", "Continue", "New game"))
+            return false;
+        transcript.Children.Clear();
+        currentLine = null;
+        await RenderAsync(engine.Submit("restore autosave"));
+        TurnCompleted?.Invoke(this, EventArgs.Empty);
+        return true;
+    }
+
+    /// <summary>The ☰ menu: essential game commands, for touch screens.</summary>
+    public async Task ShowGameMenuAsync()
+    {
+        if (engine == null || HostPage is not { } page) return;
+        var choice = await page.DisplayActionSheetAsync(engine.Adventure.Title, "Cancel", null,
+            "Save game…", "Load game…", "Undo last move", "Hint", "Restart", Audio.Muted ? "Sound on" : "Sound off");
+        switch (choice)
+        {
+            case "Save game…": await ShowSaveDialogAsync(); break;
+            case "Load game…": await ShowLoadDialogAsync(); break;
+            case "Undo last move": await SubmitAsync("undo"); break;
+            case "Hint": await SubmitAsync("hint"); break;
+            case "Restart":
+                if (await page.DisplayAlertAsync("Restart", "Start the game again from the beginning?", "Restart", "Cancel")) await SubmitAsync("restart");
+                break;
+            case "Sound on": Audio.Muted = false; break;
+            case "Sound off": Audio.Muted = true; Audio.StopAll(); break;
+        }
+    }
+
+    private async Task ScrollToEndAsync()
+    {
+        await Task.Yield();
+        await scroller.ScrollToAsync(0, Math.Max(0, transcript.Height), false);
+    }
 
     /// <summary>Puts the previous command from the history into the input box (menu shortcut ⌘↑ / Ctrl+↑).</summary>
     public void RecallPrevious()
@@ -223,6 +332,12 @@ public sealed class GamePlayerView : ContentView
                     case OutputKind.Status:
                         UpdateStatus(e.Text);
                         break;
+                    case OutputKind.SaveRequested:
+                        Dispatcher.Dispatch(async () => await ShowSaveDialogAsync());
+                        break;
+                    case OutputKind.RestoreRequested:
+                        Dispatcher.Dispatch(async () => await ShowLoadDialogAsync());
+                        break;
                     case OutputKind.GameOver:
                         AddParagraph("Type RESTART, RESTORE, UNDO or QUIT.", TextStyle.System);
                         break;
@@ -247,6 +362,7 @@ public sealed class GamePlayerView : ContentView
         var parts = (status ?? "").Split('|');
         statusRoom.Text = parts.Length > 0 ? parts[0] : "";
         statusScore.Text = parts.Length >= 4 ? $"Score {parts[1]}/{parts[2]}   Turns {parts[3]}" : "";
+        if (parts.Length >= 6) statusScore.Text = $"Health {parts[4]}/{parts[5]}   " + statusScore.Text;
         if (engine != null && statusRoom.Parent is View bar) bar.IsVisible = engine.Adventure.Settings.ShowStatusBar;
     }
 

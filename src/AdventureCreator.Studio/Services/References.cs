@@ -4,7 +4,7 @@ using AdventureCreator.Core.Parsing;
 
 namespace AdventureCreator.Studio.Services;
 
-public enum RefKind { None, Room, Item, Location, Variable, Puzzle, Trigger, Picture, Sound, Verb, Direction, Adverb, Preposition, Message }
+public enum RefKind { None, Room, Item, Location, Variable, Puzzle, Trigger, Picture, Sound, Verb, Direction, Adverb, Preposition, Message, Npc, RandomEvent, NpcProperty, RoomFlag }
 
 /// <summary>Works out what kind of id a field holds, and lists the choices for pick lists.</summary>
 public static class References
@@ -23,6 +23,9 @@ public static class References
                         ConditionType.VarEquals or ConditionType.VarGreater or ConditionType.VarLess or ConditionType.VarEqualsVar => RefKind.Variable,
                         ConditionType.PuzzleSolved => RefKind.Puzzle,
                         ConditionType.TriggerFired => RefKind.Trigger,
+                        ConditionType.NpcFollowing or ConditionType.NpcHostile or ConditionType.NpcDefeated or ConditionType.NpcIn or ConditionType.NpcHasItem => RefKind.Npc,
+                        ConditionType.RoomHasFlag or ConditionType.RoomFlooded or ConditionType.RoomTrapped => RefKind.Room,
+                        ConditionType.EventHappened => RefKind.RandomEvent,
                         ConditionType.AdverbUsed => RefKind.Adverb,
                         ConditionType.PrepositionIs => RefKind.Preposition,
                         _ => RefKind.None,
@@ -33,6 +36,9 @@ public static class References
                         ConditionType.ItemIn => RefKind.Location,
                         ConditionType.VarEqualsVar => RefKind.Variable,
                         ConditionType.ExitOpen => RefKind.Direction,
+                        ConditionType.NpcIn => RefKind.Location,
+                        ConditionType.NpcHasItem => RefKind.Item,
+                        ConditionType.RoomHasFlag => RefKind.RoomFlag,
                         _ => RefKind.None,
                     };
                 break;
@@ -49,6 +55,9 @@ public static class References
                         ActionType.PlaySound => RefKind.Sound,
                         ActionType.ShowPicture => RefKind.Picture,
                         ActionType.EnableTrigger or ActionType.DisableTrigger or ActionType.RunTrigger => RefKind.Trigger,
+                        ActionType.SetNpc or ActionType.NpcGoTo or ActionType.NpcSay => RefKind.Npc,
+                        ActionType.SetRoomFlag or ActionType.Flood or ActionType.SetTrap or ActionType.ClearTrap => RefKind.Room,
+                        ActionType.RunRandomEvent => RefKind.RandomEvent,
                         _ => RefKind.None,
                     };
                 if (property == nameof(GameAction.B))
@@ -58,6 +67,9 @@ public static class References
                         ActionType.SwapItems => RefKind.Item,
                         ActionType.CopyVar => RefKind.Variable,
                         ActionType.SetExit => RefKind.Direction,
+                        ActionType.SetNpc => RefKind.NpcProperty,
+                        ActionType.NpcGoTo => RefKind.Room,
+                        ActionType.SetRoomFlag => RefKind.RoomFlag,
                         _ => RefKind.None,
                     };
                 break;
@@ -69,7 +81,13 @@ public static class References
                     nameof(Trigger.RoomId) => RefKind.Room,
                     nameof(Trigger.Adverb) => RefKind.Adverb,
                     nameof(Trigger.Preposition) => RefKind.Preposition,
-                    nameof(Trigger.Subject) => t.Event == TriggerEvent.PuzzleSolved ? RefKind.Puzzle : RefKind.Item,
+                    nameof(Trigger.Subject) => t.Event switch
+                    {
+                        TriggerEvent.PuzzleSolved => RefKind.Puzzle,
+                        TriggerEvent.NpcArrives or TriggerEvent.NpcLeaves or TriggerEvent.NpcDefeated or TriggerEvent.ItemGiven or TriggerEvent.PlayerHurt => RefKind.Npc,
+                        TriggerEvent.BeforeCommand or TriggerEvent.AfterCommand => RefKind.Npc,
+                        _ => RefKind.Item,
+                    },
                     _ => RefKind.None,
                 };
             case Exit:
@@ -108,17 +126,39 @@ public static class References
         switch (kind)
         {
             case RefKind.Room:
+                list.Add((Locations.Here, "The player's current room (@here)"));
+                list.Add((Locations.EventRoom, "The random event's room (@eventroom)"));
+                list.Add((Locations.RandomRoom, "A random room (@randomroom)"));
                 list.AddRange(a.Rooms.Select(r => (r.Id, $"{r.Name} ({r.Id})")));
+                break;
+            case RefKind.Npc:
+                list.Add(("*", "* (any character)"));
+                list.Add(("$npc", "The NPC involved in the event ($npc)"));
+                list.AddRange(a.Items.Where(i => i.IsCharacter).Select(i => (i.Id, $"{i.Name} ({i.Id}){(i.Npc == null ? "" : " – NPC")}")));
+                break;
+            case RefKind.RandomEvent:
+                list.AddRange(a.RandomEvents.Select(e => (e.Id, $"{e.Name} ({e.Id})")));
+                break;
+            case RefKind.NpcProperty:
+                list.AddRange(new[] { ("Movement", "Movement (Text = Stationary/Wander/Patrol/Follow/Seek/Flee)"), ("Hostile", "Hostile (N = 1/0)"),
+                    ("Following", "Following the player (N = 1/0)"), ("Blocking", "Blocking exits (N = 1/0)"), ("Active", "Active (N = 1/0)"), ("Health", "Health (N)") });
+                break;
+            case RefKind.RoomFlag:
+                list.Add(("flooded", "flooded (blocks entry without a boat; same as Flood)"));
+                list.AddRange(a.Triggers.SelectMany(t => t.Actions).Where(x => x.Type == ActionType.SetRoomFlag && !string.IsNullOrEmpty(x.B)).Select(x => x.B!).Distinct().Select(f => (f, f)));
                 break;
             case RefKind.Item:
                 list.Add(("$noun1", "The player's first object ($noun1)"));
                 list.Add(("$noun2", "The player's second object ($noun2)"));
+                list.Add(("$randomitem", "A random portable item in the (event) room"));
+                list.Add(("$randomcarried", "A random item the player carries"));
                 list.AddRange(a.Items.Select(i => (i.Id, $"{i.Name} ({i.Id})")));
                 break;
             case RefKind.Location:
                 list.Add((Locations.Carried, "Carried by the player"));
                 list.Add((Locations.Worn, "Worn by the player"));
                 list.Add((Locations.Here, "The player's current room"));
+                list.Add((Locations.EventRoom, "The random event's room (@eventroom)"));
                 list.Add(("", "Nowhere (not in the game)"));
                 list.AddRange(a.Rooms.Select(r => (r.Id, $"Room: {r.Name} ({r.Id})")));
                 list.AddRange(a.Items.Where(i => i.Container || i.Supporter).Select(i => (i.Id, $"{(i.Supporter ? "On" : "In")}: {i.Name} ({i.Id})")));
@@ -129,6 +169,7 @@ public static class References
                 list.Add(("@turns", "@turns (turns taken)"));
                 list.Add(("@room", "@room (index of current room)"));
                 list.Add(("@carried", "@carried (number of items held)"));
+                list.Add(("@health", "@health (player health)"));
                 break;
             case RefKind.Puzzle:
                 list.AddRange(a.Puzzles.Select(p => (p.Id, $"{p.Name} ({p.Id})")));
@@ -180,6 +221,13 @@ public static class References
             ConditionType.ExitOpen => "A = room, B = direction",
             ConditionType.AdverbUsed or ConditionType.AdjectiveUsed or ConditionType.WordUsed or ConditionType.PrepositionIs => "A = word(s), separate alternatives with |",
             ConditionType.Always or ConditionType.IsDark => "no arguments",
+            ConditionType.NpcFollowing or ConditionType.NpcHostile or ConditionType.NpcDefeated => "A = NPC",
+            ConditionType.NpcIn => "A = NPC, B = room",
+            ConditionType.NpcHasItem => "A = NPC, B = item",
+            ConditionType.HealthAtLeast => "N = health",
+            ConditionType.RoomHasFlag => "A = room (@here, @eventroom…), B = flag name",
+            ConditionType.RoomFlooded or ConditionType.RoomTrapped => "A = room (@here, @eventroom…)",
+            ConditionType.EventHappened => "A = random event",
             _ => "A = id",
         },
         GameAction a => a.Type switch
@@ -199,6 +247,17 @@ public static class References
             ActionType.SetRoomDescription or ActionType.SetItemDescription => "A = id, Text = new description",
             ActionType.GoTo => "A = room, Text = optional travel message",
             ActionType.RunTrigger => "A = subroutine trigger id or group name",
+            ActionType.CreateItem => "A = item, B = optional location (default: here, or the event's room)",
+            ActionType.SetNpc => "A = NPC, B = Movement/Hostile/Following/Blocking/Active/Health, N = value, Text = movement mode",
+            ActionType.NpcGoTo => "A = NPC, B = room – walks there through exits, one room per turn",
+            ActionType.NpcSay => "A = NPC, Text = what it says (only heard if the player is there)",
+            ActionType.HurtPlayer => "N = damage, Text = message",
+            ActionType.HealPlayer => "N = amount (0 = full), Text = message",
+            ActionType.SetRoomFlag => "A = room, B = flag, N = 1 on / 0 off",
+            ActionType.Flood => "A = room, N = 1 flood / 0 drain",
+            ActionType.SetTrap => "A = room, N = damage (-1 = deadly), Text = when sprung, B = when found",
+            ActionType.ClearTrap => "A = room",
+            ActionType.RunRandomEvent => "A = random event (happens now if its conditions allow)",
             _ => "A = id",
         },
         _ => "",

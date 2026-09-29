@@ -109,7 +109,7 @@ public static partial class ExampleAdventures
                        Description = "A heavy iron key, big enough to open a church." },
             new Item { Id = "table", Name = "table", Nouns = { "table" }, Adjectives = { "scrubbed", "wooden", "kitchen" }, Location = "cottage", Portable = false, Scenery = true, Supporter = true,
                        Description = "A scrubbed pine kitchen table." },
-            new Item { Id = "oilcan", Name = "oil can", Nouns = { "can", "oil can", "oil", "paraffin" }, Adjectives = { "oil", "paraffin", "tin", "heavy" }, Location = "table", Weight = 3,
+            new Item { Id = "oilcan", Name = "oil can", Article = "an", Nouns = { "can", "oil can", "oil", "paraffin" }, Adjectives = { "oil", "paraffin", "tin", "heavy" }, Location = "table", Weight = 3,
                        Description = "A heavy tin can, full of paraffin for the lamp." },
             new Item { Id = "cupboard", Name = "cupboard", Nouns = { "cupboard", "cabinet" }, Adjectives = { "old", "wooden", "corner" }, Location = "cottage", Portable = false, Scenery = true,
                        Container = true, Openable = true, IsOpen = false, Description = "A tall old cupboard with a sticky door." },
@@ -145,6 +145,65 @@ public static partial class ExampleAdventures
                        Description = "An enormous Fresnel lens of polished prisms – or it would be polished, if it weren't coated in soot." },
             new Item { Id = "ship", Name = "ship", Nouns = { "ship", "lights", "vessel" }, Adjectives = { "distant" }, Location = "gallery", Portable = false, Scenery = true,
                        Description = "A coaster, riding low in the water, running before the storm. She's heading straight for the rocks." },
+        });
+
+        // ------------------------------------------------------------ NPCs
+        a.Items.Add(new Item { Id = "biscuit", Name = "dog biscuit", Nouns = { "biscuit", "treat" }, Adjectives = { "dog", "bone-shaped" }, Location = "table",
+                               Description = "A bone-shaped dog biscuit. Not for human consumption." });
+        a.Items.Add(new Item
+        {
+            Id = "dog", Name = "Skipper", Article = "", Nouns = { "skipper", "dog", "collie", "sheepdog" }, Adjectives = { "shaggy", "black", "white" },
+            Location = "cottage", IsCharacter = true, Portable = false,
+            Description = "Tom's shaggy black-and-white sheepdog. He watches you with great interest – or perhaps he's watching the biscuit tin.",
+            Npc = new NpcBehaviour
+            {
+                Movement = NpcMovement.Wander, MoveChance = 35, AllowedRooms = { "cottage", "path", "beach" },
+                GreetingMessage = "A shaggy sheepdog bounds up and sniffs your boots enthusiastically. \"That's Skipper,\" calls Tom. \"He'll follow anyone with a biscuit.\"",
+                IdleMessages = { "Skipper scratches behind one ear.", "Skipper looks at you hopefully.", "Skipper barks at the wind.", "Skipper shakes himself, spraying you with water." },
+                IdleChance = 25,
+                Wants = { "biscuit" }, FollowsWhenGiven = true,
+                AcceptMessage = "Skipper crunches the biscuit in two bites and gazes at you adoringly. It looks like you have a new friend.",
+                RefuseMessage = "Skipper sniffs {the noun1} and looks disappointed.",
+                FollowMessage = "Skipper trots after you.",
+                OnAccept = { new GameAction(ActionType.AwardScore, "dog", 2) },
+            },
+        });
+        a.Items.Add(new Item
+        {
+            Id = "gull", Name = "herring gull", Nouns = { "gull", "seagull", "bird" }, Adjectives = { "herring", "large", "greedy" },
+            Location = "beach", IsCharacter = true, Portable = false,
+            Description = "A large, greedy herring gull with a cold yellow eye. It's very interested in anything shiny.",
+            Npc = new NpcBehaviour
+            {
+                Movement = NpcMovement.Wander, MoveChance = 20, AllowedRooms = { "beach", "path" },
+                ArrivalMessage = "A herring gull lands nearby with a raucous cry.", DepartureMessage = "The gull takes off, wheeling away {direction}.",
+                IdleMessages = { "The gull eyes your pockets.", "The gull screams at nothing in particular." }, IdleChance = 20,
+                StealChance = 25, StealsItems = { "shell" }, StealMessage = "The gull swoops and snatches {the noun1} right out of your hand!",
+                Health = 1, HitMessage = "You flap your arms and shout at the gull.",
+                DefeatMessage = "The gull shrieks and flies off over the waves, dropping everything it had.", RemoveWhenDefeated = true,
+            },
+        });
+        a.Vocabulary.Replacements["shoo"] = "attack";
+        a.Vocabulary.Replacements["scare"] = "attack";
+
+        // ------------------------------------------------------------ random events
+        a.RandomEvents.Add(new RandomEvent
+        {
+            Id = "ev_lightning", Name = "Lightning", Where = EventLocation.Global, Chance = 6, Cooldown = 8,
+            Conditions = { new Condition(ConditionType.VarEquals, "lit", 0) },
+            WitnessMessage = "Lightning forks across the sky, and for an instant the whole coast is lit up as bright as day.",
+        });
+        a.RandomEvents.Add(new RandomEvent
+        {
+            Id = "ev_wave", Name = "Rogue wave floods the beach", Where = EventLocation.Anywhere, Rooms = { "beach" }, Chance = 10, EarliestTurn = 15, MaxTimes = 1,
+            WitnessMessage = "A huge wave comes roaring up the shingle!", DistantMessage = "Far below, a great wave booms against the cliffs.",
+            Actions = { new GameAction(ActionType.Flood, Locations.EventRoom, 1) },
+        });
+        a.RandomEvents.Add(new RandomEvent
+        {
+            Id = "ev_ebb", Name = "The water drains from the beach", Where = EventLocation.Anywhere, Rooms = { "beach" }, Chance = 20, Cooldown = 3,
+            Conditions = { new Condition(ConditionType.RoomFlooded, Locations.EventRoom) },
+            DistantMessage = "", Actions = { new GameAction(ActionType.Flood, Locations.EventRoom, 0) },
         });
 
         a.Variables.Add(new Variable { Name = "oil", InitialValue = 0, Description = "1 when the great lamp has been filled." });
