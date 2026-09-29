@@ -6,8 +6,8 @@ using AdventureCreator.Core.Samples;
 // AdventureCreator console player.
 //   - Run with no arguments inside an exported game: plays the game appended to the executable.
 //   - adventure-player <game.adventure|game.json>     play a file
-//   - adventure-player --example                       play the built-in example
-//   - adventure-player --write-example <path>          save the example game package
+//   - adventure-player --example | --lighthouse        play a built-in example (Genesis / The Lighthouse)
+//   - adventure-player --write-example <path> [lighthouse]  save an example game package
 //   - adventure-player --parse <game> "command"        show how the parser understands a command
 //   - adventure-player --script <game> <file>          run commands from a file (one per line)
 
@@ -18,13 +18,13 @@ try
 {
     if (argList.Count >= 2 && argList[0] == "--write-example")
     {
-        AdventurePackage.Save(ExampleAdventures.Lighthouse(), argList[1]);
+        AdventurePackage.Save(argList.Count > 2 && argList[2] == "lighthouse" ? ExampleAdventures.Lighthouse() : ExampleAdventures.Genesis(), argList[1]);
         Console.WriteLine($"Wrote {argList[1]}");
         return 0;
     }
     if (argList.Count >= 3 && argList[0] == "--parse")
     {
-        var adv = argList[1] == "example" ? ExampleAdventures.Lighthouse() : AdventurePackage.Load(argList[1]);
+        var adv = argList[1] == "example" ? ExampleAdventures.Genesis() : argList[1] == "lighthouse" ? ExampleAdventures.Lighthouse() : AdventurePackage.Load(argList[1]);
         var engine = new GameEngine(adv);
         var outcome = engine.Parser.Parse(argList[2]);
         foreach (var c in outcome.Commands) Console.WriteLine(c + (c.Lenient ? "  (lenient: " + c.GrammarError + ")" : "") + "  grammar: " + c.Grammar);
@@ -40,7 +40,8 @@ try
         argList = new List<string> { argList[1] };
     }
 
-    if (argList.Count > 0 && argList[0] is "--example" or "example") game = ExampleAdventures.Lighthouse();
+    if (argList.Count > 0 && argList[0] is "--example" or "example") game = ExampleAdventures.Genesis();
+    else if (argList.Count > 0 && argList[0] is "--lighthouse" or "lighthouse") game = ExampleAdventures.Lighthouse();
     else if (argList.Count > 0) game = AdventurePackage.Load(argList[0]);
     else game = StandaloneExporter.LocateEmbeddedGame();
 

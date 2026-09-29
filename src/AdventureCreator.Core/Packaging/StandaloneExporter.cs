@@ -159,7 +159,14 @@ public static class StandaloneExporter
         try
         {
             if (!File.Exists(plist)) return;
+            // Built bundles usually contain binary plists: convert to XML first (macOS only).
+            if (!File.ReadAllText(plist).TrimStart().StartsWith("<?xml", StringComparison.Ordinal))
+            {
+                if (!(OperatingSystem.IsMacOS() || OperatingSystem.IsMacCatalyst())) return;
+                RunQuiet("plutil", $"-convert xml1 \"{plist}\"");
+            }
             var text = File.ReadAllText(plist);
+            if (!text.TrimStart().StartsWith("<?xml", StringComparison.Ordinal)) return;
             text = ReplacePlistValue(text, "CFBundleDisplayName", title);
             text = ReplacePlistValue(text, "CFBundleName", title.Length > 15 ? title[..15] : title);
             File.WriteAllText(plist, text);

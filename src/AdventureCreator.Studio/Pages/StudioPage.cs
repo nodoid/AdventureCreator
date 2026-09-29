@@ -864,6 +864,14 @@ public sealed class StudioPage : ContentPage
         foreach (var r in RecentFiles.All) recent.Add(Item(Path.GetFileName(r), () => OpenAsync(r)));
         if (recent.Count == 0) recent.Add(new MenuFlyoutItem { Text = "(none)", IsEnabled = false });
         file.Add(recent);
+#if DEBUG
+        // Fan adventure based on BBC characters: available in development builds only, never in store releases.
+        file.Add(Item("Open Example: Genesis (Doctor Who fan adventure)", async () =>
+        {
+            if (!await ConfirmDiscardAsync()) return;
+            SetDocument(new StudioDocument(ExampleAdventures.Genesis()));
+        }));
+#endif
         file.Add(Item("Open Example: The Lighthouse", async () =>
         {
             if (!await ConfirmDiscardAsync()) return;

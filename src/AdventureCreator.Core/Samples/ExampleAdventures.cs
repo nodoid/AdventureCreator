@@ -7,7 +7,7 @@ namespace AdventureCreator.Core.Samples;
 /// light sources, characters with conversation topics, puzzles with hints and scoring, command/room/timer triggers,
 /// adverb-sensitive puzzles, adjectives, custom verbs with their own grammar, vector pictures and audio.
 /// </summary>
-public static class ExampleAdventures
+public static partial class ExampleAdventures
 {
     public static Adventure Lighthouse()
     {

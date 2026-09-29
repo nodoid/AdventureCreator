@@ -56,9 +56,14 @@ public sealed class Adventure
     {
         if (Settings.MaxScore > 0) return Settings.MaxScore;
         int total = Puzzles.Sum(p => Math.Max(0, p.Points)) + Items.Sum(i => Math.Max(0, i.ScoreOnTake)) + Rooms.Sum(r => Math.Max(0, r.ScoreOnFirstVisit));
-        foreach (var t in Triggers)
-            foreach (var a in t.Actions)
-                if (a.Type == ActionType.AwardScore && a.N > 0) total += a.N;
+        // Keyed awards are only given once, so count each key once; unkeyed ones once per place they appear.
+        var keys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var actions = Triggers.SelectMany(t => t.Actions)
+            .Concat(Items.SelectMany(i => i.Topics).SelectMany(t => t.Actions))
+            .Concat(Puzzles.SelectMany(p => p.OnSolved))
+            .Concat(Vocabulary.Verbs.SelectMany(v => v.DefaultActions));
+        foreach (var a in actions)
+            if (a.Type == ActionType.AwardScore && a.N > 0 && (string.IsNullOrEmpty(a.A) || keys.Add(a.A))) total += a.N;
         return total;
     }
 

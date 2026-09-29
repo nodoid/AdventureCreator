@@ -12,6 +12,11 @@ namespace AdventureCreator.Player;
 /// </summary>
 public sealed class PlayerPage : ContentPage
 {
+#if DEBUG
+	private const bool IsDevelopmentBuild = true;
+#else
+	private const bool IsDevelopmentBuild = false;
+#endif
 	private readonly GamePlayerView player = new();
 	private readonly VerticalStackLayout chooser;
 	private bool loaded;
@@ -28,8 +33,11 @@ public sealed class PlayerPage : ContentPage
 
 		var open = new Button { Text = "Open a game…" };
 		open.Clicked += async (_, _) => await OpenGameAsync();
-		var example = new Button { Text = "Play “The Lighthouse” (example)" };
-		example.Clicked += (_, _) => Play(ExampleAdventures.Lighthouse());
+		// The Doctor Who fan adventure is for development builds only, never store releases.
+		var example = new Button { Text = "Play “Genesis” (example)", IsVisible = IsDevelopmentBuild };
+		example.Clicked += (_, _) => Play(ExampleAdventures.Genesis());
+		var example2 = new Button { Text = "Play “The Lighthouse” (example)" };
+		example2.Clicked += (_, _) => Play(ExampleAdventures.Lighthouse());
 		chooser = new VerticalStackLayout
 		{
 			Spacing = 16,
@@ -43,6 +51,7 @@ public sealed class PlayerPage : ContentPage
 				new Label { Text = "Play text and graphic adventures made with Adventure Creator Studio.", TextColor = Theme.Text, HorizontalTextAlignment = TextAlignment.Center },
 				open,
 				example,
+				example2,
 			},
 		};
 
