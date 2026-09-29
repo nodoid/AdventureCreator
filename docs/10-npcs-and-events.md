@@ -133,6 +133,24 @@ For all of these, Subject = the NPC.
 * **Skipper**, Tom's dog, wanders the cottage, path and beach. Give him the dog biscuit (on the cottage table) and he follows you, even up the lighthouse stairs.
 * A **herring gull** wanders the beach and path, and tries to steal the conch shell. *Shoo the gull* (an attack with Health 1 and friendly messages) sends it flying off, dropping what it took.
 
+### Example: Genesis (development builds)
+
+| Character | How it works |
+|---|---|
+| **Harry Sullivan** | Sits dazed in the trench. *Talk to Harry* and he follows you (a topic action sets Following), even through the gas. He obeys orders: *Harry, wait*, *Harry, follow me*. |
+| **Sarah** | When you free her, she **walks** back to No Man's Land (NpcGoTo), room by room through the bunker's exits: cell block, corridor, entrance, trench. You can only use the Time Ring once she's there, and the reunion plays whichever of you arrives second. |
+| **Nyder** | Patrols between his office and the central laboratory every few turns, watching you suspiciously. |
+| **The Dalek** | Destroying Davros's tapes wakes the travel machine. It hunts you (Seek, one room every two turns) and fires at you. Its **Allowed Rooms** leave out the cell block, so, true to 1975, it can't follow you down the stairs. |
+
+Random events in Genesis:
+* Thal shells land in No Man's Land and the trench; they hurt you if you're there.
+* Sappers lay mines (traps) where you aren't.
+* The corridor loses power (darkness) and gets it back later.
+* Loudspeaker announcements.
+* Once Ronson has helped you, Nyder's men may arrest him while you're elsewhere.
+
+Player health is 10. A unit test plays the walkthrough with 100 different random seeds, and every one must win.
+
 ---
 
 ## Random events

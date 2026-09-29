@@ -31,6 +31,8 @@ public static partial class ExampleAdventures
             IntroSoundId = "g_demat",
         };
         a.Settings.MaxCarriedItems = 6;
+        a.Settings.PlayerHealth = 10;
+        a.Settings.DeathMessage = "Your strength gives out. Skaro has claimed another victim.";
         a.Settings.BackgroundColor = "#F4F4EF";
         a.Settings.TextColor = "#1E2320";
         a.Messages[Engine.Msg.CantGo] = "Barbed wire, rubble and craters block the way.";
@@ -207,6 +209,14 @@ public static partial class ExampleAdventures
                        Openable = true, IsOpen = false, Lockable = true, IsLocked = true, KeyItemId = "keycard",
                        Description = "A heavy barred door with a magnetic lock. Through the bars you glimpse someone sitting on a bench." },
             new Item { Id = "sarah", Name = "Sarah", Article = "", Nouns = { "sarah", "sarah jane", "friend", "companion", "journalist" }, Adjectives = { "brave" }, Location = "cell", IsCharacter = true, Portable = false,
+                       Npc = new NpcBehaviour
+                       {
+                           OpensDoors = true,
+                           DepartureMessage = "Sarah hurries off, heading {direction}.",
+                           ArrivalMessage = "Sarah comes hurrying in from the {direction}.",
+                           IdleMessages = { "Sarah shivers and pulls her coat tighter.", "Sarah keeps glancing towards the mist.", "\"Come on,\" says Sarah. \"Let's get out of this horrible place.\"" },
+                           IdleChance = 20,
+                       },
                        Description = "Your friend Sarah – muddy, furious and very glad to see you.",
                        RoomDescription = "Sarah is here.",
                        Topics =
@@ -232,6 +242,57 @@ public static partial class ExampleAdventures
                            new Topic { Keywords = { "thals", "thal", "war" }, Response = "\"The war has been a useful teacher. It has shown me what a species must be to survive.\"" },
                            new Topic { Keywords = { "tapes", "records" }, Response = "\"My life's work,\" he says, and for the first time his voice holds something like warmth. \"Irreplaceable.\"" },
                            new Topic { Keywords = { "hello", "talk", "doctor", "you", "me" }, Response = "\"You are not a Kaled, nor a Thal. How interesting. I have many questions for you... in time.\"" },
+                       } },
+            new Item { Id = "harry", Name = "Harry", Article = "", Nouns = { "harry", "harry sullivan", "sullivan", "surgeon", "lieutenant" }, Adjectives = { "dazed", "muddy" },
+                       Location = "trench", IsCharacter = true, Portable = false,
+                       Description = "Surgeon-Lieutenant Harry Sullivan, Royal Navy – rather muddier than regulations allow, and looking thoroughly bewildered.",
+                       RoomDescription = "Harry Sullivan is sitting on an ammunition box, rubbing his head.",
+                       Topics =
+                       {
+                           new Topic { Keywords = { "hello", "talk", "harry", "come", "follow" },
+                                       Response = "\"Doctor! Thank heavens. One minute we were in that police box of yours, the next – this.\" Harry scrambles to his feet. \"Lead on, old chap. I'll stick with you.\"",
+                                       Actions = { new GameAction(ActionType.SetNpc, "harry", 1, "Following") } },
+                           new Topic { Keywords = { "sarah" }, Response = "\"No sign of her, I'm afraid. I say, you don't think those chaps in black have got her?\"" },
+                           new Topic { Keywords = { "gas", "mask" }, Response = "\"Nasty stuff. I've got my own mask, don't worry about me.\"" },
+                           new Topic { Keywords = { "daleks", "davros", "kaleds" }, Response = "\"Never heard of 'em. Should I have?\"" },
+                       },
+                       Npc = new NpcBehaviour
+                       {
+                           ObeysOrders = true,
+                           FollowMessage = "Harry follows close behind.",
+                           ArrivalMessage = "Harry catches up with you, puffing.",
+                           ObeyMessage = "\"Right-ho,\" says Harry.",
+                           IdleMessages = { "Harry mutters something about the Navy never covering this sort of thing.", "\"I say,\" says Harry, \"cheerful sort of place, isn't it?\"", "Harry peers around warily." },
+                           IdleChance = 15,
+                       } },
+            new Item { Id = "nyder", Name = "Nyder", Article = "", Nouns = { "nyder", "officer", "security chief" }, Adjectives = { "cold", "black-uniformed" },
+                       Location = "office", IsCharacter = true, Portable = false,
+                       Description = "Davros's chief of security: a thin, cold-eyed man in a black uniform with an iron cross at his throat. He misses nothing.",
+                       Topics =
+                       {
+                           new Topic { Keywords = { "hello", "talk", "davros" }, Response = "\"The Chief Scientist is not to be disturbed,\" says Nyder. \"Whoever you are.\"" },
+                           new Topic { Keywords = { "ronson", "traitor" }, Response = "Nyder's eyes narrow. \"Ronson? What do you know about Ronson?\"" },
+                       },
+                       Npc = new NpcBehaviour
+                       {
+                           Movement = NpcMovement.Patrol, Route = { "office", "davroslab" }, RouteLoops = false, MoveEvery = 3, MoveChance = 100,
+                           ArrivalMessage = "Nyder strides in from the {direction}, glancing sharply at you.",
+                           DepartureMessage = "Nyder marches out, heading {direction}.",
+                           IdleMessages = { "Nyder watches you with cold suspicion.", "Nyder makes a note in a small black book." },
+                           IdleChance = 25,
+                       } },
+            new Item { Id = "dalek", Name = "Dalek", Nouns = { "dalek", "machine", "creature" }, Adjectives = { "armed", "bronze", "living" },
+                       Location = "", IsCharacter = true, Portable = false,
+                       Description = "The travel machine – no longer empty. Its eyestalk tracks your every move and its gun-stick twitches. Its only weakness: it glides on a flat base, and can't manage stairs.",
+                       Npc = new NpcBehaviour
+                       {
+                           Movement = NpcMovement.Seek, MoveChance = 100, MoveEvery = 2, Hostile = true, AttackChance = 40, Damage = 2,
+                           AllowedRooms = { "davroslab", "corridor", "lab", "office", "incubator", "entrance" },
+                           ArrivalMessage = "A Dalek glides in from the {direction}, eyestalk swivelling.",
+                           DepartureMessage = "The Dalek glides away {direction}.",
+                           AttackMessage = "\"EXTERMINATE!\" A searing bolt from the Dalek's gun-stick grazes you.",
+                           KillMessage = "\"EXTERMINATE! EXTERMINATE!\" The world turns to negative, and then to nothing.",
+                           IdleMessages = { "The Dalek's dome lights flash. \"YOU WILL BE EXTERMINATED!\"" }, IdleChance = 30,
                        } },
             new Item { Id = "machine", Name = "travel machine", Nouns = { "machine", "travel machine", "casing", "dalek", "mark", "prototype" }, Adjectives = { "travel", "metal", "squat", "bronze" },
                        Location = "davroslab", Portable = false, Scenery = true,
@@ -265,6 +326,7 @@ public static partial class ExampleAdventures
             new Variable { Name = "planted", Description = "1 once the charges are planted." },
             new Variable { Name = "hesitated", Description = "1 after the first time you hold the wires." },
             new Variable { Name = "boom", Description = "1 once the incubator room is destroyed." },
+            new Variable { Name = "reunited", Description = "1 once you and Sarah meet again in No Man's Land." },
         });
 
         // ------------------------------------------------------------ custom commands
@@ -384,9 +446,9 @@ public static partial class ExampleAdventures
             {
                 GameAction.Say("Sarah leaps up from the bench. \"I knew you'd come! Mind you, you took your time.\" She squeezes your arm. " +
                                "\"I heard the guards talking – Davros is going to finish his creatures any day now. You do what you have to. " +
-                               "I'll get out the way we came in and wait in No Man's Land.\" She hurries away up the stairs."),
+                               "I'll get out the way we came in and wait in No Man's Land.\""),
                 new GameAction(ActionType.SetVar, "sarah", 1),
-                new GameAction(ActionType.MoveItem, "sarah", b: "wasteland"),
+                new GameAction(ActionType.NpcGoTo, "sarah", b: "wasteland"),
             },
         });
 
@@ -402,6 +464,9 @@ public static partial class ExampleAdventures
                 new GameAction(ActionType.PlaySound, "g_siren"),
                 new GameAction(ActionType.SetVar, "tapesGone", 1),
                 new GameAction(ActionType.SetItemDescription, "tapes", text: "Tangled heaps of ruined tape, spilling from an empty data bank."),
+                GameAction.Say("Davros's withered hand stabs at a switch. Beside him, the travel machine's eyestalk glows blue. It lifts, turns – and a grating voice fills the laboratory: \"EX-TER-MIN-ATE!\"\n\n(Run! And remember: it can't follow you down stairs.)"),
+                new GameAction(ActionType.DestroyItem, "machine"),
+                new GameAction(ActionType.MoveItem, "dalek", b: "davroslab"),
             },
         });
         a.Triggers.Add(new Trigger
@@ -482,6 +547,7 @@ public static partial class ExampleAdventures
                 new Condition(ConditionType.VarEquals, "boom", 1),
                 new Condition(ConditionType.VarEquals, "tapesGone", 1),
                 new Condition(ConditionType.VarEquals, "sarah", 1),
+                new Condition(ConditionType.NpcIn, "sarah", b: "wasteland"),
             },
             Actions =
             {
@@ -498,13 +564,86 @@ public static partial class ExampleAdventures
             Id = Id(), Name = "Not yet", Verb = "turn|use|touch|rub|switchon|push|pull", Noun1 = "ring",
             Actions = { GameAction.Say("The ring stays cold. Your mission isn't finished – and you won't leave without Sarah. (She said she'd wait in No Man's Land.)") },
         });
-
-        // Atmosphere and the deadline
+        // The reunion happens whichever of you reaches No Man's Land second.
+        var reunion = new List<GameAction>
+        {
+            GameAction.Say("\"There you are!\" Sarah throws her arms around you. \"Now can we please go home?\""),
+            new GameAction(ActionType.SetVar, "reunited", 1),
+        };
         a.Triggers.Add(new Trigger
         {
-            Id = Id(), Name = "Artillery", Event = TriggerEvent.Timer, Interval = 6,
-            Conditions = { new Condition(ConditionType.PlayerIn, "wasteland|trench") },
-            Actions = { GameAction.Say("Somewhere out in the mist, shells land with a dull crump. The ground shivers.") },
+            Id = Id(), Name = "Sarah reaches you in No Man's Land", Event = TriggerEvent.NpcArrives, Subject = "sarah", RoomId = "wasteland",
+            Conditions = { new Condition(ConditionType.VarEquals, "reunited", 0) },
+            Actions = reunion.ToList(),
+        });
+        a.Triggers.Add(new Trigger
+        {
+            Id = Id(), Name = "You find Sarah in No Man's Land", Event = TriggerEvent.EnterRoom, RoomId = "wasteland",
+            Conditions = { new Condition(ConditionType.VarEquals, "reunited", 0), new Condition(ConditionType.NpcIn, "sarah", b: "wasteland") },
+            Actions = reunion.ToList(),
+        });
+        a.Triggers.Add(new Trigger
+        {
+            Id = Id(), Name = "Harry and the gas", Event = TriggerEvent.EnterRoom, RoomId = "entrance", OnceOnly = true,
+            Conditions = { new Condition(ConditionType.NpcFollowing, "harry") },
+            Actions = { GameAction.Say("Harry emerges from the gas behind you, coughing inside a battered respirator of his own. \"Ghastly stuff!\"") },
+        });
+
+        // Atmosphere and the deadline
+        a.RandomEvents.AddRange(new[]
+        {
+            new RandomEvent
+            {
+                Id = "gev_shell", Name = "Thal shell lands", Where = EventLocation.Anywhere, Rooms = { "wasteland", "trench" }, Chance = 12, Cooldown = 4,
+                WitnessMessage = "A shell screams down out of the mist and bursts nearby, showering you with mud and stones!",
+                DistantMessage = "Somewhere out in No Man's Land, a shell lands with a dull crump. The ground shivers.",
+                Actions = { new GameAction(ActionType.RunTrigger, "shell_hits") },
+            },
+            new RandomEvent
+            {
+                Id = "gev_mines", Name = "Thal sappers lay a mine", Where = EventLocation.AwayFromPlayer, Rooms = { "wasteland", "trench" }, Chance = 6, Cooldown = 10, MaxTimes = 2,
+                Conditions = { new Condition(ConditionType.RoomTrapped, Locations.EventRoom, negate: true) },
+                Actions = { new GameAction(ActionType.SetTrap, Locations.EventRoom, 2, "You spot the three prongs of a mine poking out of the mud – and step well around it.",
+                                               "Click. A mine! You throw yourself flat as it bursts, and shrapnel tears at your coat.") },
+            },
+            new RandomEvent
+            {
+                Id = "gev_power", Name = "Power failure", Where = EventLocation.Anywhere, Rooms = { "corridor" }, Chance = 6, Cooldown = 8,
+                Conditions = { new Condition(ConditionType.RoomHasFlag, Locations.EventRoom, b: "powercut", negate: true) },
+                WitnessMessage = "The lights stutter, buzz – and die.",
+                DistantMessage = "Somewhere in the bunker, a generator coughs and falls silent.",
+                Actions = { new GameAction(ActionType.SetDark, Locations.EventRoom, 1), new GameAction(ActionType.SetRoomFlag, Locations.EventRoom, 1, "powercut") },
+            },
+            new RandomEvent
+            {
+                Id = "gev_power_back", Name = "Power restored", Where = EventLocation.Anywhere, Rooms = { "corridor" }, Chance = 35, Cooldown = 1,
+                Conditions = { new Condition(ConditionType.RoomHasFlag, Locations.EventRoom, b: "powercut") },
+                WitnessMessage = "With a clunk, the lights flicker back on.",
+                Actions = { new GameAction(ActionType.SetDark, Locations.EventRoom, 0), new GameAction(ActionType.SetRoomFlag, Locations.EventRoom, 0, "powercut") },
+            },
+            new RandomEvent
+            {
+                Id = "gev_tannoy", Name = "Loudspeaker announcement", Where = EventLocation.PlayerRoom, Rooms = { "corridor", "lab", "office", "cellblock", "davroslab", "entrance" },
+                Chance = 8, Cooldown = 10,
+                WitnessMessage = "A loudspeaker crackles: \"Attention. Elite scientific staff to report for the meeting. By order of the Chief Scientist.\"",
+            },
+            new RandomEvent
+            {
+                Id = "gev_arrest", Name = "Ronson is arrested", Where = EventLocation.AwayFromPlayer, Rooms = { "lab" }, Chance = 15, MaxTimes = 1,
+                Conditions = { new Condition(ConditionType.VarEquals, "helped", 1) },
+                DistantMessage = "From the direction of the scientific wing comes shouting, then a scuffle, then silence. Someone has been arrested.",
+                Actions =
+                {
+                    new GameAction(ActionType.DestroyItem, "ronson"),
+                    new GameAction(ActionType.SetRoomDescription, "lab", text: "Workbenches crowded with glassware, now overturned and smashed. Ronson is gone – the scuffle marks on the floor tell you how. The corridor is west."),
+                },
+            },
+        });
+        a.Triggers.Add(new Trigger
+        {
+            Id = "shell_hits", Name = "shell_hits", Event = TriggerEvent.Subroutine,
+            Conditions = { new Condition(ConditionType.PlayerIn, Locations.EventRoom) },
+            Actions = { new GameAction(ActionType.HurtPlayer, n: 1) },
         });
         a.Triggers.Add(new Trigger
         {

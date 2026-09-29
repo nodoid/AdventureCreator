@@ -13,9 +13,9 @@ public class GenesisWalkthroughTests
         "examine the ring", "n", "search the dead soldier", "take the pass and the mask", "wear mask", "e",
         "show the pass to the guard", "n", "quietly go west", "open the drawer", "take keycard", "read memo", "e",
         "d", "unlock the cell door with the keycard", "open cell door", "n", "s", "u",
-        "e", "ask ronson about the incubator", "w", "n", "ask davros about the virus", "destroy the tapes",
+        "e", "ask ronson about the incubator", "w", "n", "ask davros about the virus",
         "unlock door with keycard", "open door", "n", "plant the charges among the tanks", "connect the wires", "connect the wires",
-        "s", "s", "w", "s", "twist the ring",
+        "destroy the tapes", "s", "s", "w", "s", "twist the ring",
     };
 
     private static (GameEngine Engine, string Log, TurnResult Last) Play(IEnumerable<string> commands, Adventure? game = null)
@@ -127,5 +127,81 @@ public class GenesisWalkthroughTests
         foreach (var p in game.Pictures)
             Assert.True(AdventureCreator.Core.Graphics.PictureRenderer.Render(p, game).Pixels.Distinct().Count() > 3, p.Id);
         foreach (var s in game.Sounds) Assert.True(game.Assets[s.AssetName].Length > 1000);
+    }
+
+    [Fact]
+    public void WalkthroughWinsWhateverTheDiceDo()
+    {
+        // Random events (shells, mines, power cuts) and the Dalek differ with every seed; the walkthrough must always win.
+        for (int seed = 0; seed < 100; seed++)
+        {
+            var e = new GameEngine(ExampleAdventures.Genesis(), randomSeed: seed);
+            e.Start();
+            TurnResult last = new();
+            foreach (var c in Walkthrough) last = e.Submit(c);
+            Assert.True(last.Won, $"seed {seed}");
+            Assert.Equal(1, e.GetVar("reunited"));
+        }
+    }
+
+    [Fact]
+    public void HarryJoinsAndFollowsThroughTheGas()
+    {
+        var (e, log, _) = Play(new[] { "n", "talk to harry", "search soldier", "take pass and mask", "wear mask", "e" });
+        Assert.Contains("I'll stick with you", log);
+        Assert.Equal("entrance", e.Loc(e.Adventure.FindItem("harry")!));
+        Assert.Contains("respirator of his own", log);
+        var r = e.Submit("harry, wait");
+        Assert.Contains("Right-ho", r.Text);
+        e.Submit("show pass to guard. n");
+        Assert.Equal("entrance", e.Loc(e.Adventure.FindItem("harry")!));
+    }
+
+    [Fact]
+    public void SarahWalksBackThroughTheExits()
+    {
+        var steps = Walkthrough.TakeWhile(c => c != "s").Append("s").ToList(); // free Sarah, step back into the cell block
+        var e = new GameEngine(ExampleAdventures.Genesis(), randomSeed: 3);
+        e.Start();
+        foreach (var c in steps) e.Submit(c);
+        var sarah = e.Adventure.FindItem("sarah")!;
+        var path = new List<string> { e.Loc(sarah) };
+        for (int i = 0; i < 8; i++)
+        {
+            e.Submit("wait");
+            var now = e.Loc(sarah);
+            if (now != path[^1])
+            {
+                Assert.Contains(e.ExitsOf(path[^1]), x => x.TargetRoomId == now); // only ever through an exit
+                path.Add(now);
+            }
+        }
+        Assert.Equal("wasteland", path[^1]);
+        Assert.Equal(new[] { "corridor", "entrance", "trench", "wasteland" }, path.SkipWhile(r => r != "corridor").ToArray());
+    }
+
+    [Fact]
+    public void DalekWakesAndCannotUseStairs()
+    {
+        var upToTapes = Walkthrough.TakeWhile(c => c != "destroy the tapes").Append("destroy the tapes").ToList();
+        var (e, log, _) = Play(upToTapes);
+        Assert.Contains("EX-TER-MIN-ATE", log);
+        var dalek = e.Adventure.FindItem("dalek")!;
+        Assert.Equal("davroslab", e.Loc(dalek));
+        e.Submit("s");
+        e.Submit("d");                               // escape down to the cells
+        for (int i = 0; i < 10; i++) e.Submit("wait");
+        Assert.NotEqual("cellblock", e.Loc(dalek));  // it can't follow down the stairs
+        Assert.False(e.IsGameOver);
+    }
+
+    [Fact]
+    public void RonsonIsArrestedOnlyAfterHelping()
+    {
+        var e = new GameEngine(ExampleAdventures.Genesis(), randomSeed: 11);
+        e.Start();
+        for (int i = 0; i < 40; i++) e.Submit("wait");
+        Assert.Equal("lab", e.Loc(e.Adventure.FindItem("ronson")!));
+        Assert.False(e.State.EventCounts.ContainsKey("gev_arrest"));
     }
 }
