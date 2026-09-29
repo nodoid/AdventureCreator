@@ -184,6 +184,7 @@ public sealed partial class GameEngine
         if (IsDark())
         {
             Say(Msg(Engine.Msg.Dark, ctx));
+            RunEventTriggers(TriggerEvent.AfterDescribe, ctx ?? new CommandContext(this, null));
             return;
         }
 
@@ -213,6 +214,7 @@ public sealed partial class GameEngine
         }
 
         if (Adventure.Settings.AutoListExits) ListExits(ctx);
+        RunEventTriggers(TriggerEvent.AfterDescribe, ctx ?? new CommandContext(this, null));
     }
 
     private string DescribeInList(Item item)

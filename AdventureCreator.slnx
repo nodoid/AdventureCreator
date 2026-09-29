@@ -3,6 +3,7 @@
     <Project Path="src/AdventureCreator.ConsolePlayer/AdventureCreator.ConsolePlayer.csproj" />
     <Project Path="src/AdventureCreator.Core/AdventureCreator.Core.csproj" />
     <Project Path="src/AdventureCreator.Importers/AdventureCreator.Importers.csproj" />
+    <Project Path="src/AdventureCreator.Maui/AdventureCreator.Maui.csproj" />
     <Project Path="src/AdventureCreator.Player/AdventureCreator.Player.csproj" />
     <Project Path="src/AdventureCreator.Studio/AdventureCreator.Studio.csproj" />
   </Folder>

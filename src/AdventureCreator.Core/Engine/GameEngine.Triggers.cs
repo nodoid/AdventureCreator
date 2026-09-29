@@ -52,6 +52,8 @@ public sealed partial class GameEngine
     private TriggerRunResult RunTriggers(TriggerEvent ev, CommandContext ctx, Func<Trigger, bool> match, bool isCommand)
     {
         bool anyFired = false, handled = false, continueRequested = false;
+        string? stoppedGroup = null;
+        bool stoppedAll = false;
         if (++triggerDepth > 32)
         {
             triggerDepth--;
@@ -63,6 +65,8 @@ public sealed partial class GameEngine
             foreach (var t in SortedTriggers.ToList())
             {
                 if (t.Event != ev || !IsTriggerEnabled(t)) continue;
+                if (stoppedAll) break;
+                if (stoppedGroup != null && string.Equals(t.Group, stoppedGroup, StringComparison.OrdinalIgnoreCase)) continue;
                 if (t.OnceOnly && State.FiredTriggers.Contains(t.Id)) continue;
                 if (!match(t)) continue;
                 if (!CheckConditions(t.Conditions, ctx)) continue;
@@ -75,7 +79,11 @@ public sealed partial class GameEngine
                 if (flow == ActionFlow.Done)
                 {
                     handled = true;
-                    if (isCommand || Adventure.Settings.LegacyTableSemantics) break;
+                    if (isCommand) break;
+                    if (Adventure.Settings.LegacyTableSemantics)
+                    {
+                        if (t.Group == null) stoppedAll = true; else stoppedGroup = t.Group;
+                    }
                     continue;
                 }
                 if (flow == ActionFlow.Continue) { continueRequested = true; continue; }

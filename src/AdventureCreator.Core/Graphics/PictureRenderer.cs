@@ -327,9 +327,10 @@ public sealed class PictureRenderer
             for (int col = Math.Max(0, x1 / 8); col <= Math.Min(cols - 1, x2 / 8); col++)
             {
                 int cell = row * cols + col;
-                if (inkIndex >= 0 && inkIndex < 8) cellInk[cell] = (byte)inkIndex;
-                if (paperIndex >= 0) cellPaper[cell] = (byte)(paperIndex & 7);
-                cellBright[cell] = bright;
+                // Indices 8-15 are the bright colours; 0-7 use the current BRIGHT setting.
+                if (inkIndex >= 0 && inkIndex < 16) cellInk[cell] = (byte)(inkIndex & 7);
+                if (paperIndex >= 0 && paperIndex < 16) cellPaper[cell] = (byte)(paperIndex & 7);
+                cellBright[cell] = bright || inkIndex >= 8 && inkIndex < 16 || paperIndex >= 8 && paperIndex < 16;
             }
     }
 

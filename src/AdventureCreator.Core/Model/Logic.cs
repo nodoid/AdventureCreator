@@ -24,6 +24,8 @@ public enum TriggerEvent
     Subroutine,
     /// <summary>When the command is not understood by the parser or no handler applies.</summary>
     Unhandled,
+    /// <summary>Right after a room description has been printed (PAWS Process 1).</summary>
+    AfterDescribe,
 }
 
 /// <summary>
@@ -61,6 +63,12 @@ public sealed class Trigger
     /// unless an action explicitly requests <see cref="ActionType.Continue"/>.
     /// </summary>
     public bool StopsCommand { get; set; } = true;
+
+    /// <summary>
+    /// Optional table name. With <see cref="GameSettings.LegacyTableSemantics"/>, a Done action ends the remaining triggers
+    /// of the same group only (like DONE ending one PAWS process table).
+    /// </summary>
+    public string? Group { get; set; }
 
     public string Notes { get; set; } = "";
     public override string ToString()

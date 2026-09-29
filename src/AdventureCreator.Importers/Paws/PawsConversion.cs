@@ -383,7 +383,7 @@ internal sealed class PawsConversion
             AddEntry(0, i, tables[0][i], TriggerEvent.BeforeCommand, null, true, "");
         if (count > 1)
             for (int i = 0; i < tables[1].Count; i++)
-                AddEntry(1, i, tables[1][i], TriggerEvent.EveryTurn, $"PRO1 #{i}", false, "");
+                AddEntry(1, i, tables[1][i], TriggerEvent.AfterDescribe, $"PRO1 #{i}", false, "");
         if (count > 2)
             for (int i = 0; i < tables[2].Count; i++)
                 AddEntry(2, i, tables[2][i], TriggerEvent.EveryTurn, $"PRO2 #{i}", false, "");
@@ -397,7 +397,7 @@ internal sealed class PawsConversion
             warnings.Add($"PROCESS {t} is called but the database has only {count} process tables.");
 
         notes.Add("PAWS runs Process 1 after describing a location and Process 2 once per turn before reading the next command; " +
-                  "both are imported as EveryTurn triggers (PRO1 entries first, then PRO2), so Process 1 entries also run on turns without a new description.");
+                  "Process 1 is imported as AfterDescribe triggers and Process 2 as EveryTurn triggers; DONE ends only its own table (trigger Group).");
         notes.Add("PAWS entries may mix conditions and actions; entries with a condition after an action were split into chained triggers " +
                   "(ids t{table}_{entry}_{k}) linked by a chain_* variable stamped with @turns.");
     }
@@ -424,6 +424,7 @@ internal sealed class PawsConversion
             var seg = segments[k];
             var trigger = new Trigger
             {
+                Group = ev == TriggerEvent.Subroutine ? $"proc{table}" : $"PRO{table}",
                 Id = k == 0 ? baseId : $"{baseId}_{k}",
                 Name = name ?? $"{AnyWord(entry.Verb, PawsWordType.Verb, PawsWordType.Noun) ?? verb} {AnyWord(entry.Noun, PawsWordType.Noun) ?? noun}",
                 Event = ev,
