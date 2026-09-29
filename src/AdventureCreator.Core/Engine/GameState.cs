@@ -31,6 +31,15 @@ public sealed class GameState
     public Dictionary<string, int> HintsShown { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     public HashSet<string> TakenOnce { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
+    public Dictionary<string, NpcState> Npcs { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+    public int Health { get; set; }
+    public int RoomEnteredTurn { get; set; }
+    /// <summary>Room id -> flags such as "flooded".</summary>
+    public Dictionary<string, HashSet<string>> RoomFlags { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+    public Dictionary<string, TrapState> Traps { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+    public Dictionary<string, int> EventCounts { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+    public Dictionary<string, int> EventLastTurn { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
     public List<string> It { get; set; } = new();
     public List<string> Them { get; set; } = new();
     public string? Him { get; set; }
@@ -60,6 +69,9 @@ public sealed class GameState
         }
         foreach (var v in adventure.Variables) s.Variables[v.Name] = v.InitialValue;
         foreach (var t in adventure.Triggers) s.TriggerEnabled[t.Id] = t.Enabled;
+        s.Health = adventure.Settings.PlayerHealth;
+        foreach (var npc in adventure.Items.Where(i => i.Npc != null))
+            s.Npcs[npc.Id] = new NpcState { Health = npc.Npc!.Health, Following = npc.Npc.Movement == NpcMovement.Follow };
         return s;
     }
 }
@@ -78,6 +90,10 @@ public enum OutputKind
     Restart,
     /// <summary>Location / score changed; hosts refresh their status bar.</summary>
     Status,
+    /// <summary>The player typed SAVE without a name and the host shows its own save dialog.</summary>
+    SaveRequested,
+    /// <summary>The player typed RESTORE without a name and the host shows its own load dialog.</summary>
+    RestoreRequested,
 }
 
 public enum TextStyle { Normal, RoomTitle, Emphasis, System, Echo, Error }
@@ -97,29 +113,3 @@ public sealed class TurnResult
     public string Text => string.Concat(Events.Where(e => e.Kind == OutputKind.Text).Select(e => e.Text));
 }
 
-/// <summary>Where save games are kept. Hosts replace the default in-memory store with file storage.</summary>
-public interface ISaveStorage
-{
-    void Save(string slot, string data);
-    string? Load(string slot);
-}
-
-public sealed class MemorySaveStorage : ISaveStorage
-{
-    private readonly Dictionary<string, string> slots = new();
-    public void Save(string slot, string data) => slots[slot] = data;
-    public string? Load(string slot) => slots.TryGetValue(slot, out var d) ? d : null;
-}
-
-public sealed class FileSaveStorage : ISaveStorage
-{
-    private readonly string directory;
-    public FileSaveStorage(string directory)
-    {
-        this.directory = directory;
-        Directory.CreateDirectory(directory);
-    }
-    private string PathFor(string slot) => Path.Combine(directory, string.Concat(slot.Where(char.IsLetterOrDigit)) + ".sav");
-    public void Save(string slot, string data) => File.WriteAllText(PathFor(slot), data);
-    public string? Load(string slot) => File.Exists(PathFor(slot)) ? File.ReadAllText(PathFor(slot)) : null;
-}

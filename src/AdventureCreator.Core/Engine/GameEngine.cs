@@ -121,7 +121,7 @@ public sealed partial class GameEngine
         {
             var w = lower.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? "";
             if (w is "restart" or "reset") { DoRestart(); return; }
-            if (w is "restore" or "load") { DoRestore(); return; }
+            if (w is "restore" or "load") { DoRestore(input.Contains(' ') ? input[(input.IndexOf(' ') + 1)..] : null); return; }
             if (w is "undo" && Adventure.Settings.AllowUndo) { DoUndo(); return; }
             if (w is "quit" or "q") { Emit(new OutputEvent(OutputKind.Quit)); return; }
             Say("The game is over. You can RESTART, RESTORE a saved game" + (Adventure.Settings.AllowUndo ? ", UNDO the last move" : "") + " or QUIT.", TextStyle.System);
@@ -301,7 +301,8 @@ public sealed partial class GameEngine
     private void EmitStatus()
     {
         var room = CurrentRoom;
-        Emit(new OutputEvent(OutputKind.Status, $"{room?.Name}|{State.Score}|{Adventure.ComputeMaxScore()}|{State.Turns}", room?.Id));
+        var health = Adventure.Settings.PlayerHealth > 0 ? $"|{State.Health}|{Adventure.Settings.PlayerHealth}" : "";
+        Emit(new OutputEvent(OutputKind.Status, $"{room?.Name}|{State.Score}|{Adventure.ComputeMaxScore()}|{State.Turns}{health}", room?.Id));
     }
 
     public string Msg(string id, CommandContext? ctx, params (string Key, string Value)[] extra)
@@ -355,6 +356,12 @@ public sealed partial class GameEngine
                 "room" => CurrentRoom?.Name,
                 "title" => Adventure.Title,
                 "author" => Adventure.Author,
+                "npc" => ctx?.Npc?.Name ?? ctx?.Actor?.Name,
+                "the npc" => (ctx?.Npc ?? ctx?.Actor)?.WithDefinite(),
+                "a npc" => (ctx?.Npc ?? ctx?.Actor)?.WithArticle(),
+                "health" => State.Health.ToString(),
+                "maxhealth" => Adventure.Settings.PlayerHealth.ToString(),
+                "eventroom" => Adventure.FindRoom(ctx?.EventRoomId)?.Name ?? "",
                 "actor" => ctx?.Actor?.Name,
                 "the actor" => ctx?.Actor?.WithDefinite(),
                 "word" => ctx?.UnknownWord,
@@ -413,6 +420,7 @@ public sealed partial class GameEngine
             case "@score": return State.Score;
             case "@carried": return Carried().Count(i => Loc(i) == Locations.Carried);
             case "@maxscore": return Adventure.ComputeMaxScore();
+            case "@health": return State.Health;
         }
         return State.Variables.TryGetValue(name, out var v) ? v : 0;
     }
@@ -423,6 +431,7 @@ public sealed partial class GameEngine
         {
             case "@score": State.Score = value; return;
             case "@turns": State.Turns = value; return;
+            case "@health": State.Health = Math.Max(0, value); return;
             case "@room":
                 if (value >= 0 && value < Adventure.Rooms.Count) State.CurrentRoomId = Adventure.Rooms[value].Id;
                 return;

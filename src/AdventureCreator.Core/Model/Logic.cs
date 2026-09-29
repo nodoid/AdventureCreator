@@ -26,6 +26,16 @@ public enum TriggerEvent
     Unhandled,
     /// <summary>Right after a room description has been printed (PAWS Process 1).</summary>
     AfterDescribe,
+    /// <summary>An NPC (Subject, or any) arrives in the player's room.</summary>
+    NpcArrives,
+    /// <summary>An NPC (Subject, or any) leaves the player's room.</summary>
+    NpcLeaves,
+    /// <summary>An NPC (Subject) is defeated in combat.</summary>
+    NpcDefeated,
+    /// <summary>The player gives an item to a character (Subject = character, Noun1 = item).</summary>
+    ItemGiven,
+    /// <summary>The player has been hurt (by an NPC, a trap or HurtPlayer).</summary>
+    PlayerHurt,
 }
 
 /// <summary>
@@ -111,6 +121,16 @@ public enum ConditionType
     IsDark,            // current room is dark with no light source
     ExitOpen,          // A = room, B = direction
     TriggerFired,      // A = trigger id (has fired at least once)
+    NpcFollowing,      // A = npc
+    NpcHostile,        // A = npc
+    NpcDefeated,       // A = npc
+    NpcIn,             // A = npc, B = room (or @here)
+    NpcHasItem,        // A = npc, B = item
+    HealthAtLeast,     // N
+    RoomHasFlag,       // A = room (or @here / @eventroom), B = flag name
+    RoomFlooded,       // A = room
+    RoomTrapped,       // A = room
+    EventHappened,     // A = random event id (has happened at least once)
 }
 
 public sealed class Condition
@@ -155,7 +175,7 @@ public enum ActionType
     WearItem,         // A = item
     UnwearItem,       // A = item
     DestroyItem,      // A = item
-    CreateItem,       // A = item (placed in the current room)
+    CreateItem,       // A = item, B = optional location (default: the current room, or @eventroom in random events)
     SwapItems,        // A, B items exchange locations
     SetOpen,          // A = item, N = 0/1
     SetLocked,        // A = item, N = 0/1
@@ -196,6 +216,22 @@ public enum ActionType
     SetDark,          // A = room, N = 0/1
     SetPlayerAlias,   // unused placeholder for future versions
     Beep,
+    /// <summary>A = npc, B = Movement|Hostile|Following|Blocking|Active, N = 1/0, Text = movement mode name.</summary>
+    SetNpc,
+    /// <summary>
+    /// Sends an NPC walking to a room (A = npc, B = room): it travels through real exits, one room per turn, and gives up if
+    /// there is no route. Use MoveItem to teleport it instead.
+    /// </summary>
+    NpcGoTo,
+    /// <summary>The NPC says Text (prefixed with its name) if the player is with it. A = npc.</summary>
+    NpcSay,
+    HurtPlayer,       // N = damage, Text = message
+    HealPlayer,       // N = amount (0 = fully)
+    SetRoomFlag,      // A = room, B = flag, N = 1/0
+    Flood,            // A = room, N = 1 flood / 0 drain
+    SetTrap,          // A = room, N = damage (-1 = deadly), Text = message when sprung, B = message when found
+    ClearTrap,        // A = room
+    RunRandomEvent,   // A = random event id: makes it happen now (ignoring chance and cooldown)
 }
 
 public sealed class GameAction

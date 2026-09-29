@@ -119,7 +119,19 @@ public sealed partial class GameEngine
 
         if (ctx.Actor != null)
         {
+            if (ctx.Actor.Npc is { ObeysOrders: true } && NpcActive(ctx.Actor) && !NpcHostile(ctx.Actor))
+            {
+                ExecuteNpcOrder(ctx.Actor, ctx);
+                return;
+            }
             Say($"{Cap(ctx.Actor.WithDefinite())} ignores you.");
+            return;
+        }
+
+        // FOLLOW an NPC that has just left the room.
+        if (cmd.ActionId == "follow" && ctx.Object1Missing)
+        {
+            FollowNpc(ctx.Word1, ctx);
             return;
         }
 
@@ -206,6 +218,12 @@ public sealed partial class GameEngine
         RunEventTriggers(TriggerEvent.Timer, turnCtx);
         if (State.GameOver) return;
         RunEventTriggers(TriggerEvent.EveryTurn, turnCtx);
+        if (State.GameOver) return;
+        RunNpcs(turnCtx);
+        if (State.GameOver) return;
+        RunRandomEvents(turnCtx);
+        if (State.GameOver) return;
+        CheckTrap(turnCtx);
         if (State.GameOver) return;
         CheckPuzzles(turnCtx);
     }

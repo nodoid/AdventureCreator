@@ -41,6 +41,12 @@ public sealed partial class GameEngine
                 string.IsNullOrEmpty(t.RoomId) || string.Equals(t.RoomId, ctx.EventRoomId, StringComparison.OrdinalIgnoreCase),
             TriggerEvent.ItemTaken or TriggerEvent.ItemDropped or TriggerEvent.PuzzleSolved =>
                 IsAny(t.Subject) || string.Equals(t.Subject, ctx.EventSubject, StringComparison.OrdinalIgnoreCase),
+            TriggerEvent.NpcArrives or TriggerEvent.NpcLeaves or TriggerEvent.NpcDefeated or TriggerEvent.PlayerHurt =>
+                (IsAny(t.Subject) || string.Equals(t.Subject, ctx.EventSubject, StringComparison.OrdinalIgnoreCase)) &&
+                (string.IsNullOrEmpty(t.RoomId) || string.Equals(t.RoomId, State.CurrentRoomId, StringComparison.OrdinalIgnoreCase)),
+            TriggerEvent.ItemGiven =>
+                (IsAny(t.Subject) || string.Equals(t.Subject, ctx.EventSubject, StringComparison.OrdinalIgnoreCase)) &&
+                (IsAny(t.Noun1) || (ctx.Item1 != null && (string.Equals(t.Noun1, ctx.Item1.Id, StringComparison.OrdinalIgnoreCase) || NounsOf(ctx.Item1).Any(n => Lexicon.Equivalent(n, t.Noun1))))),
             TriggerEvent.Timer =>
                 (t.Turn > 0 && State.Turns == t.Turn) || (t.Interval > 0 && State.Turns > 0 && State.Turns % t.Interval == 0),
             TriggerEvent.EveryTurn => (string.IsNullOrEmpty(t.RoomId) || string.Equals(t.RoomId, State.CurrentRoomId, StringComparison.OrdinalIgnoreCase))
@@ -195,14 +201,24 @@ public sealed partial class GameEngine
         "$noun1" => ctx.Item1?.Id ?? FindItemByWord(ctx.Word1)?.Id,
         "$noun2" => ctx.Item2?.Id ?? FindItemByWord(ctx.Word2)?.Id,
         "$actor" => ctx.Actor?.Id,
+        "$npc" => ctx.Npc?.Id,
+        "$randomitem" => RandomItemIn(ctx.EventRoomId ?? State.CurrentRoomId),
+        "$randomcarried" => ItemsAt(Locations.Carried).ToList() is { Count: > 0 } held ? held[Random.Next(held.Count)].Id : null,
         _ => arg,
     };
+
+    private string? RandomItemIn(string room)
+    {
+        var items = ItemsAt(room).Where(i => i.Portable && !i.Scenery && !i.IsCharacter).ToList();
+        return items.Count == 0 ? null : items[Random.Next(items.Count)].Id;
+    }
 
     private string LocationArg(string? arg, CommandContext ctx) => arg switch
     {
         null or "" => Locations.Nowhere,
         Locations.Here => State.CurrentRoomId,
-        "$noun1" or "$noun2" => ItemArg(arg, ctx) ?? Locations.Nowhere,
+        Locations.EventRoom or Locations.RandomRoom or "$npcroom" => RoomArg(arg, ctx) ?? Locations.Nowhere,
+        "$noun1" or "$noun2" or "$npc" => ItemArg(arg, ctx) ?? Locations.Nowhere,
         _ => arg,
     };
 
@@ -223,7 +239,7 @@ public sealed partial class GameEngine
         {
             case ConditionType.Always: return true;
             case ConditionType.PlayerIn:
-                return c.A?.Split('|').Any(r => string.Equals(r.Trim(), State.CurrentRoomId, StringComparison.OrdinalIgnoreCase)) ?? false;
+                return c.A?.Split('|').Any(r => string.Equals(RoomArg(r.Trim(), ctx), State.CurrentRoomId, StringComparison.OrdinalIgnoreCase)) ?? false;
             case ConditionType.ItemCarried: return ItemA() is { } i1 && IsCarried(i1);
             case ConditionType.ItemWorn: return ItemA() is { } i2 && IsWorn(i2);
             case ConditionType.ItemPresent: return ItemA() is { } i3 && (IsCarried(i3) || IsPresent(i3) || string.Equals(Loc(i3), State.CurrentRoomId, StringComparison.OrdinalIgnoreCase));
@@ -265,6 +281,17 @@ public sealed partial class GameEngine
             case ConditionType.ExitOpen: return c.A != null && c.B != null && FindExit(c.A, c.B) is { } e &&
                                                 (e.DoorItemId == null || (Adventure.FindItem(e.DoorItemId) is { } door && IsOpen(door)));
             case ConditionType.TriggerFired: return c.A != null && State.FiredTriggers.Contains(c.A);
+            case ConditionType.NpcFollowing: return ItemA() is { } f && f.Npc != null && MovementOf(f) == NpcMovement.Follow && NpcActive(f);
+            case ConditionType.NpcHostile: return ItemA() is { } h && NpcHostile(h);
+            case ConditionType.NpcDefeated: return ItemA() is { } d && d.Npc != null && NpcStateOf(d).Defeated;
+            case ConditionType.NpcIn: return ItemA() is { } w && string.Equals(Loc(w), LocationArg(c.B, ctx), StringComparison.OrdinalIgnoreCase);
+            case ConditionType.NpcHasItem:
+                return ItemA() is { } holder && Adventure.FindItem(ItemArg(c.B, ctx)) is { } thing && string.Equals(Loc(thing), holder.Id, StringComparison.OrdinalIgnoreCase);
+            case ConditionType.HealthAtLeast: return State.Health >= c.N;
+            case ConditionType.RoomHasFlag: return RoomHasFlag(RoomArg(c.A, ctx), c.B ?? "");
+            case ConditionType.RoomFlooded: return IsFlooded(RoomArg(c.A, ctx));
+            case ConditionType.RoomTrapped: return RoomArg(c.A, ctx) is { } tr && State.Traps.ContainsKey(tr);
+            case ConditionType.EventHappened: return c.A != null && State.EventCounts.GetValueOrDefault(c.A) > 0;
         }
         return false;
     }
@@ -298,7 +325,7 @@ public sealed partial class GameEngine
                 Describe(ctx, forceFull: true);
                 break;
             case ActionType.GoTo:
-                if (a.A != null) MovePlayer(a.A == Locations.Here ? State.CurrentRoomId : a.A, ctx, a.Text);
+                if (RoomArg(a.A, ctx) is { } goRoom) MovePlayer(goRoom, ctx, a.Text);
                 break;
             case ActionType.MoveItem:
                 if (ItemA() is { } mi)
@@ -352,7 +379,9 @@ public sealed partial class GameEngine
                 if (ItemA() is { } di) SetLoc(di, Locations.Nowhere); else MissingItem(a.A);
                 break;
             case ActionType.CreateItem:
-                if (ItemA() is { } ci) SetLoc(ci, State.CurrentRoomId); else MissingItem(a.A);
+                if (ItemA() is { } ci)
+                    SetLoc(ci, !string.IsNullOrEmpty(a.B) ? LocationArg(a.B, ctx) : ctx.InRandomEvent && ctx.EventRoomId != null ? ctx.EventRoomId : State.CurrentRoomId);
+                else MissingItem(a.A);
                 break;
             case ActionType.SwapItems:
             {
@@ -433,10 +462,10 @@ public sealed partial class GameEngine
                 Emit(new OutputEvent(OutputKind.Quit));
                 return ActionFlow.Done;
             case ActionType.Save:
-                DoSave();
+                DoSave(a.Text);
                 break;
             case ActionType.Restore:
-                DoRestore();
+                DoRestore(a.Text);
                 return ActionFlow.Done;
             case ActionType.Restart:
                 DoRestart();
@@ -449,14 +478,14 @@ public sealed partial class GameEngine
             case ActionType.Continue:
                 return ActionFlow.Continue;
             case ActionType.SetExit:
-                if (a.A != null && a.B != null)
+                if (RoomArg(a.A, ctx) is { } exitRoom && a.B != null)
                 {
                     var dir = Lexicon.Direction(a.B) ?? a.B.ToLowerInvariant();
-                    State.ExitOverrides[$"{a.A}|{dir}"] = a.Text ?? "";
+                    State.ExitOverrides[$"{exitRoom}|{dir}"] = RoomArg(a.Text, ctx) ?? "";
                 }
                 break;
             case ActionType.SetRoomDescription:
-                if (a.A != null) State.RoomDescriptions[a.A] = a.Text ?? "";
+                if (RoomArg(a.A, ctx) is { } descRoom) State.RoomDescriptions[descRoom] = a.Text ?? "";
                 break;
             case ActionType.SetItemDescription:
                 if (ItemA() is { } sdi) State.ItemDescriptions[sdi.Id] = a.Text ?? "";
@@ -479,7 +508,56 @@ public sealed partial class GameEngine
                 break;
             }
             case ActionType.SetDark:
-                if (a.A != null) State.RoomDark[a.A == Locations.Here ? State.CurrentRoomId : a.A] = a.N != 0;
+                if (RoomArg(a.A, ctx) is { } darkRoom)
+                {
+                    bool wasDark = IsDark();
+                    State.RoomDark[darkRoom] = a.N != 0;
+                    if (string.Equals(darkRoom, State.CurrentRoomId, StringComparison.OrdinalIgnoreCase) && wasDark != IsDark())
+                        Say(IsDark() ? Msg(Engine.Msg.Dark, ctx) : "Light floods the room.");
+                }
+                break;
+            case ActionType.SetNpc:
+                if (ItemA() is { Npc: not null } npcToSet) SetNpcProperty(npcToSet, a.B, a.N, a.Text);
+                break;
+            case ActionType.NpcGoTo:
+                if (ItemA() is { Npc: not null } walker && RoomArg(a.B, ctx) is { } dest)
+                {
+                    var ns = NpcStateOf(walker);
+                    ns.Destination = dest;
+                    ns.Following = false;
+                }
+                break;
+            case ActionType.NpcSay:
+                if (ItemA() is { } speaker && WithPlayer(speaker) && !IsDark())
+                    Say($"{Cap(speaker.WithDefinite())} says, \u201C{Format(a.Text ?? "", NpcCtx(speaker, ctx))}\u201D");
+                break;
+            case ActionType.HurtPlayer:
+                HurtPlayer(a.N, a.Text, ctx, ctx.Npc);
+                break;
+            case ActionType.HealPlayer:
+                if (Adventure.Settings.PlayerHealth > 0)
+                    State.Health = a.N <= 0 ? Adventure.Settings.PlayerHealth : Math.Min(Adventure.Settings.PlayerHealth, State.Health + a.N);
+                if (!string.IsNullOrWhiteSpace(a.Text)) Say(Format(a.Text, ctx));
+                break;
+            case ActionType.SetRoomFlag:
+                if (RoomArg(a.A, ctx) is { } flagRoom && !string.IsNullOrEmpty(a.B))
+                {
+                    if (string.Equals(a.B, FloodedFlag, StringComparison.OrdinalIgnoreCase)) Flood(flagRoom, a.N != 0, ctx);
+                    else SetRoomFlag(flagRoom, a.B, a.N != 0);
+                }
+                break;
+            case ActionType.Flood:
+                if (RoomArg(a.A, ctx) is { } floodRoom) Flood(floodRoom, a.N != 0, ctx);
+                break;
+            case ActionType.SetTrap:
+                if (RoomArg(a.A, ctx) is { } trapRoom)
+                    SetTrap(trapRoom, new TrapState { Damage = Math.Max(0, a.N), Deadly = a.N < 0, Message = a.Text ?? "", RevealMessage = a.B ?? "" });
+                break;
+            case ActionType.ClearTrap:
+                if (RoomArg(a.A, ctx) is { } clearRoom) State.Traps.Remove(clearRoom);
+                break;
+            case ActionType.RunRandomEvent:
+                if (Adventure.FindRandomEvent(a.A) is { } ev) TryFireEvent(ev, ctx, force: true);
                 break;
         }
         return ActionFlow.Normal;

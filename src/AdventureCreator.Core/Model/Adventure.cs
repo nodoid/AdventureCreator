@@ -27,6 +27,8 @@ public sealed class Adventure
     public List<Room> Rooms { get; set; } = new();
     public List<Item> Items { get; set; } = new();
     public List<Puzzle> Puzzles { get; set; } = new();
+    /// <summary>Things that may happen by chance during play.</summary>
+    public List<RandomEvent> RandomEvents { get; set; } = new();
     public List<Trigger> Triggers { get; set; } = new();
     public List<Variable> Variables { get; set; } = new();
     public List<Picture> Pictures { get; set; } = new();
@@ -48,6 +50,7 @@ public sealed class Adventure
     public Picture? FindPicture(string? id) => id is null ? null : Pictures.Find(p => string.Equals(p.Id, id, StringComparison.OrdinalIgnoreCase));
     public SoundAsset? FindSound(string? id) => id is null ? null : Sounds.Find(s => string.Equals(s.Id, id, StringComparison.OrdinalIgnoreCase));
     public Puzzle? FindPuzzle(string? id) => id is null ? null : Puzzles.Find(p => string.Equals(p.Id, id, StringComparison.OrdinalIgnoreCase));
+    public RandomEvent? FindRandomEvent(string? id) => id is null ? null : RandomEvents.Find(e => string.Equals(e.Id, id, StringComparison.OrdinalIgnoreCase));
     public Trigger? FindTrigger(string? id) => id is null ? null : Triggers.Find(t => string.Equals(t.Id, id, StringComparison.OrdinalIgnoreCase));
     public Variable? FindVariable(string? name) => name is null ? null : Variables.Find(v => string.Equals(v.Name, name, StringComparison.OrdinalIgnoreCase));
 
@@ -61,6 +64,7 @@ public sealed class Adventure
         var actions = Triggers.SelectMany(t => t.Actions)
             .Concat(Items.SelectMany(i => i.Topics).SelectMany(t => t.Actions))
             .Concat(Puzzles.SelectMany(p => p.OnSolved))
+            .Concat(Items.Where(i => i.Npc != null).SelectMany(i => i.Npc!.OnAccept.Concat(i.Npc.OnDefeat)))
             .Concat(Vocabulary.Verbs.SelectMany(v => v.DefaultActions));
         foreach (var a in actions)
             if (a.Type == ActionType.AwardScore && a.N > 0 && (string.IsNullOrEmpty(a.A) || keys.Add(a.A))) total += a.N;
@@ -77,6 +81,7 @@ public sealed class Adventure
         foreach (var t in Triggers) used.Add(t.Id);
         foreach (var p in Pictures) used.Add(p.Id);
         foreach (var s in Sounds) used.Add(s.Id);
+        foreach (var e in RandomEvents) used.Add(e.Id);
         for (int n = 1; ; n++)
         {
             var id = $"{prefix}{n}";
@@ -122,6 +127,10 @@ public sealed class GameSettings
     /// BeforeCommand trigger is considered.
     /// </summary>
     public bool ExitsBeforeTriggers { get; set; }
+    /// <summary>Player hit points (0 = no health system). NPC attacks, traps and HurtPlayer actions reduce it; at 0 the player dies.</summary>
+    public int PlayerHealth { get; set; }
+    /// <summary>Printed when the player's health reaches 0 (unless an NPC's kill message applies).</summary>
+    public string DeathMessage { get; set; } = "Your injuries are too much for you.";
     /// <summary>Text shown in the status/title bar of players.</summary>
     public bool ShowStatusBar { get; set; } = true;
 }
@@ -168,6 +177,10 @@ public static class Locations
     public const string Nowhere = "";
     /// <summary>Pseudo-location used by actions: the player's current room.</summary>
     public const string Here = "@here";
+    /// <summary>Pseudo-location in random events: the room the event is happening in.</summary>
+    public const string EventRoom = "@eventroom";
+    /// <summary>Pseudo-location: a random room.</summary>
+    public const string RandomRoom = "@randomroom";
     public static bool IsNowhere(string? loc) => string.IsNullOrEmpty(loc);
 }
 
@@ -213,6 +226,12 @@ public sealed class Item
     public string? PictureId { get; set; }
     /// <summary>Conversation topics for characters (ask/tell about).</summary>
     public List<Topic> Topics { get; set; } = new();
+    /// <summary>Makes a character act on its own: move, talk, want things, steal, block exits, fight, obey orders.</summary>
+    public NpcBehaviour? Npc { get; set; }
+    /// <summary>Extra damage when used as a weapon (ATTACK X WITH this). 0 = not a weapon.</summary>
+    public int Damage { get; set; }
+    /// <summary>Lets the player enter flooded rooms while carried or worn (boat, raft, diving suit).</summary>
+    public bool AllowsWater { get; set; }
     /// <summary>Custom per-verb responses: verb id -> text. A quick alternative to writing a trigger.</summary>
     public Dictionary<string, string> VerbResponses { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 

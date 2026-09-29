@@ -46,6 +46,20 @@ public sealed partial class GameEngine
                 }
                 return true;
 
+            case "search" when item == null && !ctx.Self1:
+                if (!RevealTraps(ctx)) Say(Msg(Msg_.NothingFound, ctx));
+                return true;
+            case "disarm":
+                if (State.Traps.TryGetValue(State.CurrentRoomId, out var trapHere) && trapHere.Revealed)
+                {
+                    State.Traps.Remove(State.CurrentRoomId);
+                    return Say1("Working very carefully, you disarm the trap.");
+                }
+                return Say1("You haven't found anything to disarm.") && false;
+            case "diagnose":
+                if (Adventure.Settings.PlayerHealth <= 0) return Say1("You feel fine.");
+                Say(Msg(Engine.Msg.Health, ctx));
+                return true;
             case "search":
             case "lookunder":
             case "lookbehind":
@@ -98,7 +112,8 @@ public sealed partial class GameEngine
                 return Say1("There's no water deep enough for swimming here.");
 
             case "follow":
-                return Say1("You're not sure which way {the noun1} went.");
+                if (item?.Npc != null && WithPlayer(item)) return Say1("{The noun1} is right here.");
+                return FollowNpc(ctx.Word1, ctx);
 
             // ---------------------------------------------------------- manipulation
             case "take":
@@ -296,6 +311,8 @@ public sealed partial class GameEngine
                 return false;
             }
 
+            case "askfor" when item?.Npc != null && second != null:
+                return AskNpcFor(item, second, ctx);
             case "askfor":
                 return Say1(item?.IsCharacter == true ? "{The noun1} doesn't seem inclined to give you anything." : "There's nobody to ask.") && false;
 
@@ -304,6 +321,7 @@ public sealed partial class GameEngine
                 if (!Need1() || item == null) return false;
                 if (second == null) { Say($"Who do you want to {action} {item.WithDefinite()} to?"); return false; }
                 if (!second.IsCharacter) return Say1("{The noun2} can't accept things.") && false;
+                if (action == "give" && second.Npc != null && GiveToNpc(item, second, ctx)) return true;
                 if (action == "give" && !EnsureHeld(item, ctx)) return false;
                 return Say1(action == "give" ? "{The noun2} doesn't seem interested." : "{The noun2} glances at {the noun1} but says nothing.") && false;
 
@@ -334,6 +352,7 @@ public sealed partial class GameEngine
             case "kick":
             case "break":
                 if (!Need1()) return false;
+                if (item?.Npc != null && AttackNpc(item, second is { Damage: > 0 } ? second : null, ctx)) return true;
                 return Say1(cmd.Adverbs.Count > 0 ? "Even {adverb}, violence isn't the answer to this one." : Msg(Msg_.Violence, ctx));
 
             case "push":
@@ -415,10 +434,10 @@ public sealed partial class GameEngine
                 State.Verbose = false;
                 return Say1("Brief mode: full descriptions on the first visit only.");
             case "save":
-                DoSave();
+                DoSave(cmd.Text);
                 return true;
             case "restore":
-                DoRestore();
+                DoRestore(cmd.Text);
                 return true;
             case "restart":
                 DoRestart();
@@ -446,7 +465,7 @@ public sealed partial class GameEngine
             NotSwitchable = Engine.Msg.NotSwitchable, SwitchedOn = Engine.Msg.SwitchedOn, SwitchedOff = Engine.Msg.SwitchedOff,
             NotEdible = Engine.Msg.NotEdible, Eaten = Engine.Msg.Eaten, Drunk = Engine.Msg.Drunk, NothingToRead = Engine.Msg.NothingToRead,
             Empty = Engine.Msg.Empty, NoReply = Engine.Msg.NoReply, Violence = Engine.Msg.Violence, Waited = Engine.Msg.Waited,
-            Score = Engine.Msg.Score, Turns = Engine.Msg.Turns, CantDoThat = Engine.Msg.CantDoThat;
+            Score = Engine.Msg.Score, Turns = Engine.Msg.Turns, CantDoThat = Engine.Msg.CantDoThat, NothingFound = Engine.Msg.NothingFound;
     }
 
     // ================================================================ helpers
@@ -491,6 +510,11 @@ public sealed partial class GameEngine
             return false;
         }
         if (item.IsCharacter) { Say(Format("{The noun1} wouldn't care for that.", ctx)); return false; }
+        if (Adventure.FindItem(Loc(item)) is { IsCharacter: true } holder)
+        {
+            Say(Format($"{Cap(holder.WithDefinite())} won't let you have {{the noun1}}.", ctx));
+            return false;
+        }
         if (!item.Portable || item.Scenery) { Say(Msg(Engine.Msg.CantTake, ctx)); return false; }
         if (TooManyCarried(extra: 1)) { Say(Msg(Engine.Msg.TooMany, ctx)); return false; }
         int maxWeight = Adventure.Settings.MaxCarriedWeight;
@@ -540,6 +564,16 @@ public sealed partial class GameEngine
         if (exit == null || string.IsNullOrEmpty(exit.TargetRoomId))
         {
             Say(Msg(Engine.Msg.CantGo, ctx, ("direction", direction)));
+            return false;
+        }
+        if (BlockerFor(exit.Direction) is { } blocker)
+        {
+            Say(NpcText(blocker, blocker.Npc!.BlockMessage, "{The npc} blocks your way.", NpcCtx(blocker, ctx)));
+            return false;
+        }
+        if (IsFlooded(exit.TargetRoomId) && !PlayerCanSwim())
+        {
+            Say(Msg(Engine.Msg.Flooded, ctx, ("room", Adventure.FindRoom(exit.TargetRoomId)?.Name ?? "That way")));
             return false;
         }
         if (exit.DoorItemId != null && Adventure.FindItem(exit.DoorItemId) is { } door && !IsOpen(door))
@@ -596,12 +630,73 @@ public sealed partial class GameEngine
         Say("Verbs I know: " + string.Join(", ", verbs) + ".", TextStyle.System);
     }
 
-    private void DoSave()
+    // ================================================================ saving and loading
+
+    public const string AutosaveSlot = "autosave";
+
+    /// <summary>
+    /// Set by hosts that show their own save/load dialogs: SAVE or RESTORE without a name then raises
+    /// <see cref="OutputKind.SaveRequested"/> / <see cref="OutputKind.RestoreRequested"/> instead of using a default slot.
+    /// </summary>
+    public bool HostHandlesSaveDialogs { get; set; }
+
+    /// <summary>Saves the current position to a named slot.</summary>
+    public SaveGame SaveToSlot(string name)
+    {
+        name = CleanSlotName(name);
+        var save = new SaveGame
+        {
+            Name = name, GameTitle = Adventure.Title, SavedAt = DateTime.Now, RoomName = CurrentRoom?.Name ?? "",
+            Score = State.Score, MaxScore = Adventure.ComputeMaxScore(), Turns = State.Turns, State = State.Serialize(),
+        };
+        SaveStorage.Save(name, save.Serialize());
+        return save;
+    }
+
+    public SaveGame? ReadSave(string name)
+    {
+        var data = SaveStorage.Load(CleanSlotName(name));
+        return data == null ? null : SaveGame.Parse(data, name);
+    }
+
+    public bool HasSave(string name) => ReadSave(name) != null;
+
+    public void DeleteSave(string name) => SaveStorage.Delete(CleanSlotName(name));
+
+    /// <summary>All saved positions, newest first. The autosave is included when <paramref name="includeAutosave"/> is set.</summary>
+    public List<SaveGame> ListSaves(bool includeAutosave = true) =>
+        SaveStorage.Slots().Select(ReadSave).Where(s => s != null).Select(s => s!)
+            .Where(s => includeAutosave || !s.IsAutosave)
+            .OrderByDescending(s => s.SavedAt).ToList();
+
+    /// <summary>Saves silently to the autosave slot (hosts call this after each turn). Nothing is saved once the game is over.</summary>
+    public void Autosave()
     {
         try
         {
-            SaveStorage.Save("default", State.Serialize());
-            Say(Msg(Engine.Msg.Saved, null), TextStyle.System);
+            if (State.GameOver) SaveStorage.Delete(AutosaveSlot);
+            else SaveToSlot(AutosaveSlot);
+        }
+        catch { /* autosave is best effort */ }
+    }
+
+    private static string CleanSlotName(string name)
+    {
+        name = name.Trim().Trim('"', '\u201C', '\u201D', '\'').Trim();
+        return name.Length == 0 ? "default" : name.Length > 60 ? name[..60] : name;
+    }
+
+    private void DoSave(string? name = null)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            if (HostHandlesSaveDialogs) { Emit(new OutputEvent(OutputKind.SaveRequested)); return; }
+            name = "default";
+        }
+        try
+        {
+            var save = SaveToSlot(name);
+            Say(Msg(Engine.Msg.Saved, null) + (save.Name == "default" ? "" : $" (\u201C{save.Name}\u201D)"), TextStyle.System);
         }
         catch (Exception ex)
         {
@@ -609,12 +704,27 @@ public sealed partial class GameEngine
         }
     }
 
-    private void DoRestore()
+    private void DoRestore(string? name = null)
     {
-        var data = SaveStorage.Load("default");
-        if (data == null) { Say("There is no saved game.", TextStyle.System); return; }
-        State = GameState.Deserialize(data);
-        Say(Msg(Engine.Msg.Restored, null), TextStyle.System);
+        SaveGame? save;
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            if (HostHandlesSaveDialogs) { Emit(new OutputEvent(OutputKind.RestoreRequested)); return; }
+            var saves = ListSaves();
+            if (saves.Count == 0) { Say("There is no saved game.", TextStyle.System); return; }
+            if (saves.Count > 1 && !saves.Any(s => s.Name == "default"))
+            {
+                Say("Saved games:\n" + string.Join("\n", saves.Select(s => "  " + s.Summary)) + "\nType RESTORE followed by the name.", TextStyle.System);
+                return;
+            }
+            save = saves.FirstOrDefault(s => s.Name == "default") ?? saves[0];
+        }
+        else save = ReadSave(name);
+
+        if (save == null) { Say($"There is no saved game called \u201C{name}\u201D.", TextStyle.System); return; }
+        State = GameState.Deserialize(save.State);
+        pending = null;
+        Say(Msg(Engine.Msg.Restored, null) + (save.Name is "default" ? "" : $" (\u201C{(save.IsAutosave ? "autosave" : save.Name)}\u201D)"), TextStyle.System);
         Describe(null, forceFull: true);
         if (State.CurrentSoundId != null) PlaySound(State.CurrentSoundId, true);
     }

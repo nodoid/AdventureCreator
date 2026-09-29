@@ -80,6 +80,20 @@ public static class Msg
     public const string Inside = "Inside";
     public const string On = "On";
     public const string Empty = "Empty";
+    public const string BadlyHurt = "BadlyHurt";
+    public const string Health = "Health";
+    public const string Flooded = "Flooded";
+    public const string FloodedHere = "FloodedHere";
+    public const string FloodRises = "FloodRises";
+    public const string Drained = "Drained";
+    public const string Drowned = "Drowned";
+    public const string SweptOut = "SweptOut";
+    public const string TrapSense = "TrapSense";
+    public const string TrapFound = "TrapFound";
+    public const string TrapAlreadyFound = "TrapAlreadyFound";
+    public const string TrapSprung = "TrapSprung";
+    public const string TrapAvoided = "TrapAvoided";
+    public const string NothingFound = "NothingFound";
 
     public static readonly IReadOnlyDictionary<string, string> Defaults = new Dictionary<string, string>
     {
@@ -154,5 +168,19 @@ public static class Msg
         [Inside] = "In {the noun1} you can see {list}.",
         [On] = "On {the noun1} you can see {list}.",
         [Empty] = "{The noun1} is empty.",
+        [BadlyHurt] = "You are badly hurt.",
+        [Health] = "Your health is {health} out of {maxhealth}.",
+        [Flooded] = "{room} is flooded. You can't go there without a boat or diving gear.",
+        [FloodedHere] = "Water fills this place, cold and deep.",
+        [FloodRises] = "Water comes surging in!",
+        [Drained] = "The water drains away.",
+        [Drowned] = "The water closes over your head. You have drowned.",
+        [SweptOut] = "The rising water sweeps you away to {room}!",
+        [TrapSense] = "You have an uneasy feeling about this place.",
+        [TrapFound] = "Searching carefully, you discover a trap – and step well clear of it.",
+        [TrapAlreadyFound] = "You've already found the trap here.",
+        [TrapSprung] = "Click. Too late, you realise you've sprung a trap!",
+        [TrapAvoided] = "You step carefully around the trap.",
+        [NothingFound] = "You find nothing of interest.",
     };
 }

@@ -80,8 +80,28 @@ public sealed class Parser
 
     // ---------------------------------------------------------------- top level
 
+    /// <summary>
+    /// Parses a line of input. Spelling correction is only used when the sentence doesn't make sense as typed
+    /// (so free text such as SAVE MY GAME or SAY "XYZZY" is never "corrected").
+    /// </summary>
     public ParseOutcome Parse(string input)
     {
+        var plain = ParseInternal(input, correct: false);
+        if (!SpellingCorrection || IsClean(plain)) return plain;
+        var corrected = ParseInternal(input, correct: true);
+        return corrected.Corrections.Count > 0 && (corrected.Success || !plain.Success) ? corrected : plain;
+    }
+
+    private static bool IsClean(ParseOutcome o) =>
+        o.Success && o.Commands.All(c => !c.Lenient &&
+            (c.Object1 == null || c.Object1.Simple().All(p => p.UnknownWords.Count == 0)) &&
+            (c.Object2 == null || c.Object2.Simple().All(p => p.UnknownWords.Count == 0)));
+
+    private bool correctSpelling;
+
+    private ParseOutcome ParseInternal(string input, bool correct)
+    {
+        correctSpelling = correct;
         var outcome = new ParseOutcome();
         var tokens = Tokenize(input);
 
@@ -148,7 +168,7 @@ public sealed class Parser
         {
             if (t.Quoted || t.Punctuation) continue;
             var norm = Lexicon.Normalize(t.Text);
-            if (!Lexicon.IsKnown(norm) && SpellingCorrection && !LooksPlural(norm))
+            if (!Lexicon.IsKnown(norm) && correctSpelling && !LooksPlural(norm))
             {
                 var fix = Lexicon.SuggestCorrection(t.Text);
                 if (fix != null)

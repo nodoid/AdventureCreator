@@ -28,6 +28,10 @@ public sealed class CommandContext
     public string? EventRoomId { get; set; }
     public string? EventSubject { get; set; }
     public string? UnknownWord { get; set; }
+    /// <summary>The NPC acting (for NPC messages and triggers).</summary>
+    public Item? Npc { get; set; }
+    /// <summary>True while a random event's actions run (CreateItem then defaults to @eventroom).</summary>
+    public bool InRandomEvent { get; set; }
 }
 
 public sealed partial class GameEngine
@@ -90,7 +94,7 @@ public sealed partial class GameEngine
         {
             if (!seen.Add(item.Id)) return;
             result.Add(item);
-            if (depth > 8 || !ContentsVisible(item)) return;
+            if (depth > 8 || !(ContentsVisible(item) || item.IsCharacter)) return;
             foreach (var inner in ItemsAt(item.Id)) AddWithContents(inner, depth + 1);
         }
 
@@ -195,6 +199,7 @@ public sealed partial class GameEngine
         if (brief && !string.IsNullOrWhiteSpace(room.ShortDescription)) desc = room.ShortDescription;
         if (!brief || !string.IsNullOrWhiteSpace(room.ShortDescription))
             if (!string.IsNullOrWhiteSpace(desc)) Say(Format(desc, ctx));
+        if (IsFlooded(room.Id)) Say(Msg(Engine.Msg.FloodedHere, ctx));
 
         if (Adventure.Settings.AutoListItems)
         {
@@ -237,6 +242,12 @@ public sealed partial class GameEngine
             if (inside.Count > 0) s += (item.Supporter ? " (on which is " : " (containing ") + JoinList(inside) + ")";
         }
         else if (item.Container && item.Openable && !IsOpen(item)) s += " (closed)";
+        if (item.IsCharacter)
+        {
+            var held = ItemsAt(item.Id).Select(i => i.WithArticle()).ToList();
+            if (held.Count > 0) s += " (carrying " + JoinList(held) + ")";
+            if (item.Npc != null && NpcStateOf(item).Defeated && !item.Npc.RemoveWhenDefeated) s += " (defeated)";
+        }
         return s;
     }
 
@@ -266,8 +277,11 @@ public sealed partial class GameEngine
         var room = Adventure.FindRoom(roomId);
         ctx ??= new CommandContext(this, null);
         State.CurrentRoomId = roomId;
+        State.RoomEnteredTurn = State.Turns;
         Describe(ctx, forceFull: false);
         bool first = State.VisitedRooms.Add(roomId);
+        NpcsNoticePlayer(ctx);
+        SenseTrap(ctx);
 
         if (room != null)
         {
@@ -296,7 +310,9 @@ public sealed partial class GameEngine
         var left = RunEventTriggers(TriggerEvent.LeaveRoom, leaveCtx);
         if (left.Handled || State.GameOver) return;
         if (!string.IsNullOrWhiteSpace(travelMessage)) Say(Format(travelMessage, ctx));
+        var from = State.CurrentRoomId;
         EnterRoom(roomId, ctx);
+        if (!State.GameOver) NpcsFollowPlayer(from, roomId, ctx ?? new CommandContext(this, null));
     }
 
     // ================================================================ scoring
