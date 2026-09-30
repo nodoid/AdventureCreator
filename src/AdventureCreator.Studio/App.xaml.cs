@@ -13,15 +13,17 @@ public partial class App : Application
 
 	protected override Window CreateWindow(IActivationState? activationState)
 	{
-		var window = new Window(new StudioPage(StudioDocument.CreateNew()))
+		Page page = new StudioPage(StudioDocument.CreateNew());
+		// Windows shows MenuBarItems only inside a NavigationPage (in its bar), so host the page in one there.
+		if (DeviceInfo.Platform == DevicePlatform.WinUI)
+			page = new NavigationPage(page) { BarBackgroundColor = AdventureCreator.Maui.Theme.Sidebar, BarTextColor = AdventureCreator.Maui.Theme.Text };
+		var window = new Window(page)
 		{
 			Title = "Adventure Creator Studio",
 		};
 		if (DeviceInfo.Idiom == DeviceIdiom.Desktop || DeviceInfo.Platform == DevicePlatform.MacCatalyst)
 		{
-			AdventureCreator.Maui.WindowSizing.Apply(window, 1440, 900);
-			window.MinimumWidth = 1000;
-			window.MinimumHeight = 640;
+			AdventureCreator.Maui.WindowSizing.Apply(window, 1440, 900, 1000, 640);
 		}
 		return window;
 	}

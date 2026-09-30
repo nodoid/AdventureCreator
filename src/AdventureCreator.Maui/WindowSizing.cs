@@ -3,8 +3,22 @@ namespace AdventureCreator.Maui;
 /// <summary>Sets the initial desktop window size (Mac Catalyst ignores Window.Width/Height, so use the scene API there).</summary>
 public static class WindowSizing
 {
-    public static void Apply(Window window, double width, double height)
+    /// <summary>Sets the preferred size (clamped to the screen), centres the window, and sets a minimum size.</summary>
+    public static void Apply(Window window, double width, double height, double minWidth, double minHeight)
     {
+        // Never ask for more than the screen: small displays and VMs would otherwise get a window that runs off-screen.
+        var display = DeviceDisplay.Current.MainDisplayInfo;
+        double density = display.Density > 0 ? display.Density : 1;
+        double screenW = display.Width / density, screenH = display.Height / density;
+        if (screenW > 0 && screenH > 0)
+        {
+            width = Math.Min(width, screenW - 40);
+            height = Math.Min(height, screenH - 80);
+            minWidth = Math.Min(minWidth, width);
+            minHeight = Math.Min(minHeight, height);
+        }
+        window.MinimumWidth = minWidth;
+        window.MinimumHeight = minHeight;
 #if MACCATALYST
         bool done = false;
         window.Activated += (_, _) =>
@@ -27,6 +41,11 @@ public static class WindowSizing
 #else
         window.Width = width;
         window.Height = height;
+        if (screenW > 0 && screenH > 0)
+        {
+            window.X = Math.Max(0, (screenW - width) / 2);
+            window.Y = Math.Max(0, (screenH - height) / 2 - 20);
+        }
 #endif
     }
 }

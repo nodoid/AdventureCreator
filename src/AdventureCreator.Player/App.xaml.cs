@@ -19,9 +19,7 @@ public partial class App : Application
 		};
 		if (DeviceInfo.Idiom == DeviceIdiom.Desktop || DeviceInfo.Platform == DevicePlatform.MacCatalyst)
 		{
-			AdventureCreator.Maui.WindowSizing.Apply(window, 900, 820);
-			window.MinimumWidth = 480;
-			window.MinimumHeight = 500;
+			AdventureCreator.Maui.WindowSizing.Apply(window, 900, 820, 480, 500);
 		}
 		return window;
 	}

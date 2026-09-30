@@ -57,7 +57,9 @@ public sealed class PlayerPage : ContentPage
 
 		Content = new Grid { Children = { player, chooser } };
 		// Desktop windows already show the title in the title bar.
-		NavigationPage.SetHasNavigationBar(this, DeviceInfo.Idiom != DeviceIdiom.Desktop);
+		// Mac windows show the title in the title bar and menus in the system menu bar, so no navigation bar is needed.
+		// Windows shows MenuBarItems inside the navigation bar, so it must stay visible there.
+		NavigationPage.SetHasNavigationBar(this, DeviceInfo.Platform != DevicePlatform.MacCatalyst);
 		BuildMenus();
 	}
 
