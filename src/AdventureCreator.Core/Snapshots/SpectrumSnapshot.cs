@@ -129,6 +129,103 @@ public sealed class SpectrumSnapshot
         return s;
     }
 
+    // ================================================================ writing
+
+    /// <summary>
+    /// Writes this snapshot back in the format of <paramref name="original"/> (the file it was loaded from): the
+    /// registers and hardware state come from the original, the RAM from <see cref="Memory"/> (48K) or
+    /// <see cref="Banks128"/> (128K).
+    /// </summary>
+    public byte[] Save(byte[] original)
+    {
+        switch (Format)
+        {
+            case "sna48":
+            {
+                var data = (byte[])original.Clone();
+                Array.Copy(Memory, 0x4000, data, 27, 49152);
+                return data;
+            }
+            case "sna128":
+            {
+                var data = (byte[])original.Clone();
+                int paged = data[49181] & 7;
+                Array.Copy(Banks128![5], 0, data, 27, 16384);
+                Array.Copy(Banks128[2], 0, data, 27 + 16384, 16384);
+                Array.Copy(Banks128[paged], 0, data, 27 + 32768, 16384);
+                int offset = 49183;
+                for (int b = 0; b < 8; b++)
+                {
+                    if (b == 5 || b == 2 || b == paged) continue;
+                    if (offset + 16384 > data.Length) break;
+                    Array.Copy(Banks128[b], 0, data, offset, 16384);
+                    offset += 16384;
+                }
+                return data;
+            }
+            case "z80v1":
+            {
+                var output = new List<byte>(original.AsSpan(0, 30).ToArray());
+                output[12] = (byte)((original[12] == 255 ? 1 : original[12]) | 0x20);   // compressed
+                output.AddRange(Compress(Memory.AsSpan(0x4000, 49152)));
+                output.AddRange(new byte[] { 0, 0xED, 0xED, 0 });
+                return output.ToArray();
+            }
+            case "z80v2":
+            case "z80v3":
+            {
+                int extraLen = original[30] | (original[31] << 8);
+                var output = new List<byte>(original.AsSpan(0, 32 + extraLen).ToArray());
+                void Block(int page, ReadOnlySpan<byte> ram)
+                {
+                    var packed = Compress(ram);
+                    bool raw = packed.Length >= 16384 && Format == "z80v3";
+                    var body = raw ? ram.ToArray() : packed;
+                    int len = raw ? 0xFFFF : body.Length;
+                    output.Add((byte)len); output.Add((byte)(len >> 8)); output.Add((byte)page);
+                    output.AddRange(body);
+                }
+                if (Banks128 != null)
+                {
+                    for (int b = 0; b < 8; b++)
+                        if (Banks128[b] != null) Block(b + 3, Banks128[b]);
+                }
+                else
+                {
+                    Block(8, Memory.AsSpan(0x4000, 16384));
+                    Block(4, Memory.AsSpan(0x8000, 16384));
+                    Block(5, Memory.AsSpan(0xC000, 16384));
+                }
+                return output.ToArray();
+            }
+            case "raw48": return Memory.AsSpan(0x4000, 49152).ToArray();
+            default: return (byte[])Memory.Clone();
+        }
+    }
+
+    /// <summary>Z80 RLE: runs of five or more (two or more for ED) become ED ED count byte; a byte after a lone ED is never packed.</summary>
+    private static byte[] Compress(ReadOnlySpan<byte> data)
+    {
+        var output = new List<byte>(data.Length);
+        int i = 0;
+        while (i < data.Length)
+        {
+            byte b = data[i];
+            int run = 1;
+            while (i + run < data.Length && data[i + run] == b && run < 255) run++;
+            if (run >= 5 || b == 0xED && run >= 2)
+            {
+                output.Add(0xED); output.Add(0xED); output.Add((byte)run); output.Add(b);
+                i += run;
+                continue;
+            }
+            output.Add(b);
+            i++;
+            if (b == 0xED && i < data.Length) output.Add(data[i++]);
+        }
+        return output.ToArray();
+    }
+
     /// <summary>Z80 snapshot RLE: ED ED nn bb = nn copies of bb. v1 blocks end with 00 ED ED 00.</summary>
     private static byte[] Decompress(byte[] data, int start, int length, int expected, bool v1)
     {
