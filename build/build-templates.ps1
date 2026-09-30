@@ -13,7 +13,7 @@ New-Item -ItemType Directory -Force "$out\console" | Out-Null
 Write-Host "== Windows graphical player"
 $arch = if ($env:PROCESSOR_ARCHITECTURE -eq 'ARM64') { 'win-arm64' } else { 'win-x64' }
 dotnet publish src\AdventureCreator.Player -f net10.0-windows10.0.19041.0 -c Release -p:RuntimeIdentifierOverride=$arch `
-    -p:WindowsPackageType=None -p:SelfContained=true -p:WindowsAppSDKSelfContained=true -o "$out\windows"
+    -p:StandaloneWindows=true -o "$out\windows"
 if ($LASTEXITCODE -ne 0) { throw "Windows player failed" }
 
 foreach ($rid in $Rids) {

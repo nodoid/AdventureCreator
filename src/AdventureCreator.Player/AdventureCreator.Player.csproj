@@ -77,6 +77,14 @@
 	     which is not in git. See signing.local.props.example. -->
 	<Import Project="$(MSBuildThisFileDirectory)..\..\signing.local.props" Condition="Exists('$(MSBuildThisFileDirectory)..\..\signing.local.props')" />
 
+	<!-- Self-contained Windows app (runs on PCs without .NET or the Windows App SDK installed): -p:StandaloneWindows=true.
+	     Set here rather than on the command line, where it would also reach the referenced libraries. -->
+	<PropertyGroup Condition="'$(StandaloneWindows)' == 'true' And $(TargetFramework.Contains('-windows'))">
+		<SelfContained>true</SelfContained>
+		<WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+		<WindowsPackageType>None</WindowsPackageType>
+	</PropertyGroup>
+
 	<!-- The game to embed: dotnet publish -p:EmbeddedGame=/path/to/game.adventure -->
 	<ItemGroup Condition="'$(EmbeddedGame)' != ''">
 		<MauiAsset Include="$(EmbeddedGame)" LogicalName="game.adventure" />

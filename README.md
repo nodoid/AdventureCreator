@@ -104,7 +104,7 @@ Every import produces a report. Anything that couldn't be converted exactly is l
 3. **Desktop app from a template**: copies a prebuilt Player and places the game inside it. The macOS app is re-signed ad hoc. No SDK is needed.
 4. **Console executable**: a single self-contained file with the game appended.
 
-To create the templates for options 3 and 4, run `build/build-templates.sh`. It writes them to `artifacts/templates/`.
+To create the templates for options 3 and 4, run `build/build-templates.sh` (macOS/Linux) or `build\build-templates.ps1` (Windows). It writes them to `artifacts/templates/`.
 
 ## Building
 

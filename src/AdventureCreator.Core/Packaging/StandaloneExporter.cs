@@ -269,7 +269,11 @@ public static class StandaloneExporter
         switch (target)
         {
             case BuildTarget.Android: args.Append(" -p:AndroidPackageFormat=apk"); break;
-            case BuildTarget.Windows: args.Append(" -p:WindowsPackageType=None -p:SelfContained=true -p:WindowsAppSDKSelfContained=true"); break;
+            case BuildTarget.Windows:
+                // Self-contained for this PC's architecture (RuntimeIdentifierOverride keeps it out of the other targets).
+                var winRid = System.Runtime.InteropServices.RuntimeInformation.OSArchitecture == System.Runtime.InteropServices.Architecture.Arm64 ? "win-arm64" : "win-x64";
+                args.Append($" -p:StandaloneWindows=true -p:RuntimeIdentifierOverride={winRid}");
+                break;
             case BuildTarget.MacCatalyst: args.Append(" -p:CreatePackage=false"); break;
             case BuildTarget.iOSSimulator: args.Append($" -r {SimulatorRid}"); break;
             case BuildTarget.iOS: args.Append(" -r ios-arm64 -p:ArchiveOnBuild=true"); break;
