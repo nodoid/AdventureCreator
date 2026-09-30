@@ -1,0 +1,35 @@
+<Project>
+  <!--
+    Copy this file to signing.local.props (same folder) and fill in your own details. signing.local.props is ignored
+    by git, so your team, certificates and profiles never end up in the repository. Both the Studio and the Player
+    import it when it exists; without it, builds use the default ids and are unsigned (simulators, Android, Windows
+    and local Mac builds work fine unsigned).
+
+    Mac Catalyst apps that share an iOS App ID use the "maccatalyst." prefix, as Xcode does.
+  -->
+
+  <!-- Player -->
+  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'AdventureCreator.Player' And '$(GameId)' == ''">
+    <ApplicationId>com.example.adventureplayer</ApplicationId>
+    <ApplicationId Condition="$(TargetFramework.Contains('-maccatalyst'))">maccatalyst.com.example.adventureplayer</ApplicationId>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'AdventureCreator.Player' And '$(GameId)' == '' And $(TargetFramework.Contains('-ios')) And '$(Configuration)' == 'Debug'">
+    <CodesignKey>Apple Development: Your Name (XXXXXXXXXX)</CodesignKey>
+    <CodesignProvision>your-player-development-profile</CodesignProvision>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'AdventureCreator.Player' And '$(GameId)' == '' And $(TargetFramework.Contains('-ios')) And '$(Configuration)' == 'Release'">
+    <CodesignKey>Apple Distribution: Your Name (TEAMID)</CodesignKey>
+    <CodesignProvision>your-player-distribution-profile</CodesignProvision>
+  </PropertyGroup>
+
+  <!-- Studio -->
+  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'AdventureCreator.Studio'">
+    <ApplicationId>com.example.adventurecreator</ApplicationId>
+    <ApplicationId Condition="$(TargetFramework.Contains('-maccatalyst'))">maccatalyst.com.example.adventurecreator</ApplicationId>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'AdventureCreator.Studio' And $(TargetFramework.Contains('-maccatalyst')) And '$(Configuration)' == 'Release'">
+    <EnableCodeSigning>true</EnableCodeSigning>
+    <CodesignKey>Apple Distribution: Your Name (TEAMID)</CodesignKey>
+    <CodesignProvision>your-studio-mac-app-store-profile</CodesignProvision>
+  </PropertyGroup>
+</Project>

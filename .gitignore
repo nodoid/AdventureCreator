@@ -14,3 +14,6 @@ obj/
 *.user
 TestResults/
 artifacts/
+
+# Personal code signing (see signing.local.props.example)
+signing.local.props

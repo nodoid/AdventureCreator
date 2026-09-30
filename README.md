@@ -1,6 +1,6 @@
 # Adventure Creator
 
-Version 1.0 · Copyright © 2026 Paul F.Johnson
+Version 1.0 · Copyright © 2026 Paul F.Johnson · Released under the [DILLIGAF License](LICENSE): do what you like with it.
 
 A .NET 10 / .NET MAUI system for writing, importing and publishing text and graphic adventure games.
 
@@ -118,25 +118,15 @@ dotnet run --project src/AdventureCreator.ConsolePlayer -- --parse example "quie
 
 Windows targets are added automatically when you build on Windows.
 
-## Code signing (team TEAMID)
+## Code signing
 
-| App | Configuration | Identity | Profile | Bundle id |
-|---|---|---|---|---|
-| Player, iOS | Debug | Apple Development | `player-dev-profile` | `com.adventurecreator.player` |
-| Player, iOS | Release | Apple Distribution | `player-release-profile` | `com.adventurecreator.player` |
-| Player, Mac | Debug | Apple Development | `player-dev-mac-profile` | `maccatalyst.com.adventurecreator.player` |
-| Studio, Mac | Release (Mac App Store, sandboxed) | Apple Distribution | `studio-release-mac-profile` | `maccatalyst.com.adventurecreator.studio` |
-
-The profiles must be installed in `~/Library/MobileDevice/Provisioning Profiles`.
-
-Games exported with their own bundle id (`-p:GameId=…`) are not signed with these profiles.
-
-Still to do:
-* There is no `studio-dev-profile` profile yet, so Debug builds of the Studio are unsigned.
-* The Player has no Mac *release* profile.
-* The Studio has no iPad profile.
-* Uploading the Mac App Store Studio also needs a *Mac Installer Distribution* certificate, which is not in the keychain.
-* The sandboxed App Store Studio cannot run the .NET SDK. Export options 2 to 4 are therefore disabled there. They work in the Debug or Developer-ID builds.
+Nothing personal is kept in the repository.
+* Without any setup, the default ids are `com.adventurecreator.player` and `com.adventurecreator.studio`, and builds are unsigned. Simulators, Android, Windows and local Mac builds all work that way.
+* To sign for devices or the App Store, copy `signing.local.props.example` to **`signing.local.props`** in the repository root and fill in your App IDs, signing identities and provisioning profile names. This file is ignored by git, and both apps import it automatically.
+* Provisioning profiles must be installed in `~/Library/MobileDevice/Provisioning Profiles`.
+* Mac Catalyst apps that share an iOS App ID use the `maccatalyst.` prefix, as Xcode does.
+* Games exported with their own bundle id (`-p:GameId=…`) need their own profiles. The export window has fields for these.
+* Mac App Store (Release) builds of the Studio are sandboxed, so they can't run the .NET SDK. Export options 2 to 4 are disabled there; they work in Debug or Developer-ID builds.
 
 ## Example games
 
@@ -152,3 +142,7 @@ Still to do:
 
   All text is original. *Doctor Who*, the Daleks, Davros and related names belong to the BBC. This game is for personal and testing use only. The Studio and Player therefore offer it only in Debug builds; Release (store) builds show only The Lighthouse.
 * **The Lighthouse** is an original, freely distributable example. It covers light and darkness, an adverb puzzle on a rusted stair, custom commands (POLISH, SIGNAL), and hints.
+
+## Licence
+
+Adventure Creator is released under the **[DILLIGAF License](LICENSE)**: use, copy, change, share or sell it however you like, with no warranty. Third-party components (fonts, NuGet packages) keep their own licences. The *Genesis* example uses BBC-owned characters and isn't covered.

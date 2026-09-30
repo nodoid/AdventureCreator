@@ -1,0 +1,34 @@
+THE DILLIGAF LICENSE
+("Do I Look Like I Give A F***")
+
+Copyright © 2026 Paul F.Johnson
+
+Take it. Use it. Copy it, change it, share it, sell it, bundle it, rename it,
+put it in your own projects, ship it in your products, or print it out and
+line a birdcage with it. Do whatever you like with this software and its
+documentation, for any purpose, commercial or otherwise.
+
+You don't need to ask permission. You don't need to pay anything. You don't
+need to credit anyone (a mention is nice, but honestly, nobody's checking).
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHOR OR COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE. IF IT BREAKS, YOU GET TO KEEP BOTH PIECES.
+
+--------------------------------------------------------------------------------
+This licence covers the Adventure Creator code and documentation written for
+this project. It does not cover, and cannot grant rights in:
+
+  * Third-party components, which keep their own licences: the Open Sans fonts
+    (Apache License 2.0), the font8x8 bitmap font (public domain), and the NuGet
+    packages the projects reference (.NET MAUI, CommunityToolkit.Maui,
+    Plugin.Maui.Audio – see their licences).
+  * Characters, names and trademarks belonging to others. In particular the
+    "Genesis" example adventure is a fan work inspired by Doctor Who; Doctor Who,
+    the Daleks, Davros and related names are owned by the BBC.
+  * Games made by other people with PAWS, The Quill, The Illustrator or GAC that
+    you import – those remain the property of their authors.

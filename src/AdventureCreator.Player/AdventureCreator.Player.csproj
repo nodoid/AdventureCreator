@@ -25,9 +25,8 @@
 		<!-- Display name and id. Exported games override these with -p:GameTitle=... -p:GameId=... -->
 		<ApplicationTitle Condition="'$(GameTitle)' == ''">Adventure Player</ApplicationTitle>
 		<ApplicationTitle Condition="'$(GameTitle)' != ''">$(GameTitle)</ApplicationTitle>
+		<!-- Default id; signing.local.props (not in git) may replace it with your own registered App ID. -->
 		<ApplicationId Condition="'$(GameId)' == ''">com.adventurecreator.player</ApplicationId>
-		<!-- Mac Catalyst shares the iOS App ID; Apple's convention prefixes the Mac bundle id with "maccatalyst." -->
-		<ApplicationId Condition="'$(GameId)' == '' And $(TargetFramework.Contains('-maccatalyst'))">maccatalyst.com.adventurecreator.player</ApplicationId>
 		<ApplicationId Condition="'$(GameId)' != ''">$(GameId)</ApplicationId>
 
 		<!-- Versions -->
@@ -74,22 +73,9 @@
 		<ProjectReference Include="..\AdventureCreator.Maui\AdventureCreator.Maui.csproj" />
 	</ItemGroup>
 
-	<!-- Code signing (team TEAMID). Applies to the Player itself; exported games built with their own
-	     GameId need their own profiles and are signed ad hoc otherwise. -->
-	<PropertyGroup Condition="'$(GameId)' == '' And $(TargetFramework.Contains('-ios')) And '$(Configuration)' == 'Debug'">
-		<CodesignKey>Apple Development</CodesignKey>
-		<CodesignProvision>player-dev-profile</CodesignProvision>
-	</PropertyGroup>
-	<PropertyGroup Condition="'$(GameId)' == '' And $(TargetFramework.Contains('-ios')) And '$(Configuration)' == 'Release'">
-		<CodesignKey>Apple Distribution</CodesignKey>
-		<CodesignProvision>player-release-profile</CodesignProvision>
-	</PropertyGroup>
-	<PropertyGroup Condition="'$(GameId)' == '' And $(TargetFramework.Contains('-maccatalyst')) And '$(Configuration)' == 'Debug'">
-		<EnableCodeSigning>true</EnableCodeSigning>
-		<CodesignKey>Apple Development</CodesignKey>
-		<CodesignProvision>player-dev-mac-profile</CodesignProvision>
-		<CodesignEntitlements>Platforms/MacCatalyst/Entitlements.plist</CodesignEntitlements>
-	</PropertyGroup>
+	<!-- Personal code signing (identities, profiles, App IDs) lives in signing.local.props at the repository root,
+	     which is not in git. See signing.local.props.example. -->
+	<Import Project="$(MSBuildThisFileDirectory)..\..\signing.local.props" Condition="Exists('$(MSBuildThisFileDirectory)..\..\signing.local.props')" />
 
 	<!-- The game to embed: dotnet publish -p:EmbeddedGame=/path/to/game.adventure -->
 	<ItemGroup Condition="'$(EmbeddedGame)' != ''">

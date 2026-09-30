@@ -145,20 +145,19 @@ Ad-hoc-signed Mac apps run on your own Mac. To give them to other people, sign t
 
 ## Code signing of the Studio and Player themselves
 
-The projects are set up for team **TEAMID**:
-
-| App | Build | Identity | Profile | Bundle id |
-|---|---|---|---|---|
-| Player, iOS | Debug | Apple Development | `player-dev-profile` | `com.adventurecreator.player` |
-| Player, iOS | Release | Apple Distribution | `player-release-profile` | `com.adventurecreator.player` |
-| Player, Mac | Debug | Apple Development | `player-dev-mac-profile` | `maccatalyst.com.adventurecreator.player` |
-| Studio, Mac | Release (Mac App Store, sandboxed) | Apple Distribution | `studio-release-mac-profile` | `maccatalyst.com.adventurecreator.studio` |
+Signing details are kept out of the repository, in a local file.
+* Without it, the apps use the ids `com.adventurecreator.player` / `com.adventurecreator.studio` and build unsigned. That is fine for simulators, emulators, Android, Windows and local Mac builds.
+* To sign, copy **`signing.local.props.example`** to **`signing.local.props`** in the repository root and fill in, for each app and build type:
+  * your App ID (bundle id)
+  * your signing identity (e.g. `Apple Development: Your Name (TEAMID)`)
+  * your provisioning profile name
+* `signing.local.props` is ignored by git, and the Studio and Player projects import it automatically.
 
 Notes:
 * Provisioning profiles must be installed in `~/Library/MobileDevice/Provisioning Profiles`.
 * Mac Catalyst apps that share an iOS App ID use the `maccatalyst.` prefix, as Xcode does.
-* Games exported with their own bundle id aren't signed with these profiles.
-* Still missing: a `studio-dev-profile` profile (Studio Debug builds are unsigned), a Mac release profile for the Player, an iPad profile for the Studio, and the *Mac Installer Distribution* certificate needed to upload the Studio to the Mac App Store.
+* Games exported with their own bundle id need profiles for that id. Enter them in the export window's signing fields.
+* Uploading to the Mac App Store also needs a *Mac Installer Distribution* certificate.
 
 ## Content and licences
 
