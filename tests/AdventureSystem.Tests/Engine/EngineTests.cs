@@ -34,6 +34,22 @@ public class EngineTests
     }
 
     [Fact]
+    public void Directions_match_exactly_before_by_significant_letters()
+    {
+        // With five significant letters "south" and "southeast" look alike; "south" must not take the south-east exit.
+        var a = World();
+        a.Settings.SignificantLetters = 5;
+        a.FindRoom("hall")!.Exits.Add(new Exit { Direction = "southeast", TargetRoomId = "study" });
+        var e = Start(a);
+        Assert.Null(e.FindExit("hall", "south"));
+        Assert.Equal("study", e.FindExit("hall", "southeast")?.TargetRoomId);
+        e.Submit("s");
+        Assert.Equal("hall", e.State.CurrentRoomId);
+        e.Submit("se");
+        Assert.Equal("study", e.State.CurrentRoomId);
+    }
+
+    [Fact]
     public void A_picture_can_be_drawn_over_the_room_picture()
     {
         var a = World();

@@ -166,10 +166,15 @@ public sealed partial class GameEngine
         return exits;
     }
 
-    public Exit? FindExit(string roomId, string direction) =>
-        ExitsOf(roomId).FirstOrDefault(e => string.Equals(e.Direction, direction, StringComparison.OrdinalIgnoreCase)
-                                            || Lexicon.Equivalent(e.Direction, direction)
-                                            || string.Equals(Lexicon.Direction(e.Direction), direction, StringComparison.OrdinalIgnoreCase));
+    public Exit? FindExit(string roomId, string direction)
+    {
+        var exits = ExitsOf(roomId).ToList();
+        string Canonical(string d) => Lexicon.Direction(d) ?? d;
+        // The exact direction first. Looser matches (significant letters, an imported game's word numbers) never
+        // pair two different directions: with five significant letters "south" would otherwise find "southeast".
+        return exits.FirstOrDefault(e => string.Equals(Canonical(e.Direction), Canonical(direction), StringComparison.OrdinalIgnoreCase))
+            ?? exits.FirstOrDefault(e => !(Lexicon.Direction(e.Direction) != null && Lexicon.Direction(direction) != null) && Lexicon.Equivalent(e.Direction, direction));
+    }
 
     // ================================================================ describing
 

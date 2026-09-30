@@ -100,7 +100,7 @@ Wherever an item is expected you can use `$noun1` / `$noun2` (the item the playe
 | PrepositionIs | the command used this preposition | A = words |
 | Noun1Is / Noun2Is | the first / second object is this item or word | A = item id or word |
 | IsDark | the player is in darkness | — |
-| ExitOpen | the room's exit in that direction exists and its door (if any) is open | A = room, B = direction |
+| ExitOpen | the room's exit in that direction exists and its door (if any) is open | A = room (or `@here`), B = direction |
 | NpcFollowing / NpcHostile / NpcDefeated | the NPC is following the player / hostile / defeated | A = NPC |
 | NpcIn | the NPC is in the room | A = NPC, B = room |
 | NpcHasItem | the NPC holds the item | A = NPC, B = item |

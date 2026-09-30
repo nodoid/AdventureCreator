@@ -140,7 +140,7 @@ You can freely add modern triggers, commands, puzzles, hints and sound to an imp
 |---|---|
 | Skipped condacts | COPYOF, COPYFO, COPYOO, WEIGH, WEIGHT, ADD, SUB, DOALL, LISTAT, WHATO, PARSE, NEWTEXT, RESET, EXTERN (machine code). Each use is listed in the Notes. |
 | Screen control | MODE, LINE, PROTECT, PRINTAT, SAVEAT, BACKAT, INPUT, PROMPT, GRAPHIC, CHARSET, INK, PAPER, BORDER and TIME are skipped. The Player has its own layout. |
-| TIMEOUT, MOVE | Input time-outs and flag-driven characters walking the map aren't modelled. Entries that *test* TIMEOUT or use MOVE never fire. |
+| TIMEOUT, MOVE | Input time-outs and flag-driven characters walking the map aren't modelled. Entries that *test* TIMEOUT never fire. MOVE works for the usual way of listing exits (COPYFF 38 x, LET 33 direction, MOVE x, NOTSAME x 38), which becomes an ExitOpen test on the current room; other entries using MOVE never fire. |
 | Approximations | NOTDONE acts like DONE. ADJECT2 is treated as "adjective used" for either noun. PUTO uses the first noun (PAWS uses the last referenced object). RAMSAVE/RAMLOAD use normal save slots. |
 | Flags 2–10 | PAWS counts these down automatically; here they are ordinary variables. |
 | Flag 1 | Writes to it are dropped; the engine counts carried objects itself. |

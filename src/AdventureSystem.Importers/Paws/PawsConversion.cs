@@ -402,8 +402,16 @@ internal sealed class PawsConversion
                   "(ids t{table}_{entry}_{k}) linked by a chain_* variable stamped with @turns.");
     }
 
+    // Within one entry: flags holding a copy of the current location (COPYFF 38 x), the verb set with LET 33 n,
+    // and flags a MOVE was converted for (see "MOVE" in Translate).
+    private readonly HashSet<string> roomCopies = new(), movedFlags = new();
+    private int? verbConstant;
+
     private void AddEntry(int table, int index, PawsEntry entry, TriggerEvent ev, string? name, bool matchWords, string idSuffix)
     {
+        roomCopies.Clear();
+        movedFlags.Clear();
+        verbConstant = null;
         var segments = new List<Segment> { new() };
         foreach (var c in entry.Condacts)
         {
@@ -533,6 +541,9 @@ internal sealed class PawsConversion
         notes.Add($"PAWS {condact}: {why}");
     }
 
+    private bool MovedFromHere(int a, int b) =>
+        FlagW(a) is { } fa && movedFlags.Contains(fa) && FlagR(b) == "@room" || FlagW(b) is { } fb && movedFlags.Contains(fb) && FlagR(a) == "@room";
+
     private void Translate(PawsCondact c, Segment seg)
     {
         var cond = seg.Conditions;
@@ -564,6 +575,10 @@ internal sealed class PawsConversion
             case "NOTEQ": cond.Add(new Condition(ConditionType.VarEquals, FlagR(a0), a1, negate: true)); break;
             case "GT": cond.Add(new Condition(ConditionType.VarGreater, FlagR(a0), a1)); break;
             case "LT": cond.Add(new Condition(ConditionType.VarLess, FlagR(a0), a1)); break;
+            case "SAME" or "NOTSAME" when MovedFromHere(a0, a1):
+                // After a converted MOVE the flag has left the current location: NOTSAME holds, SAME can't.
+                if (name == "SAME") cond.Add(new Condition(ConditionType.Always, negate: true));
+                break;
             case "SAME": cond.Add(new Condition(ConditionType.VarEqualsVar, FlagR(a0), b: FlagR(a1))); break;
             case "NOTSAME": cond.Add(new Condition(ConditionType.VarEqualsVar, FlagR(a0), b: FlagR(a1), negate: true)); break;
             case "ADJECT1": cond.Add(WordCondition(ConditionType.AdjectiveUsed, a0, PawsWordType.Adjective)); break;
@@ -579,8 +594,19 @@ internal sealed class PawsConversion
                 Skip(name, "input time-outs do not exist in the engine, so entries testing TIMEOUT never fire.");
                 break;
             case "MOVE":
-                cond.Add(new Condition(ConditionType.Always, negate: true));
-                Skip(name, "moving a flag-based character through the connections table has no equivalent; entries using MOVE never fire.");
+                // The exit-listing idiom: COPYFF 38 x; LET 33 <direction>; MOVE x; NOTSAME x 38 → "the current location has
+                // an exit that way". Other uses (walking a flag-based character through the connections) aren't modelled.
+                if (FlagW(a0) is { } moved && roomCopies.Contains(moved) && verbConstant is int dirWord)
+                {
+                    cond.Add(new Condition(ConditionType.ExitOpen, Locations.Here, b: Direction(dirWord)));
+                    movedFlags.Add(moved);
+                    notes.Add("PAWS MOVE on a copy of the current location (listing the exits) became ExitOpen conditions on the current room.");
+                }
+                else
+                {
+                    cond.Add(new Condition(ConditionType.Always, negate: true));
+                    Skip(name, "moving a flag-based character through the connections table has no equivalent; entries using MOVE never fire.");
+                }
                 break;
 
             // ---------------------------------------------------------- objects
@@ -609,10 +635,22 @@ internal sealed class PawsConversion
             // ---------------------------------------------------------- flags
             case "SET": Set(FlagW(a0), 255); break;
             case "CLEAR": Set(FlagW(a0), 0); break;
-            case "LET": Set(FlagW(a0), a1); break;
+            case "LET":
+                if (a0 == 33) verbConstant = a1;
+                if (FlagW(a0) is { } let) { roomCopies.Remove(let); movedFlags.Remove(let); }
+                Set(FlagW(a0), a1);
+                break;
             case "PLUS": if (FlagW(a0) is { } fp) act.Add(new GameAction(ActionType.AddVar, fp, a1)); break;
             case "MINUS": if (FlagW(a0) is { } fm) act.Add(new GameAction(ActionType.AddVar, fm, -a1)); break;
-            case "COPYFF": if (FlagW(a1) is { } fc) act.Add(new GameAction(ActionType.CopyVar, fc, b: FlagR(a0))); break;
+            case "COPYFF":
+                if (FlagW(a1) is { } fc)
+                {
+                    act.Add(new GameAction(ActionType.CopyVar, fc, b: FlagR(a0)));
+                    if (FlagR(a0) == "@room") roomCopies.Add(fc); else roomCopies.Remove(fc);
+                    movedFlags.Remove(fc);
+                    if (a1 == 33) verbConstant = null;
+                }
+                break;
             case "RANDOM": if (FlagW(a0) is { } fr) act.Add(new GameAction(ActionType.RandomVar, fr, 100)); break;
             case "ABILITY":
                 act.Add(new GameAction(ActionType.SetVar, FlagR(37), a0));

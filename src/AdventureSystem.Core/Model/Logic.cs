@@ -123,7 +123,7 @@ public enum ConditionType
     Noun2Is,           // A = item id or word
     CarriedCountAtLeast, // N
     IsDark,            // current room is dark with no light source
-    ExitOpen,          // A = room, B = direction
+    ExitOpen,          // A = room (or @here), B = direction
     TriggerFired,      // A = trigger id (has fired at least once)
     NpcFollowing,      // A = npc
     NpcHostile,        // A = npc

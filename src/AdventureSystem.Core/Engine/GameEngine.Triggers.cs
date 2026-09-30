@@ -280,7 +280,7 @@ public sealed partial class GameEngine
             case ConditionType.Noun2Is: return ctx.Command != null && NounMatches(c.A, ctx.Item2, ctx.Word2, ctx.Command.Object2 != null, ctx.Command);
             case ConditionType.CarriedCountAtLeast: return ItemsAt(Locations.Carried).Count() >= c.N;
             case ConditionType.IsDark: return IsDark();
-            case ConditionType.ExitOpen: return c.A != null && c.B != null && FindExit(c.A, c.B) is { } e &&
+            case ConditionType.ExitOpen: return RoomArg(c.A, ctx) is { } exitRoom && c.B != null && FindExit(exitRoom, c.B) is { } e &&
                                                 (e.DoorItemId == null || (Adventure.FindItem(e.DoorItemId) is { } door && IsOpen(door)));
             case ConditionType.TriggerFired: return c.A != null && State.FiredTriggers.Contains(c.A);
             case ConditionType.NpcFollowing: return ItemA() is { } f && f.Npc != null && MovementOf(f) == NpcMovement.Follow && NpcActive(f);

@@ -283,6 +283,19 @@ public class PawsImporterTests
             .GetMethod("LineCharacter", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!.Invoke(null, new object[] { glyph });
 
     [Fact]
+    public void The_MOVE_idiom_for_listing_exits_tests_the_current_location_s_exits()
+    {
+        // Process 1: COPYFF 38 23; LET 33 north; MOVE 23; NOTSAME 23 38; MESSAGE 2 – "if there's an exit north, say so".
+        var b = SampleGame();
+        b.Processes[1].Add((None, None, C(Op("COPYFF"), 38, 23, Op("LET"), 33, VNorth, Op("MOVE"), 23, Op("NOTSAME"), 23, 38, Op("MESSAGE"), 2)));
+        var (a, result) = Import(b);
+        Assert.DoesNotContain(result.Warnings, w => w.Contains("MOVE"));
+        var e = new GameEngine(a, randomSeed: 1);
+        Assert.Contains("Something glints.", e.Start().Text);            // the hall has an exit north
+        Assert.DoesNotContain("Something glints.", e.Submit("n").Text);   // the garden hasn't
+    }
+
+    [Fact]
     public void Characters_a_game_redraws_as_lines_are_shown_as_line_characters()
     {
         // Civil Service redraws $ as a thick bar low in the cell and # as one high up, and prints rows of them as rules.
