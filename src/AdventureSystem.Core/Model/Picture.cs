@@ -90,8 +90,14 @@ public sealed class DrawCommand
     public int Y { get; set; }
     public int X2 { get; set; }
     public int Y2 { get; set; }
-    /// <summary>Palette index for SetInk/SetPaper/Clear/AttributeBlock ink.</summary>
+    /// <summary>
+    /// Palette index for SetInk/SetPaper/Clear/AttributeBlock ink. In Spectrum pictures SetInk/SetPaper may also be
+    /// <see cref="Transparent"/> (drawing leaves the cell's colour alone: INK 8) or <see cref="Contrast"/> (the cell
+    /// gets whichever of white or black stands out against its other colour: INK 9).
+    /// </summary>
     public int Color { get; set; }
+
+    public const int Transparent = -1, Contrast = -2;
     /// <summary>Paper index for AttributeBlock; -1 = unchanged.</summary>
     public int Color2 { get; set; } = -1;
     /// <summary>Flat list of x,y pairs for polygons and freehand strokes.</summary>

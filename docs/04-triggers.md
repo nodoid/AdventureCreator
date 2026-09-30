@@ -121,7 +121,7 @@ Actions run in order. Fields: **A**, **B**, **N**, **Text**. Item fields accept 
 |---|---|---|
 | Message | prints Text (with [placeholders](#text-placeholders)) | Text; N = 1 → no line break after it |
 | Look | describes the room again | — |
-| ShowPicture | shows a picture | A = picture (empty = the room's picture) |
+| ShowPicture | shows a picture | A = picture (empty = the room's picture); N = 1 draws it over the picture already shown (a frame round every room, say) until the next picture is shown |
 | ClearScreen | clears the transcript | — |
 | Pause | pauses output | N = milliseconds |
 | Inventory / ShowScore / ShowTurns | as the INVENTORY / SCORE / TURNS commands | — |

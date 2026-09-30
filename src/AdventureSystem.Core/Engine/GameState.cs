@@ -48,6 +48,8 @@ public sealed class GameState
     public string? Her { get; set; }
     public string? CurrentSoundId { get; set; }
     public string? CurrentPictureId { get; set; }
+    /// <summary>Pictures drawn over <see cref="CurrentPictureId"/>, in order (ShowPicture with N = 1).</summary>
+    public List<string> PictureLayers { get; set; } = new();
 
     private static readonly JsonSerializerOptions options = new() { WriteIndented = false };
 

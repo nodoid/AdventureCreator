@@ -798,14 +798,17 @@ internal sealed class PawsWriter
                 case 22 or 23: skip = 2; break;
                 case 96: sb.Append('£'); break;
                 case 127: sb.Append('©'); break;
-                case >= 32 and < 127: sb.Append((char)c); break;
+                case >= 32 and < 127: sb.Append(db.Shown(c)); break;
                 case >= 165 when tokens[c] != null:
-                    foreach (var t in tokens[c]!) if (t >= 32 && t < 127) sb.Append(t); else if (t is '\x07' or '\x0D') sb.Append('\n');
+                    foreach (var t in tokens[c]!) if (t >= 32 && t < 127) sb.Append(db.Shown(t)); else if (t is '\x07' or '\x0D') sb.Append('\n');
                     break;
             }
         }
         return PawsConversion.LightClean(sb.ToString());
     }
+
+    /// <summary>A dictionary token as the game shows it (see <see cref="PawsDatabase.LineCharacters"/>).</summary>
+    private string Shown(string token) => new(token.Select(ch => ch >= 32 && ch < 127 ? db.Shown(ch) : ch).ToArray());
 
     /// <summary>Encodes text: dictionary tokens where the database is compressed, XOR 255, ending with 31.</summary>
     private byte[] Encode(string text)
@@ -817,13 +820,14 @@ internal sealed class PawsWriter
             int best = -1, bestLength = 1;
             if (db.Compressed)
                 for (int c = 165; c < 256; c++)
-                    if (tokens[c] is { Length: > 1 } t && t.Length > bestLength && string.CompareOrdinal(text, i, t.Replace('\x07', '\n').Replace('\x0D', '\n'), 0, t.Length) == 0 && t.All(ch => ch >= 32 && ch < 127 || ch is '\x07' or '\x0D'))
+                    if (tokens[c] is { Length: > 1 } t && t.Length > bestLength && string.CompareOrdinal(text, i, Shown(t).Replace('\x07', '\n').Replace('\x0D', '\n'), 0, t.Length) == 0 && t.All(ch => ch >= 32 && ch < 127 || ch is '\x07' or '\x0D'))
                     {
                         best = c;
                         bestLength = t.Length;
                     }
             if (best >= 0) { codes.Add(best); i += bestLength; continue; }
             char ch = text[i++];
+            if (db.Stored(ch) is var stored and >= 0) { codes.Add(stored); continue; }
             codes.Add(ch switch
             {
                 '\n' => newline,

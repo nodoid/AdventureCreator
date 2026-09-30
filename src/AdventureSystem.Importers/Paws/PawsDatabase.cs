@@ -246,10 +246,10 @@ internal sealed class PawsDatabase
             case 22 or 23: skip = 2; return;                 // AT / TAB + 2 values
             case 96: sb.Append('£'); return;
             case 127: sb.Append('©'); return;
-            case >= 32 and < 127: sb.Append((char)c); return;
+            case >= 32 and < 127: sb.Append(Shown(c)); return;
             case >= 165 when Compressed:
                 foreach (var t in tokens[c] ?? "")
-                    if (t >= 32 && t < 127) sb.Append(t);
+                    if (t >= 32 && t < 127) sb.Append(Shown(t));
                     else if (t is '\x07' or '\x0D') sb.Append('\n');
                 return;
             case >= 163:
@@ -376,6 +376,64 @@ internal sealed class PawsDatabase
 
     /// <summary>8 bytes of shade pattern 0-15.</summary>
     public byte[] Shade(int n) => Enumerable.Range(0, 8).Select(i => (byte)Peek(Main, MainTop + 152 + 8 * (n & 15) + i)).ToArray();
+
+    private Dictionary<int, char>? lineCharacters;
+
+    /// <summary>
+    /// Characters the game's own character set draws as lines or blocks (say "$" redrawn as a thick bar, printed in a
+    /// row to frame a message), with the Unicode character that looks like each. Letters, digits and characters that
+    /// are lines anyway (_ - |) are left alone.
+    /// </summary>
+    public IReadOnlyDictionary<int, char> LineCharacters => lineCharacters ??= FindLineCharacters();
+
+    /// <summary>How a character code in the game's text is shown.</summary>
+    public char Shown(int c) => LineCharacters.TryGetValue(c, out var ch) ? ch : (char)c;
+
+    /// <summary>The character code for a shown character that stands for one of <see cref="LineCharacters"/>, or -1.</summary>
+    public int Stored(char shown)
+    {
+        foreach (var (code, ch) in LineCharacters) if (ch == shown) return code;
+        return -1;
+    }
+
+    private Dictionary<int, char> FindLineCharacters()
+    {
+        var map = new Dictionary<int, char>();
+        if (DefaultCharset < 1 || DefaultCharset > NumCharsets) return map;
+        for (int c = 33; c < 127; c++)
+        {
+            if (char.IsLetterOrDigit((char)c) || c is '_' or '-' or '|' or 96) continue;
+            // Each shown character must stand for one code (it's turned back on export): look-alikes when the nearest is taken.
+            if (Glyph(DefaultCharset, c) is { } g && LineCharacter(g) is { } line &&
+                (line + "━─═▬").FirstOrDefault(x => !map.ContainsValue(x)) is var free and not '\0')
+                map[c] = free;
+        }
+        return map;
+    }
+
+    /// <summary>A glyph made only of whole rows or of the same columns in every row, as the nearest Unicode line or block character; null otherwise.</summary>
+    internal static char? LineCharacter(byte[] g)
+    {
+        if (g.Length != 8 || g.All(b => b == 0)) return null;
+        if (g.All(b => b is 0 or 0xFF))
+        {
+            int rows = g.Count(b => b == 0xFF), first = Array.IndexOf(g, (byte)0xFF), last = Array.LastIndexOf(g, (byte)0xFF);
+            if (last - first + 1 != rows) return null;                     // separate bars: not a single line
+            if (rows == 8) return '█';
+            if (last == 7) return "▁▂▃▄▅▆▇"[rows - 1];
+            if (first == 0) return rows >= 4 ? '▀' : '▔';
+            return rows >= 2 ? '━' : '─';
+        }
+        if (g.All(b => b == g[0]))
+        {
+            int bits = System.Numerics.BitOperations.PopCount(g[0]), run = g[0] >> System.Numerics.BitOperations.TrailingZeroCount(g[0]);
+            if ((run & (run + 1)) != 0) return null;                          // separate columns: not a single line
+            if ((g[0] & 0x80) != 0) return bits >= 4 ? '▌' : '▏';          // bit 7 is the leftmost pixel
+            if ((g[0] & 0x01) != 0) return bits >= 4 ? '▐' : '▕';
+            return bits >= 2 ? '┃' : '│';
+        }
+        return null;
+    }
 
     /// <summary>Glyph bytes for a picture TEXT character, or null when only the ROM font has it.</summary>
     public byte[]? Glyph(int set, int ch)

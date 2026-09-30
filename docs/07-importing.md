@@ -122,12 +122,13 @@ You can freely add modern triggers, commands, puzzles, hints and sound to an imp
   * AUTOG / AUTOD / AUTOW / AUTOR / AUTOP / AUTOT → the same actions on `$noun1`
   * SET, CLEAR, LET, PLUS, MINUS, COPYFF, RANDOM → variable actions
   * MESSAGE / MES / SYSMESS / PRINT / NEWLINE → Message actions
-  * GOTO, DESC, DONE, OK, END, QUIT, SAVE, LOAD, RAMSAVE, RAMLOAD, SCORE, TURNS, INVEN, CLS, ANYKEY, PAUSE, BEEP, PROCESS, PICTURE, DROPALL → their equivalents
+  * GOTO, DESC, DONE, OK, END, QUIT, SAVE, LOAD, RAMSAVE, RAMLOAD, SCORE, TURNS, INVEN, CLS, ANYKEY, PAUSE, BEEP, PROCESS, PICTURE, DROPALL → their equivalents. PICTURE draws over the picture already on screen, as PAWS does (many games draw a frame round each location picture this way).
 * **Flags:** 0 = darkness (`f0`, with object 0 as the light source), 1 → `@carried`, 30 → `@score`, 31 → `@turns`, 38 → `@room`. All others become `f{n}` variables, with the system flags described in **Variables**.
 * **Carrying limits:** the first ABILITY in the game (or the PAWS defaults of 4 objects and weight 10) sets **Max Carried Items / Weight**.
-* **Pictures:** every location picture, with PLOT, LINE, FILL, SHADE (including inverse patterns), BLOCK, GOSUB with scale, INK, PAPER, BRIGHT, OVER and INVERSE.
+* **Pictures:** every location picture, with PLOT, LINE, FILL, SHADE (including inverse patterns), BLOCK, GOSUB with scale, INK, PAPER (including 8, transparent, and 9, contrast), BRIGHT, OVER and INVERSE.
   * TEXT in the ROM font becomes a Text command.
   * Text using the game's own character sets or UDGs is drawn pixel by pixel from the snapshot.
+* **Text in the game's own character set** is shown in the engine's font. Characters that set redraws as lines or blocks (for example `$` drawn as a bar, printed in a row as a rule) are shown as line characters such as ─ ━ ▁ █, and turned back into the game's own characters when you export it.
 * **Settings:**
   * Significant Letters 5, Auto List Exits off, Spelling Correction off.
   * Auto List Items is on only if the game used LISTOBJ.
@@ -144,7 +145,7 @@ You can freely add modern triggers, commands, puzzles, hints and sound to an imp
 | Flags 2–10 | PAWS counts these down automatically; here they are ordinary variables. |
 | Flag 1 | Writes to it are dropped; the engine counts carried objects itself. |
 | "Current object" system | Flags 51 and 54–57 aren't maintained. |
-| Pictures | INK/PAPER 8 and 9 (transparent/contrast), BRIGHT 8 and FLASH are ignored. |
+| Pictures | BRIGHT 8 and FLASH are ignored. Pictures a game draws with machine code (EXTERN), such as character portraits, are not in the picture data and don't appear. |
 | Fonts | Custom character sets for game *text* aren't used; the Player uses its own font. |
 | Not supported | CP/M PAWS, tape images (use a snapshot), and games whose database has been deliberately scrambled. |
 
@@ -375,7 +376,7 @@ An imported game can be saved in the format it came from with *File › Export G
 | An item can't be referred to | Add nouns to the item in **Items** (common with early Quill games and GAC). |
 | A puzzle doesn't work | Check **Game › Notes** for skipped condacts or conditions in the trigger concerned (trigger ids show the original table and entry). |
 | Wrong ending (GAC) | Check the Win/Lose actions converted from EXIT. |
-| Pictures slightly different | Expected for GAC fills and PAWS/Quill FLASH and transparent colours. You can touch them up in the picture editor. |
+| Pictures slightly different | Expected for GAC fills and PAWS/Quill FLASH. You can touch them up in the picture editor. |
 | The game is dark everywhere | Look at the Darkness Variable (Game › Settings) and object `o0` (the Quill/PAWS light source). |
 
 ## Reading the converted logic

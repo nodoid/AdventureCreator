@@ -19,7 +19,7 @@ Pictures marked **Is Subroutine** are pieces drawn inside other pictures with th
 | Property | Meaning |
 |---|---|
 | Width, Height | Canvas size in pixels (for Smooth pictures, in drawing units). The default 256×176 is the classic ZX Spectrum picture size. |
-| Render Mode | **Smooth**: drawn with Maui.Graphics as anti-aliased vectors, so lines, curves and text stay sharp at any size; the best choice for new pictures. **FullColour**: retro pixels, where every pixel has its own colour, scaled up with crisp edges. **SpectrumAttributes**: authentic ZX Spectrum rendering, where each 8×8 cell can hold only one ink and one paper colour, so colours "clash" (used by imported PAWS/Quill/GAC pictures). |
+| Render Mode | **Smooth**: drawn with Maui.Graphics as anti-aliased vectors, so lines, curves and text stay sharp at any size; the best choice for new pictures. **FullColour**: retro pixels, where every pixel has its own colour, scaled up with crisp edges. **SpectrumAttributes**: authentic ZX Spectrum rendering, where each 8×8 cell can hold only one ink and one paper colour, and drawing in a cell gives it the current ink and paper, so colours "clash" (used by imported PAWS/Quill/GAC pictures). Ink or paper can also be transparent (the cell keeps its colour) or contrast (white or black, whichever stands out). |
 | Line Width | Smooth pictures only: the width of lines and outlines, in picture pixels (1 by default; the pen's brush size multiplies it). |
 | Palette | The colours available to the drawing commands (32 by default: the 16 Spectrum colours plus 16 extra shades). Imported pictures use their machine's palette. |
 | Initial Ink / Initial Paper | The starting drawing and background colours. |

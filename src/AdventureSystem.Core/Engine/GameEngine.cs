@@ -407,11 +407,25 @@ public sealed partial class GameEngine
         Emit(new OutputEvent(OutputKind.StopSound));
     }
 
-    public void ShowPicture(string? pictureId)
+    /// <summary>
+    /// Shows a picture; with <paramref name="over"/>, draws it over the picture already shown instead (an 8-bit game's
+    /// screen frame, say). The event's Id is the picture and its Text the pictures drawn over it, comma-separated.
+    /// </summary>
+    public void ShowPicture(string? pictureId, bool over = false)
     {
         if (!Adventure.Settings.ShowPictures) return;
-        State.CurrentPictureId = pictureId;
-        Emit(new OutputEvent(OutputKind.Picture, Id: pictureId));
+        if (over && pictureId != null && State.CurrentPictureId != null)
+        {
+            if (string.Equals(pictureId, State.CurrentPictureId, StringComparison.OrdinalIgnoreCase)) return;
+            State.PictureLayers.RemoveAll(l => string.Equals(l, pictureId, StringComparison.OrdinalIgnoreCase));
+            State.PictureLayers.Add(pictureId);
+        }
+        else
+        {
+            State.CurrentPictureId = pictureId;
+            State.PictureLayers.Clear();
+        }
+        Emit(new OutputEvent(OutputKind.Picture, Id: State.CurrentPictureId, Text: State.PictureLayers.Count > 0 ? string.Join(",", State.PictureLayers) : null));
     }
 
     // ================================================================ variables

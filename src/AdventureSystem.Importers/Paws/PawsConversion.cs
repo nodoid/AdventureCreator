@@ -649,7 +649,8 @@ internal sealed class PawsConversion
             case "TURNS": act.Add(new GameAction(ActionType.ShowTurns)); break;
             case "SCORE": act.Add(new GameAction(ActionType.ShowScore)); usesScore = true; break;
             case "CLS": act.Add(new GameAction(ActionType.ClearScreen)); break;
-            case "PICTURE": act.Add(new GameAction(ActionType.ShowPicture, $"p{a0}")); break;
+            // PAWS draws pictures on top of what's on screen (a location picture, then a frame round it).
+            case "PICTURE": act.Add(new GameAction(ActionType.ShowPicture, $"p{a0}", n: 1)); break;
             case "ANYKEY": act.Add(new GameAction(ActionType.Pause, n: 0)); break;
             case "PAUSE": act.Add(new GameAction(ActionType.Pause, n: (a0 == 0 ? 256 : a0) * 20)); break;
             case "BEEP": act.Add(new GameAction(ActionType.Beep)); break;
@@ -722,7 +723,9 @@ internal sealed class PawsConversion
         if (conv.UsesCustomCharset)
             notes.Add("Picture TEXT commands using the database's own character sets or UDGs were drawn pixel by pixel from the glyph data.");
         if (db.NumCharsets > 0 && db.DefaultCharset != 0)
-            notes.Add($"The game prints its text in custom character set {db.DefaultCharset}; the engine's own font is used instead.");
+            notes.Add($"The game prints its text in custom character set {db.DefaultCharset}; the engine's own font is used instead." +
+                      (db.LineCharacters.Count > 0 ? " Characters that set draws as lines are shown as line characters: " +
+                          string.Join(", ", db.LineCharacters.Select(kv => $"{(char)kv.Key} → {kv.Value}")) + "." : ""));
     }
 
     // ================================================================ variables & settings

@@ -197,7 +197,7 @@ public enum ActionType
     SolvePuzzle,      // A = puzzle
     PlaySound,        // A = sound, N = 1 to loop
     StopSound,
-    ShowPicture,      // A = picture (empty = room picture)
+    ShowPicture,      // A = picture (empty = room picture); N = 1 draws it over the picture shown (8-bit games draw frames that way)
     ClearScreen,
     Inventory,
     ShowScore,

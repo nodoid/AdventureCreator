@@ -170,7 +170,7 @@ internal sealed class PawsPictureConverter
                     {
                         Op = DrawOp.AttributeBlock,
                         X = col * 8, Y = row * 8, X2 = (col + w + 1) * 8 - 1, Y2 = (row + h + 1) * 8 - 1,
-                        Color = st.Ink + bright, Color2 = st.Paper + bright,
+                        Color = st.Ink < 0 ? st.Ink : st.Ink + bright, Color2 = st.Paper < 0 ? st.Paper : st.Paper + bright,
                     });
                     break;
                 }
@@ -210,8 +210,12 @@ internal sealed class PawsPictureConverter
                         if (v <= 1) { st.Bright = v; output?.Add(new DrawCommand { Op = DrawOp.SetBright, X = v }); }
                         else Notes.Add("Picture BRIGHT 8 (transparent) is ignored.");
                     }
-                    else if (v < 8) { st.Paper = v; output?.Add(new DrawCommand { Op = DrawOp.SetPaper, Color = v }); }
-                    else Notes.Add("Picture PAPER 8/9 (transparent / contrast) is ignored; the previous paper is kept.");
+                    else
+                    {
+                        // PAPER 8 leaves each cell's paper as it is; PAPER 9 contrasts with its ink.
+                        st.Paper = v < 8 ? v : v == 8 ? DrawCommand.Transparent : DrawCommand.Contrast;
+                        output?.Add(new DrawCommand { Op = DrawOp.SetPaper, Color = st.Paper });
+                    }
                     break;
                 }
 
@@ -219,8 +223,11 @@ internal sealed class PawsPictureConverter
                 {
                     int v = (b >> 3) & 15;
                     if ((b & 0x80) != 0) Notes.Add("Picture FLASH commands are ignored.");
-                    else if (v < 8) { st.Ink = v; output?.Add(new DrawCommand { Op = DrawOp.SetInk, Color = v }); }
-                    else Notes.Add("Picture INK 8/9 (transparent / contrast) is ignored; the previous ink is kept.");
+                    else
+                    {
+                        st.Ink = v < 8 ? v : v == 8 ? DrawCommand.Transparent : DrawCommand.Contrast;
+                        output?.Add(new DrawCommand { Op = DrawOp.SetInk, Color = st.Ink });
+                    }
                     break;
                 }
             }

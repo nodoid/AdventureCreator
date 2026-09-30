@@ -278,6 +278,27 @@ public class PawsImporterTests
 
     // ------------------------------------------------------------------ tests
 
+    private static char? LineCharacter(params byte[] glyph) =>
+        (char?)typeof(PawsImporter).Assembly.GetType("AdventureSystem.Importers.Paws.PawsDatabase")!
+            .GetMethod("LineCharacter", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!.Invoke(null, new object[] { glyph });
+
+    [Fact]
+    public void Characters_a_game_redraws_as_lines_are_shown_as_line_characters()
+    {
+        // Civil Service redraws $ as a thick bar low in the cell and # as one high up, and prints rows of them as rules.
+        Assert.Equal('━', LineCharacter(0, 0, 0, 0, 0, 0xFF, 0xFF, 0));
+        Assert.Equal('▁', LineCharacter(0, 0, 0, 0, 0, 0, 0, 0xFF));
+        Assert.Equal('▄', LineCharacter(0, 0, 0, 0, 0xFF, 0xFF, 0xFF, 0xFF));
+        Assert.Equal('▔', LineCharacter(0xFF, 0, 0, 0, 0, 0, 0, 0));
+        Assert.Equal('█', LineCharacter(0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF));
+        Assert.Equal('▌', LineCharacter(0xF0, 0xF0, 0xF0, 0xF0, 0xF0, 0xF0, 0xF0, 0xF0));
+        Assert.Equal('│', LineCharacter(0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10));
+        // Letters and anything else stay as they are.
+        Assert.Null(LineCharacter(0x7C, 0xFE, 0xC6, 0xFE, 0xFE, 0xC6, 0xC6, 0));      // an A
+        Assert.Null(LineCharacter(0xFF, 0, 0, 0, 0, 0, 0, 0xFF));                       // two separate bars
+        Assert.Null(LineCharacter(0, 0, 0, 0, 0, 0, 0, 0));
+    }
+
     [Fact]
     public void DetectsPawsAndRejectsOtherSnapshots()
     {

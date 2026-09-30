@@ -499,7 +499,7 @@ public sealed class GamePlayerView : ContentView
                         AppendText(e.Text ?? "", e.Style);
                         break;
                     case OutputKind.Picture:
-                        ShowPicture(e.Id);
+                        ShowPicture(e.Id, e.Text);
                         break;
                     case OutputKind.PlaySound:
                         Audio.Play(engine!.Adventure, e.Id, e.Loop);
@@ -556,10 +556,11 @@ public sealed class GamePlayerView : ContentView
         if (engine != null && statusRoom.Parent is View bar) bar.IsVisible = engine.Adventure.Settings.ShowStatusBar;
     }
 
-    private void ShowPicture(string? id)
+    private void ShowPicture(string? id, string? layers = null)
     {
         if (engine == null) return;
         var pic = engine.Adventure.FindPicture(id);
+        if (pic != null) pic = Core.Graphics.PictureLayers.Compose(engine.Adventure, pic, Core.Graphics.PictureLayers.Parse(layers));
         picture.Show(pic, engine.Adventure);
         picture.IsVisible = pic != null;
         UpdatePictureSize();

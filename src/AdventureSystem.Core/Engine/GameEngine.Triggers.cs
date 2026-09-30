@@ -433,7 +433,7 @@ public sealed partial class GameEngine
                 StopSound();
                 break;
             case ActionType.ShowPicture:
-                ShowPicture(string.IsNullOrEmpty(a.A) ? CurrentRoom?.PictureId : a.A);
+                ShowPicture(string.IsNullOrEmpty(a.A) ? CurrentRoom?.PictureId : a.A, over: a.N == 1);
                 break;
             case ActionType.ClearScreen:
                 Emit(new OutputEvent(OutputKind.ClearScreen));

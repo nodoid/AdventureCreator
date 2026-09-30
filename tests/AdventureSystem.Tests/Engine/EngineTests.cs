@@ -34,6 +34,28 @@ public class EngineTests
     }
 
     [Fact]
+    public void A_picture_can_be_drawn_over_the_room_picture()
+    {
+        var a = World();
+        a.Pictures.Add(new Picture { Id = "hallpic", Width = 8, Height = 8 });
+        a.Pictures.Add(new Picture { Id = "frame", Width = 8, Height = 8 });
+        a.FindRoom("hall")!.PictureId = "hallpic";
+        a.FindRoom("study")!.PictureId = "hallpic";
+        // As a PAWS game draws its screen frame after every description.
+        a.Triggers.Add(new Trigger { Id = "frame", Event = TriggerEvent.AfterDescribe, Actions = { new GameAction(ActionType.ShowPicture, "frame", n: 1) } });
+        var e = new GameEngine(a, randomSeed: 1);
+        var start = e.Start();
+        var last = start.Events.Last(ev => ev.Kind == OutputKind.Picture);
+        Assert.Equal(("hallpic", "frame"), (last.Id, last.Text));
+        Assert.Equal("hallpic", e.State.CurrentPictureId);
+        Assert.Equal(new[] { "frame" }, e.State.PictureLayers);
+
+        // A new description shows the room picture afresh; the frame is drawn over it again, once.
+        e.Submit("look");
+        Assert.Equal(new[] { "frame" }, e.State.PictureLayers);
+    }
+
+    [Fact]
     public void StartDescribesRoom()
     {
         var e = new GameEngine(World());

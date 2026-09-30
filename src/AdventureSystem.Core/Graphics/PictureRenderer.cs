@@ -210,14 +210,26 @@ public sealed class PictureRenderer
             int i = y * image.Width + x;
             if (c.Xor) bits[i] = !bits[i];
             else bits[i] = !c.Inverse;
-            int cell = (y / 8) * cols + x / 8;
-            if (ink < 8) cellInk[cell] = (byte)(ink & 7);
-            cellBright[cell] = bright;
+            Stamp((y / 8) * cols + x / 8);
             return;
         }
         uint col = c.Inverse ? Colour(paper) : Colour(ink);
         if (c.Xor) col = image[x, y] ^ (col & 0x00FFFFFF);
         image[x, y] = col;
+    }
+
+    /// <summary>
+    /// Drawing on a Spectrum gives the cell the current attributes (the ROM's ATTR-T): paper, ink and bright, except
+    /// where they are transparent (INK/PAPER 8); contrast (9) picks white or black against the cell's other colour.
+    /// </summary>
+    private void Stamp(int cell)
+    {
+        // Indices 8-15 are the bright colours (as for attribute blocks); 0-7 use the current BRIGHT setting.
+        if (paper is >= 0 and < 16) cellPaper[cell] = (byte)(paper & 7);
+        if (ink is >= 0 and < 16) cellInk[cell] = (byte)(ink & 7);
+        else if (ink == DrawCommand.Contrast) cellInk[cell] = (byte)(cellPaper[cell] < 4 ? 7 : 0);
+        if (paper == DrawCommand.Contrast) cellPaper[cell] = (byte)(cellInk[cell] < 4 ? 7 : 0);
+        cellBright[cell] = bright || ink is >= 8 and < 16 || paper is >= 8 and < 16;
     }
 
     private void Plot(int x, int y, DrawCommand c) => Set(x, y, c);
@@ -330,9 +342,7 @@ public sealed class PictureRenderer
                 if (spectrum)
                 {
                     if (on) bits[i] = true;
-                    int cell = (y / 8) * cols + xi / 8;
-                    if (ink < 8) cellInk[cell] = (byte)(ink & 7);
-                    cellBright[cell] = bright;
+                    Stamp((y / 8) * cols + xi / 8);
                 }
                 else image.Pixels[i] = on ? inkColour : paperColour;
                 if (y > 0 && Inside(xi, y - 1)) stack.Push((xi, y - 1));
