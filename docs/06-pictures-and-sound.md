@@ -4,7 +4,7 @@
 
 A picture is a list of **drawing commands** (lines, fills, shapes…) painted by the built-in renderer. It can also have a
 bitmap background, or bitmap stamps, imported from an image file. Pictures are small (a few hundred bytes of commands)
-and look identical on every platform.
+and look identical on every platform. Parts of a picture can be **animated** (see *Animation* below).
 
 A picture can be:
 * a room's **Picture id** (shown when the player arrives and on LOOK)
@@ -18,8 +18,9 @@ Pictures marked **Is Subroutine** are pieces drawn inside other pictures with th
 
 | Property | Meaning |
 |---|---|
-| Width, Height | Canvas size in pixels. The default 256×176 is the classic ZX Spectrum picture size. Players scale pictures up with crisp pixels. |
-| Render Mode | **FullColour**: every pixel has its own colour. **SpectrumAttributes**: authentic ZX Spectrum rendering, where each 8×8 cell can hold only one ink and one paper colour, so colours "clash" (used by imported PAWS/Quill/GAC pictures). |
+| Width, Height | Canvas size in pixels (for Smooth pictures, in drawing units). The default 256×176 is the classic ZX Spectrum picture size. |
+| Render Mode | **Smooth**: drawn with Maui.Graphics as anti-aliased vectors, so lines, curves and text stay sharp at any size; the best choice for new pictures. **FullColour**: retro pixels, where every pixel has its own colour, scaled up with crisp edges. **SpectrumAttributes**: authentic ZX Spectrum rendering, where each 8×8 cell can hold only one ink and one paper colour, so colours "clash" (used by imported PAWS/Quill/GAC pictures). |
+| Line Width | Smooth pictures only: the width of lines and outlines, in picture pixels (1 by default; the pen's brush size multiplies it). |
 | Palette | The colours available to the drawing commands (32 by default: the 16 Spectrum colours plus 16 extra shades). Imported pictures use their machine's palette. |
 | Initial Ink / Initial Paper | The starting drawing and background colours. |
 | Bitmap Asset | An imported image drawn underneath the commands. |
@@ -75,6 +76,31 @@ Every change can be undone with **↶ Undo**.
 * **Image to stamp…** stores an image that the **🖼 Image** tool can place anywhere, as often as you like.
 
 Imported images are kept inside the game package (`assets/images/`). Large photographs make large games; prefer PNGs of a few hundred pixels.
+
+### Smooth pictures and flood fills
+
+Smooth pictures are drawn as shapes, not pixels, at whatever size the player's screen allows. Flood fills (▨ Fill and ▦ Shade) still work: the Studio traces each fill's area on a grid four times finer than the picture, with lines as wide as the smooth ones, so a fill meets its outline cleanly. For the smoothest results, use filled shapes (Box, Disc, Shape) where you can, and keep flood fills for areas bounded by several shapes.
+
+Smooth pictures are drawn as pixels (full colour) where vectors can't be used, such as the exported apps' launch screens and the console player.
+
+## Animation
+
+Pictures can have simple looping animations: rain that falls, a lamp that flickers, a ship that bobs on the waves, lights that blink. An animation acts on a **layer**, meaning every shape with the same **Layer** name.
+
+1. With **↖ Select**, click a shape and type a **Layer** name in the inspector (for example `rain`). Give every shape that should move together the same name.
+2. In the inspector's **Animation** section, click **+ Add animation**, then choose its kind and layer.
+3. Press **▶ Animate** (next to Undo) to preview. Press **■ Stop** to stop.
+
+| Kind | What it does | Settings |
+|---|---|---|
+| **Blink** | Shows the layer for part of each period and hides it for the rest. | **Period**, **On %** |
+| **Move** | Slides the layer by (Move X, Move Y) over the period, then back again, or jumps back to the start if **There and back** is off (good for falling rain). | **Period**, **Move X**, **Move Y**, **There and back** |
+| **ColourCycle** | Steps the layer's colour through a list of palette colours, one per step (fire, flashing beacons, shimmering water). Type the colour numbers, or click a colour in the palette and press **+ ink**. | **Step**, **Colours** |
+| **Flipbook** | Shows a different sub-picture on each step. Place a sub-picture with **⧉ Sub** in the layer, then list the frames' picture ids. | **Step**, **Frames** |
+
+Times are in milliseconds. **Delay** holds an animation back at the start, and can make two animations run out of step. The tick box switches an animation off without deleting it. Several animations can act on the same layer; for example, a ship can bob with Move while its lights Blink.
+
+Animations play in the Player and in the Studio's room preview and Test Play, in every render mode. Each one restarts when its picture is shown. They are purely visual and don't affect the game. *The Lighthouse* example uses all of these: rain on every outdoor scene, a pitching ship, a flickering fire in the cottage, a pulsing lamp beam and the ship's blinking lights.
 
 ## Sound
 

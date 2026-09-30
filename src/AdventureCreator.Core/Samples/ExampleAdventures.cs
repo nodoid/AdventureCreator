@@ -517,8 +517,25 @@ public static partial class ExampleAdventures
     private static Picture Pic(string id, string name, params DrawCommand[][] layers) => new()
     {
         Id = id, Name = name, Palette = Palettes.Extended.ToList(), InitialPaper = Black, InitialInk = BrightWhite,
+        RenderMode = PictureRenderMode.Smooth,
         Commands = layers.SelectMany(l => l).ToList(),
     };
+
+    /// <summary>Puts the drawing commands (not the ink changes) on an animation layer.</summary>
+    private static DrawCommand[] OnLayer(string layer, params DrawCommand[] commands)
+    {
+        foreach (var c in commands) if (c.Op != DrawOp.SetInk) c.Layer = layer;
+        return commands;
+    }
+
+    private static Picture Animated(Picture picture, params PictureAnimation[] animations)
+    {
+        picture.Animations.AddRange(animations);
+        return picture;
+    }
+
+    private static PictureAnimation Falling(string layer = "rain") =>
+        new() { Name = "Rain", Kind = AnimationKind.Move, Layer = layer, Dx = -2, Dy = 5, PeriodMs = 260, PingPong = false };
 
     private static DrawCommand[] Tower(int cx, int top, int bottom, bool lit)
     {
@@ -557,7 +574,7 @@ public static partial class ExampleAdventures
             int x = rnd.Next(0, 256), y = rnd.Next(0, 110);
             list.Add(Line(x, y, x - 3, y + 7));
         }
-        return list.ToArray();
+        return OnLayer("rain", list.ToArray());
     }
 
     private static DrawCommand[] Sea(int top)
@@ -573,16 +590,18 @@ public static partial class ExampleAdventures
 
     private static void AddPictures(Adventure a)
     {
-        a.Pictures.Add(Pic("pic_beach", "Storm Beach",
+        a.Pictures.Add(Animated(Pic("pic_beach", "Storm Beach",
             new[] { Clear(Navy), Ink(DarkGrey), Oval(-20, -10, 120, 40), Oval(90, -15, 230, 30), Ink(Slate), Oval(150, 5, 280, 45), Oval(10, 20, 90, 50) },
             Sea(95),
             new[] { Ink(DarkGrey), Poly(150, 175, 170, 90, 205, 80, 256, 70, 256, 175) },
             Tower(222, 22, 76, lit: false),
             new[] { Ink(Tan), Poly(0, 175, 0, 140, 60, 128, 140, 132, 180, 150, 200, 175), Ink(Brown), Poly(40, 138, 95, 138, 88, 128, 47, 128), Ink(DarkBrown), Line(47, 128, 88, 128) },
-            new[] { Ink(Yellow), Box(100, 108, 103, 110), Ink(BrightRed), Box(108, 108, 110, 110), Ink(DarkGrey), Poly(92, 112, 120, 112, 116, 116, 96, 116) },
-            Rain(1, Sky)));
+            OnLayer("ship", Ink(Yellow), Box(100, 108, 103, 110), Ink(BrightRed), Box(108, 108, 110, 110), Ink(DarkGrey), Poly(92, 112, 120, 112, 116, 116, 96, 116)),
+            Rain(1, Sky)),
+            Falling(),
+            new PictureAnimation { Name = "Ship pitching", Kind = AnimationKind.Move, Layer = "ship", Dy = 2, Dx = 1, PeriodMs = 900 }));
 
-        a.Pictures.Add(Pic("pic_path", "Cliff Path",
+        a.Pictures.Add(Animated(Pic("pic_path", "Cliff Path",
             new[] { Clear(Slate), Ink(DarkGrey), Oval(-30, -20, 140, 40), Oval(120, -25, 290, 35) },
             new[] { Ink(Green), Box(0, 110, 255, 175), Ink(DarkGreen), Poly(0, 125, 80, 118, 160, 128, 255, 120, 255, 175, 0, 175) },
             new[] { Ink(BrightWhite), Poly(90, 8, 150, 8, 165, 120, 75, 120), Ink(BrightRed), Poly(84, 45, 156, 45, 158, 60, 82, 60), Poly(80, 85, 160, 85, 162, 100, 78, 100) },
@@ -590,16 +609,20 @@ public static partial class ExampleAdventures
             new[] { Ink(Tan), Poly(100, 122, 140, 122, 175, 175, 60, 175) },
             new[] { Ink(Brown), Poly(104, 121, 136, 121, 139, 127, 101, 127), Ink(Wheat), Label(104, 122, "") },
             new[] { Ink(Grey), Box(195, 105, 250, 140), Ink(DarkBrown), Poly(190, 105, 255, 105, 222, 82), Ink(Yellow), Box(205, 115, 215, 125), Ink(DarkGrey), Box(240, 70, 246, 90) },
-            Rain(2, Sky)));
+            Rain(2, Sky)), Falling()));
 
-        a.Pictures.Add(Pic("pic_cottage", "Keeper's Cottage",
+        a.Pictures.Add(Animated(Pic("pic_cottage", "Keeper's Cottage",
             new[] { Clear(Brown), Ink(DarkBrown), Box(0, 130, 255, 175), Ink(Tan), Line(0, 130, 255, 130) },
-            new[] { Ink(Grey), Box(160, 60, 240, 130), Ink(Black), Box(175, 85, 225, 130), Ink(Orange), Poly(180, 130, 190, 100, 200, 120, 210, 95, 220, 130), Ink(Yellow), Poly(190, 130, 197, 110, 205, 125, 212, 108, 216, 130), Ink(DarkGrey), Box(155, 55, 245, 62) },
+            new[] { Ink(Grey), Box(160, 60, 240, 130), Ink(Black), Box(175, 85, 225, 130), Ink(DarkGrey), Box(155, 55, 245, 62) },
+            OnLayer("flames", Ink(Orange), Poly(180, 130, 190, 100, 200, 120, 210, 95, 220, 130)),
+            OnLayer("embers", Ink(Yellow), Poly(190, 130, 197, 110, 205, 125, 212, 108, 216, 130)),
             new[] { Ink(Navy), Box(40, 30, 100, 80), Ink(Wheat), Frame(40, 30, 100, 80), Line(70, 30, 70, 80), Line(40, 55, 100, 55), Ink(Sky), Line(50, 35, 46, 43), Line(85, 60, 81, 68) },
             new[] { Ink(Wheat), Box(30, 110, 120, 116), Ink(DarkBrown), Box(35, 116, 40, 150), Box(110, 116, 115, 150), Ink(Grey), Box(55, 98, 70, 110), Ink(Slate), Box(58, 94, 67, 98) },
             new[] { Ink(DarkBrown), Box(5, 50, 30, 150), Ink(Brown), Frame(5, 50, 30, 150), Line(17, 50, 17, 150) },
             new[] { Ink(Royal), Poly(135, 110, 160, 110, 162, 150, 133, 150), Ink(Wheat), Oval(138, 88, 156, 108), Ink(BrightWhite), Poly(138, 100, 156, 100, 150, 112, 144, 112) },
-            new[] { Ink(Yellow), Oval(115, 60, 127, 76), Ink(DarkGrey), Line(121, 50, 121, 60) }));
+            new[] { Ink(Yellow), Oval(115, 60, 127, 76), Ink(DarkGrey), Line(121, 50, 121, 60) }),
+            new PictureAnimation { Name = "Fire", Kind = AnimationKind.ColourCycle, Layer = "flames", PeriodMs = 140, Colours = { Orange, BrightRed, Orange, Yellow } },
+            new PictureAnimation { Name = "Embers", Kind = AnimationKind.ColourCycle, Layer = "embers", PeriodMs = 110, Colours = { Yellow, Wheat, Orange, Yellow, BrightWhite } }));
 
         a.Pictures.Add(Pic("pic_base", "Foot of the Tower",
             new[] { Clear(DarkGrey), Ink(Black), Oval(60, -40, 196, 60), Ink(Slate), Line(0, 150, 255, 150) },
@@ -620,16 +643,22 @@ public static partial class ExampleAdventures
             new[] { Ink(BrightCyan), Oval(90, 20, 166, 125, false), Oval(96, 30, 160, 115, false), Line(128, 20, 128, 125), Line(90, 72, 166, 72) },
             new[] { Ink(Slate), Box(118, 60, 138, 85) },
         };
-        a.Pictures.Add(Pic("pic_lamproom", "Lamp Room", lampRoom));
-        a.Pictures.Add(Pic("pic_lit", "The Lamp Lit", lampRoom.Append(new[] { Ink(Yellow), Oval(108, 50, 148, 95), Ink(BrightWhite), Oval(118, 60, 138, 85), Ink(Wheat), Poly(128, 70, 0, 20, 0, 110), Poly(128, 70, 255, 30, 255, 100) }).ToArray()));
+        a.Pictures.Add(Animated(Pic("pic_lamproom", "Lamp Room", lampRoom), Falling()));
+        a.Pictures.Add(Animated(Pic("pic_lit", "The Lamp Lit", lampRoom.Append(new[] { Ink(Yellow), Oval(108, 50, 148, 95), Ink(BrightWhite), Oval(118, 60, 138, 85) })
+                .Append(OnLayer("beam", Ink(Wheat), Poly(128, 70, 0, 20, 0, 110), Poly(128, 70, 255, 30, 255, 100))).ToArray()),
+            Falling(),
+            new PictureAnimation { Name = "Beam", Kind = AnimationKind.ColourCycle, Layer = "beam", PeriodMs = 220, Colours = { Wheat, Yellow, BrightWhite, Yellow } }));
 
-        a.Pictures.Add(Pic("pic_gallery", "Gallery",
+        a.Pictures.Add(Animated(Pic("pic_gallery", "Gallery",
             new[] { Clear(Navy), Ink(DarkGrey), Oval(-40, -20, 150, 40), Oval(100, -10, 300, 30) },
             Sea(80),
-            new[] { Ink(BrightWhite), Poly(30, 130, 45, 118, 60, 132, 75, 120, 90, 134, 40, 140), Ink(DarkGrey), Poly(150, 78, 215, 78, 205, 88, 158, 88), Box(170, 64, 185, 78), Ink(Yellow), Box(173, 68, 175, 70), Box(160, 81, 162, 83), Box(195, 81, 197, 83) },
+            new[] { Ink(BrightWhite), Poly(30, 130, 45, 118, 60, 132, 75, 120, 90, 134, 40, 140), Ink(DarkGrey), Poly(150, 78, 215, 78, 205, 88, 158, 88), Box(170, 64, 185, 78) },
+            OnLayer("lights", Ink(Yellow), Box(173, 68, 175, 70), Box(160, 81, 162, 83), Box(195, 81, 197, 83)),
             new[] { Ink(Grey), Line(0, 150, 255, 150), Line(0, 160, 255, 160), Ink(DarkGrey), Box(0, 165, 255, 175) },
             Enumerable.Range(0, 17).Select(i => Line(i * 16, 150, i * 16, 165)).Prepend(Ink(Grey)).ToArray(),
-            Rain(4, Sky)));
+            Rain(4, Sky)),
+            Falling(),
+            new PictureAnimation { Name = "Ship's lights", Kind = AnimationKind.Blink, Layer = "lights", PeriodMs = 1400, OnPercent = 70 }));
     }
 
     private static void AddSounds(Adventure a)

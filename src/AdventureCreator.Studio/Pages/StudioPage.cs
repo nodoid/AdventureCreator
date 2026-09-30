@@ -169,7 +169,11 @@ public sealed class StudioPage : ContentPage
         ShowSection(s);
         if (parts.Length < 3 || !int.TryParse(parts[2], out var index) || index < 0 || index >= rows.Count) return;
         Select(rows[index].Item);
-        if (parts.Length >= 4 && int.TryParse(parts[3], out var command) && FindPictureEditor(detail) is { } editor) editor.SelectCommand(command);
+        if (FindPictureEditor(detail) is { } editor)
+        {
+            if (parts.Length >= 4 && int.TryParse(parts[3], out var command)) editor.SelectCommand(command);
+            if (parts.Contains("play")) editor.PlayAnimations();
+        }
     }
 
     private static PictureEditorView? FindPictureEditor(IView? view) => view switch
@@ -381,7 +385,11 @@ public sealed class StudioPage : ContentPage
             {
                 var stack = new VerticalStackLayout { Spacing = 10, Children = { Heading(room.Name, "Room") } };
                 if (room.PictureId != null && document.Adventure.FindPicture(room.PictureId) is { } pic)
-                    stack.Children.Add(new Image { Source = PictureImages.Source(PictureImages.RenderPng(pic, document.Adventure, 2)), HeightRequest = 240, HorizontalOptions = LayoutOptions.Start, Aspect = Aspect.AspectFit });
+                {
+                    var preview = new PictureView { HeightRequest = 240, WidthRequest = 240.0 * pic.Width / Math.Max(1, pic.Height), HorizontalOptions = LayoutOptions.Start };
+                    preview.Show(pic, document.Adventure);
+                    stack.Children.Add(preview);
+                }
                 stack.Children.Add(new ObjectEditor(room, ctx));
                 var here = document.Adventure.Items.Where(i => string.Equals(i.Location, room.Id, StringComparison.OrdinalIgnoreCase)).Select(i => i.Name).ToList();
                 stack.Children.Add(new SectionView("Items here", new Label { Text = here.Count == 0 ? "(none)" : string.Join(", ", here) }));

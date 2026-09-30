@@ -24,16 +24,24 @@ public sealed class PictureRenderer
     private int depth;
     private RasterImage? cachedBackground;
 
-    private PictureRenderer(Picture picture, Adventure? adventure)
+    // Fill tracing for Smooth mode: the picture is rasterised on a grid 'supersample' times finer, with strokes as
+    // wide as the smooth ones, and every flood fill's region is recorded.
+    private readonly int supersample = 1;
+    private readonly double strokeScale = 1;
+    private List<FillRegion>? regions;
+
+    private PictureRenderer(Picture picture, Adventure? adventure, int supersample = 1)
     {
         this.picture = picture;
         this.adventure = adventure;
-        spectrum = picture.RenderMode == PictureRenderMode.SpectrumAttributes;
-        image = new RasterImage(picture.Width, picture.Height, Colour(picture.InitialPaper));
+        this.supersample = supersample;
+        if (supersample > 1) strokeScale = supersample * Math.Max(0.25, picture.LineWidth);
+        spectrum = picture.RenderMode == PictureRenderMode.SpectrumAttributes && supersample == 1;
+        image = new RasterImage(picture.Width * supersample, picture.Height * supersample, Colour(picture.InitialPaper));
         ink = picture.InitialInk;
         paper = picture.InitialPaper;
-        cols = (picture.Width + 7) / 8;
-        rows = (picture.Height + 7) / 8;
+        cols = (image.Width + 7) / 8;
+        rows = (image.Height + 7) / 8;
         bits = spectrum ? new bool[picture.Width * picture.Height] : Array.Empty<bool>();
         cellInk = new byte[cols * rows];
         cellPaper = new byte[cols * rows];
@@ -50,6 +58,20 @@ public sealed class PictureRenderer
         var commands = commandLimit.HasValue ? picture.Commands.Take(commandLimit.Value) : picture.Commands;
         r.Run(commands, 0, 0, 8);
         return r.Compose();
+    }
+
+    /// <summary>
+    /// Traces the flood fills (Fill and Shade commands, including those in sub-pictures) of a Smooth picture on a grid
+    /// <paramref name="supersample"/> times finer than the picture, in the order they are drawn. Each region is a list
+    /// of horizontal runs in grid cells, split into ink and paper (for patterns).
+    /// </summary>
+    public static IReadOnlyList<FillRegion> TraceFills(Picture picture, Adventure? adventure = null, int supersample = 4, int? commandLimit = null)
+    {
+        var r = new PictureRenderer(picture, adventure, Math.Max(1, supersample)) { regions = new List<FillRegion>() };
+        r.DrawBackground();
+        var commands = commandLimit.HasValue ? picture.Commands.Take(commandLimit.Value) : picture.Commands;
+        r.Run(commands, supersample / 2, supersample / 2, 8 * supersample);
+        return r.regions;
     }
 
     /// <summary>Convenience: render straight to PNG bytes, optionally scaled up for display.</summary>
@@ -84,6 +106,8 @@ public sealed class PictureRenderer
     private void Run(IEnumerable<DrawCommand> commands, int ox, int oy, int scale)
     {
         if (++depth > 16) { depth--; return; }
+        // In fill-tracing mode coordinates point at cell centres; areas (text, filled boxes) start at cell corners.
+        int ox0 = supersample / 2;
         int Tx(int x) => ox + x * scale / 8;
         int Ty(int y) => oy + y * scale / 8;
 
@@ -98,7 +122,10 @@ public sealed class PictureRenderer
                 case DrawOp.SetInk: ink = c.Color; break;
                 case DrawOp.SetPaper: paper = c.Color; break;
                 case DrawOp.SetBright: bright = c.X != 0; break;
-                case DrawOp.Plot: Plot(Tx(c.X), Ty(c.Y), c); break;
+                case DrawOp.Plot:
+                    if (supersample > 1) Line(Tx(c.X), Ty(c.Y), Tx(c.X), Ty(c.Y), c);
+                    else Plot(Tx(c.X), Ty(c.Y), c);
+                    break;
                 case DrawOp.Line: Line(Tx(c.X), Ty(c.Y), Tx(c.X2), Ty(c.Y2), c); break;
                 case DrawOp.Rectangle:
                 {
@@ -110,6 +137,8 @@ public sealed class PictureRenderer
                 {
                     int x1 = Math.Min(Tx(c.X), Tx(c.X2)), x2 = Math.Max(Tx(c.X), Tx(c.X2));
                     int y1 = Math.Min(Ty(c.Y), Ty(c.Y2)), y2 = Math.Max(Ty(c.Y), Ty(c.Y2));
+                    // When tracing fills, cover whole pixels as the smooth renderer does.
+                    if (supersample > 1) { x1 -= ox0; y1 -= ox0; x2 += scale / 8 - ox0 - 1; y2 += scale / 8 - ox0 - 1; }
                     for (int y = y1; y <= y2; y++) for (int x = x1; x <= x2; x++) Set(x, y, c);
                     break;
                 }
@@ -131,10 +160,10 @@ public sealed class PictureRenderer
                     if (pts.Count == 1) Plot(pts[0].X, pts[0].Y, c);
                     break;
                 }
-                case DrawOp.Fill: FloodFill(Tx(c.X), Ty(c.Y), null); break;
-                case DrawOp.Shade: FloodFill(Tx(c.X), Ty(c.Y), c.Pattern ?? new byte[] { 0xAA, 0x55, 0xAA, 0x55, 0xAA, 0x55, 0xAA, 0x55 }); break;
+                case DrawOp.Fill: FloodFill(Tx(c.X), Ty(c.Y), null, scale / 8); break;
+                case DrawOp.Shade: FloodFill(Tx(c.X), Ty(c.Y), c.Pattern ?? new byte[] { 0xAA, 0x55, 0xAA, 0x55, 0xAA, 0x55, 0xAA, 0x55 }, scale / 8); break;
                 case DrawOp.AttributeBlock: Block(Tx(c.X), Ty(c.Y), Tx(c.X2), Ty(c.Y2), c.Color, c.Color2); break;
-                case DrawOp.Text: Text(Tx(c.X), Ty(c.Y), c.Text ?? "", Math.Max(1, c.Scale == 8 ? 1 : c.Scale), c); break;
+                case DrawOp.Text: Text(Tx(c.X) - ox0, Ty(c.Y) - ox0, c.Text ?? "", Math.Max(1, (c.Scale == 8 ? 1 : c.Scale) * scale / 8), c); break;
                 case DrawOp.Call:
                     if (adventure?.FindPicture(c.SubPictureId) is { } sub && sub != picture)
                         Run(sub.Commands, Tx(c.X), Ty(c.Y), Math.Max(1, c.Scale) * scale / 8);
@@ -195,6 +224,7 @@ public sealed class PictureRenderer
 
     private void Line(int x0, int y0, int x1, int y1, DrawCommand c, int brush = 1)
     {
+        if (supersample > 1) brush = Math.Max(1, (int)Math.Round(brush * strokeScale));
         int dx = Math.Abs(x1 - x0), sx = x0 < x1 ? 1 : -1;
         int dy = -Math.Abs(y1 - y0), sy = y0 < y1 ? 1 : -1;
         int err = dx + dy;
@@ -266,15 +296,15 @@ public sealed class PictureRenderer
     /// Flood fill. Full colour: replaces the contiguous region of the seed colour with ink (or pattern ink/paper).
     /// Spectrum: fills contiguous "off" pixels, setting them on (or per pattern), like PAWS FILL / SHADE.
     /// </summary>
-    private void FloodFill(int sx, int sy, byte[]? pattern)
+    private void FloodFill(int sx, int sy, byte[]? pattern, int cellSize = 1)
     {
-        if (!image.InBounds(sx, sy)) return;
+        if (!image.InBounds(sx, sy)) { regions?.Add(new FillRegion(image.Width, image.Height, ink, paper, new(), new())); return; }
         int w = image.Width, h = image.Height;
         var visited = new bool[w * h];
         uint target = spectrum ? 0 : image[sx, sy];
         uint inkColour = Colour(ink), paperColour = Colour(paper);
         if (spectrum && bits[sy * w + sx]) return;
-        if (!spectrum && pattern == null && target == inkColour) return;
+        if (!spectrum && pattern == null && target == inkColour && regions == null) return;
 
         bool Inside(int x, int y)
         {
@@ -296,7 +326,7 @@ public sealed class PictureRenderer
             {
                 int i = y * w + xi;
                 visited[i] = true;
-                bool on = pattern == null || ((pattern[y & 7] >> (7 - (xi & 7))) & 1) != 0;
+                bool on = pattern == null || PatternBit(pattern, xi / cellSize, y / cellSize);
                 if (spectrum)
                 {
                     if (on) bits[i] = true;
@@ -309,7 +339,10 @@ public sealed class PictureRenderer
                 if (y < h - 1 && Inside(xi, y + 1)) stack.Push((xi, y + 1));
             }
         }
+        if (regions != null) regions.Add(FillRegion.FromMask(visited, w, h, pattern, cellSize, ink, paper));
     }
+
+    internal static bool PatternBit(byte[] pattern, int px, int py) => ((pattern[py & 7] >> (7 - (px & 7))) & 1) != 0;
 
     private void Block(int x1, int y1, int x2, int y2, int inkIndex, int paperIndex)
     {

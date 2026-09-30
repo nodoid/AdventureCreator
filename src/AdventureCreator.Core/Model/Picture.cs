@@ -7,6 +7,11 @@ public enum PictureRenderMode
     FullColour,
     /// <summary>ZX Spectrum style: 1-bit pixels with ink/paper/bright attributes per 8x8 cell (authentic PAWS/Quill/Illustrator look).</summary>
     SpectrumAttributes,
+    /// <summary>
+    /// Anti-aliased vector drawing (Maui.Graphics): smooth lines, curves and text at any size. Flood fills are traced
+    /// on a fine grid so they meet the smooth outlines.
+    /// </summary>
+    Smooth,
 }
 
 /// <summary>
@@ -30,6 +35,20 @@ public sealed class Picture
     public List<DrawCommand> Commands { get; set; } = new();
     /// <summary>Sub-pictures are only drawn when called from another picture (PAWS/Illustrator GOSUB).</summary>
     public bool IsSubroutine { get; set; }
+    /// <summary>Width of lines and outlines in picture pixels (Smooth mode).</summary>
+    public double LineWidth { get; set; } = 1;
+    /// <summary>Simple animations of the picture's layers (see <see cref="DrawCommand.Layer"/>).</summary>
+    public List<PictureAnimation> Animations { get; set; } = new();
+    [System.Text.Json.Serialization.JsonIgnore]
+    public bool HasAnimations => Animations.Any(a => a.Enabled && !string.IsNullOrWhiteSpace(a.Layer));
+    /// <summary>A copy sharing everything except the command list (used for animation frames and previews).</summary>
+    public Picture WithCommands(List<DrawCommand> commands)
+    {
+        var copy = (Picture)MemberwiseClone();
+        copy.Commands = commands;
+        return copy;
+    }
+
     public override string ToString() => string.IsNullOrEmpty(Name) ? Id : Name;
 }
 
@@ -86,6 +105,8 @@ public sealed class DrawCommand
     public bool Xor { get; set; }
     /// <summary>When true the pixels are drawn in paper colour (INVERSE 1).</summary>
     public bool Inverse { get; set; }
+    /// <summary>Optional layer name. Animations act on every command in a layer.</summary>
+    public string? Layer { get; set; }
 
     public DrawCommand Clone()
     {
@@ -95,7 +116,7 @@ public sealed class DrawCommand
         return c;
     }
 
-    public override string ToString() => Op switch
+    public override string ToString() => (string.IsNullOrEmpty(Layer) ? "" : $"[{Layer}] ") + Op switch
     {
         DrawOp.Clear or DrawOp.SetInk or DrawOp.SetPaper => $"{Op} {Color}",
         DrawOp.Plot or DrawOp.Fill or DrawOp.Shade => $"{Op} {X},{Y}",
@@ -105,6 +126,45 @@ public sealed class DrawCommand
         DrawOp.Image => $"Image {Text} @{X},{Y}",
         _ => $"{Op} {X},{Y} {X2},{Y2}",
     };
+}
+
+public enum AnimationKind
+{
+    /// <summary>The layer is shown for <see cref="PictureAnimation.OnPercent"/>% of each period, hidden for the rest.</summary>
+    Blink,
+    /// <summary>The layer moves by (Dx, Dy) over the period, then back (or jumps back if not PingPong).</summary>
+    Move,
+    /// <summary>The layer's ink steps through <see cref="PictureAnimation.Colours"/>, one step per period.</summary>
+    ColourCycle,
+    /// <summary>Sub-picture (Call) commands in the layer show each of <see cref="PictureAnimation.Frames"/> in turn, one per period.</summary>
+    Flipbook,
+}
+
+/// <summary>A simple looping animation of one layer of a picture.</summary>
+public sealed class PictureAnimation
+{
+    public string Name { get; set; } = "";
+    public bool Enabled { get; set; } = true;
+    public AnimationKind Kind { get; set; } = AnimationKind.Blink;
+    /// <summary>The layer (<see cref="DrawCommand.Layer"/>) this animation acts on.</summary>
+    public string Layer { get; set; } = "";
+    /// <summary>Length of one cycle (Blink, Move) or of one step (ColourCycle, Flipbook), in milliseconds.</summary>
+    public int PeriodMs { get; set; } = 1000;
+    /// <summary>Delay before the animation starts, in milliseconds; also offsets it against other animations.</summary>
+    public int DelayMs { get; set; }
+    /// <summary>Blink: percentage of each period that the layer is visible.</summary>
+    public int OnPercent { get; set; } = 50;
+    /// <summary>Move: horizontal distance in picture pixels.</summary>
+    public int Dx { get; set; }
+    /// <summary>Move: vertical distance in picture pixels.</summary>
+    public int Dy { get; set; }
+    /// <summary>Move: go there and back again (true) or jump back to the start and repeat (false).</summary>
+    public bool PingPong { get; set; } = true;
+    /// <summary>ColourCycle: palette indices stepped through.</summary>
+    public List<int> Colours { get; set; } = new();
+    /// <summary>Flipbook: picture ids shown in turn.</summary>
+    public List<string> Frames { get; set; } = new();
+    public override string ToString() => string.IsNullOrWhiteSpace(Name) ? $"{Kind} {Layer}" : Name;
 }
 
 public static class Palettes

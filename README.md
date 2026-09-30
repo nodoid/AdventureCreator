@@ -75,9 +75,12 @@ The same guide is available in the Studio under **Help › User Guide…** (⇧�
 * **Saving:** named save slots with a load list, a ☰ game menu and an autosave that offers *Continue where you left off?*.
 
 ### Graphics
+* Three render modes: **Smooth** (anti-aliased vectors drawn with Maui.Graphics, sharp at any size), **FullColour** retro pixels, and authentic ZX Spectrum attributes.
+* **Animation**: shapes are grouped into layers that can blink, move, colour-cycle or flip between sub-pictures, and animations play in the Player.
+* A **WYSIWYG picture designer**: draw, select, move, reshape and recolour shapes on the canvas, with undo. The drawing commands are shown as text in a panel that expands and collapses.
 * Vector pictures: lines, rectangles, ellipses, polygons, freehand strokes, flood fill, pattern shading, text, sub-picture calls, bitmap stamps and Spectrum attribute blocks.
-* Rendering is done by a platform-independent software renderer. It has a full-colour mode and an authentic ZX Spectrum attribute mode (colour clash included) for imported games.
-* The Studio's picture editor draws directly onto the same renderer. It can import PNG, JPEG or HEIC images as backgrounds or stamps.
+* Pixel modes use a platform-independent software renderer, including an authentic ZX Spectrum attribute mode (colour clash included) for imported games.
+* The Studio's picture designer shows pictures exactly as the Player does. It can import PNG, JPEG or HEIC images as backgrounds or stamps.
 
 ### Audio
 * Rooms can have looping ambient sound. The `PlaySound` and `StopSound` actions control audio from triggers.

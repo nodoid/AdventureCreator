@@ -76,6 +76,32 @@ Their fields:
 | `SubPictureId` | The picture a `Call` draws. |
 | `Scale` | Eighths for `Call` (8 = 1:1), letter size for `Text`, brush size for `Freehand`. |
 | `Xor` / `Inverse` | Spectrum OVER / INVERSE. |
+| `Layer` | Optional layer name, used by animations. |
+
+A picture's `RenderMode` is `FullColour`, `SpectrumAttributes` or `Smooth`. `LineWidth` (default 1) is the width of lines in Smooth pictures.
+
+### Picture animations
+
+A picture's `Animations` list holds simple looping animations. Each one acts on every command whose `Layer` matches:
+
+```json
+"Animations": [
+  { "Name": "Rain", "Kind": "Move", "Layer": "rain", "PeriodMs": 260, "Dx": -2, "Dy": 5, "PingPong": false },
+  { "Name": "Beam", "Kind": "ColourCycle", "Layer": "beam", "PeriodMs": 220, "Colours": [31, 14, 15, 14] }
+]
+```
+
+| Field | Meaning |
+|---|---|
+| `Kind` | `Blink`, `Move`, `ColourCycle` or `Flipbook`. |
+| `Layer` | The layer it animates. |
+| `PeriodMs` | Length of one cycle (Blink, Move) or one step (ColourCycle, Flipbook). |
+| `DelayMs` | Start delay. |
+| `Enabled` | `false` switches the animation off. |
+| `OnPercent` | Blink: the share of each period the layer is visible. |
+| `Dx`, `Dy`, `PingPong` | Move: the distance, and whether it comes back (`true`) or jumps back. |
+| `Colours` | ColourCycle: palette indices. |
+| `Frames` | Flipbook: picture ids shown in turn by the layer's `Call` commands. |
 
 ## Save games
 

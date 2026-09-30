@@ -69,7 +69,11 @@ public sealed class PictureEditorView : ContentView
     private readonly HorizontalStackLayout optionsBar = new() { Spacing = 10, VerticalOptions = LayoutOptions.Center };
     private readonly VerticalStackLayout colourSection = new() { Spacing = 8 };
     private readonly VerticalStackLayout selectionSection = new() { Spacing = 8 };
-    private readonly Chip undoChip, redoChip, gridChip;
+    private readonly Chip undoChip, redoChip, gridChip, playChip;
+    private readonly VerticalStackLayout animationSection = new() { Spacing = 8 };
+    private readonly Maui.PictureCanvas renderer = new();
+    private readonly Stopwatch animationClock = new();
+    private IDispatcherTimer? animationTimer;
 
     // Commands (text) panel
     private readonly ObservableCollection<string> commandTexts = new();
@@ -133,10 +137,12 @@ public sealed class PictureEditorView : ContentView
         redoChip.Clicked += (_, _) => Redo();
         gridChip = new Chip("# Grid", "Show the 8×8 character-cell grid");
         gridChip.Clicked += (_, _) => { showGrid = !showGrid; gridChip.IsSelected = showGrid; canvas!.Invalidate(); };
+        playChip = new Chip("▶ Animate", "Play the picture's animations");
+        playChip.Clicked += (_, _) => SetAnimating(animationTimer is not { IsRunning: true });
 
         var header = new Grid { ColumnDefinitions = { new(GridLength.Star), new(GridLength.Auto) }, ColumnSpacing = 12 };
         header.Add(headerText, 0);
-        header.Add(new HorizontalStackLayout { VerticalOptions = LayoutOptions.End, Children = { undoChip, redoChip, gridChip } }, 1);
+        header.Add(new HorizontalStackLayout { VerticalOptions = LayoutOptions.End, Children = { playChip, undoChip, redoChip, gridChip } }, 1);
         var toolbar = tools;
 
         var optionsRow = new Grid { ColumnDefinitions = { new(GridLength.Star), new(GridLength.Auto) }, MinimumHeightRequest = 30 };
@@ -161,7 +167,7 @@ public sealed class PictureEditorView : ContentView
         var canvasFrame = new Border { Content = canvas, Stroke = Theme.Border, StrokeThickness = 1, StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 6 } };
 
         // ---------------- inspector
-        var pictureSettings = new ObjectEditor(picture, ctx, only: new[] { "Id", "Name", "Width", "Height", "RenderMode", "InitialInk", "InitialPaper", "BitmapAsset", "IsSubroutine" },
+        var pictureSettings = new ObjectEditor(picture, ctx, only: new[] { "Id", "Name", "Width", "Height", "RenderMode", "LineWidth", "InitialInk", "InitialPaper", "BitmapAsset", "IsSubroutine" },
             onStructureChanged: RefreshImage, labelWidth: 96);
         var importBackground = SmallButton("Background image…", async () => await ImportImageAsync(asBackground: true));
         ToolTipProperties.SetText(importBackground, "Import a PNG, JPEG or HEIC picture to draw over");
@@ -176,6 +182,7 @@ public sealed class PictureEditorView : ContentView
             {
                 InspectorHeading("Colour"), colourSection,
                 InspectorHeading("Selection"), selectionSection,
+                InspectorHeading("Animation"), animationSection,
                 InspectorHeading("Picture"), pictureSettings,
                 new FlexLayout { Wrap = Microsoft.Maui.Layouts.FlexWrap.Wrap, Margin = new Thickness(0, 6, 0, 0), Children = { importBackground, importStamp } },
             },
@@ -280,7 +287,7 @@ public sealed class PictureEditorView : ContentView
             if (!selfChange && ReferenceEquals(what, picture)) { UpdateSubtitle(); RefreshImage(); BuildColourSection(); }
         }
         Loaded += (_, _) => ctx.Document.Changed += OnDocumentChanged;
-        Unloaded += (_, _) => ctx.Document.Changed -= OnDocumentChanged;
+        Unloaded += (_, _) => { ctx.Document.Changed -= OnDocumentChanged; animationTimer?.Stop(); };
 
         bool expanded = false;
         try { expanded = Preferences.Default.Get(CommandsExpandedKey, false); } catch { }
@@ -289,6 +296,7 @@ public sealed class PictureEditorView : ContentView
         RefreshList();
         BuildColourSection();
         BuildSelectionSection();
+        BuildAnimationSection();
         SelectTool(Tool.Select);
         UpdateUndoButtons();
     }
@@ -315,7 +323,13 @@ public sealed class PictureEditorView : ContentView
 
     private void UpdateSubtitle() =>
         subtitle.Text = $"Picture · {picture.Id} · {picture.Width}×{picture.Height} · " +
-                        (picture.RenderMode == PictureRenderMode.SpectrumAttributes ? "Spectrum attributes" : "full colour") +
+                        picture.RenderMode switch
+                        {
+                            PictureRenderMode.SpectrumAttributes => "Spectrum attributes",
+                            PictureRenderMode.Smooth => "smooth",
+                            _ => "full colour (pixels)",
+                        } +
+                        (picture.HasAnimations ? $" · {picture.Animations.Count(x => x.Enabled)} animation(s)" : "") +
                         (picture.IsSubroutine ? " · sub-picture" : "");
 
     private void SetCommandsExpanded(bool expanded, bool animate)
@@ -491,6 +505,23 @@ public sealed class PictureEditorView : ContentView
         }
         if (row > 0) selectionSection.Children.Add(fields);
 
+        var layer = new Entry { Text = c.Layer, FontSize = 13, Placeholder = "none" };
+        void CommitLayer()
+        {
+            var value = string.IsNullOrWhiteSpace(layer.Text) ? null : layer.Text.Trim();
+            if (value == c.Layer) return;
+            Snapshot();
+            c.Layer = value;
+            Changed();
+        }
+        layer.Completed += (_, _) => CommitLayer();
+        layer.Unfocused += (_, _) => CommitLayer();
+        ToolTipProperties.SetText(layer, "Shapes with the same layer name can be animated together");
+        var layerRow = new Grid { ColumnDefinitions = { new(new GridLength(44)), new(GridLength.Star) }, ColumnSpacing = 6 };
+        layerRow.Add(FieldLabel("Layer"), 0);
+        layerRow.Add(layer, 1);
+        selectionSection.Children.Add(layerRow);
+
         if (c.Op == DrawOp.Text)
         {
             var text = new Entry { Text = c.Text, FontSize = 13, Placeholder = "Text" };
@@ -587,6 +618,186 @@ public sealed class PictureEditorView : ContentView
         syncingList = false;
     }
 
+    // =================================================================== animation
+
+    /// <summary>Starts the animation preview.</summary>
+    public void PlayAnimations() => SetAnimating(true);
+
+    private void SetAnimating(bool on)
+    {
+        if (on)
+        {
+            if (animationTimer == null)
+            {
+                animationTimer = Dispatcher.CreateTimer();
+                animationTimer.Interval = TimeSpan.FromMilliseconds(50);
+                animationTimer.Tick += (_, _) => canvas.Invalidate();
+            }
+            animationClock.Restart();
+            animationTimer.Start();
+        }
+        else animationTimer?.Stop();
+        playChip.IsSelected = on;
+        playChip.Text = on ? "■ Stop" : "▶ Animate";
+        canvas.Invalidate();
+    }
+
+    private void BuildAnimationSection()
+    {
+        animationSection.Children.Clear();
+        var layers = PictureAnimator.Layers(picture);
+        animationSection.Children.Add(new Label
+        {
+            Text = layers.Count == 0
+                ? "To animate part of the picture, select its shapes and give them a Layer name (above), then add an animation here."
+                : "Animations act on a layer: every shape with that Layer name. Times are in milliseconds. Press ▶ Animate to preview.",
+            FontSize = 12, TextColor = Theme.SecondaryText,
+        });
+        foreach (var a in picture.Animations) animationSection.Children.Add(AnimationCard(a, layers));
+        var add = new Chip("+ Add animation", "Add a blink, move, colour-cycle or flipbook animation");
+        add.Clicked += (_, _) =>
+        {
+            picture.Animations.Add(new PictureAnimation
+            {
+                Layer = selectedIndex >= 0 && picture.Commands[selectedIndex].Layer is { } l ? l : layers.FirstOrDefault() ?? "",
+            });
+            AnimationChanged(rebuild: true);
+        };
+        animationSection.Children.Add(new HorizontalStackLayout { Children = { add } });
+    }
+
+    private View AnimationCard(PictureAnimation a, IReadOnlyList<string> layers)
+    {
+        var body = new VerticalStackLayout { Spacing = 6 };
+
+        var kind = new Picker { ItemsSource = Enum.GetNames<AnimationKind>(), SelectedItem = a.Kind.ToString(), FontSize = 13 };
+        kind.SelectedIndexChanged += (_, _) =>
+        {
+            if (kind.SelectedItem is string k && Enum.TryParse<AnimationKind>(k, out var value) && value != a.Kind) { a.Kind = value; AnimationChanged(rebuild: true); }
+        };
+        var enabled = new CheckBox { IsChecked = a.Enabled, VerticalOptions = LayoutOptions.Center };
+        enabled.CheckedChanged += (_, e) => { a.Enabled = e.Value; AnimationChanged(); };
+        ToolTipProperties.SetText(enabled, "On or off");
+        var remove = new Chip("✕", "Delete this animation");
+        remove.Clicked += (_, _) => { picture.Animations.Remove(a); AnimationChanged(rebuild: true); };
+        var top = new Grid { ColumnDefinitions = { new(GridLength.Auto), new(GridLength.Star), new(GridLength.Auto) }, ColumnSpacing = 6 };
+        top.Add(enabled, 0);
+        top.Add(kind, 1);
+        top.Add(remove, 2);
+        body.Children.Add(top);
+
+        var layerChoices = layers.ToList();
+        if (!string.IsNullOrWhiteSpace(a.Layer) && !layerChoices.Contains(a.Layer, StringComparer.OrdinalIgnoreCase)) layerChoices.Add(a.Layer);
+        var layer = new Picker { ItemsSource = layerChoices, SelectedItem = layerChoices.FirstOrDefault(l => string.Equals(l, a.Layer, StringComparison.OrdinalIgnoreCase)), FontSize = 13, Title = "Layer" };
+        layer.SelectedIndexChanged += (_, _) => { if (layer.SelectedItem is string l) { a.Layer = l; AnimationChanged(); } };
+
+        var fields = new Grid { ColumnDefinitions = { new(new GridLength(52)), new(GridLength.Star), new(new GridLength(52)), new(GridLength.Star) }, ColumnSpacing = 6, RowSpacing = 6 };
+        int row = 0;
+        void Row(View left, View? right = null, string? l1 = null, string? l2 = null)
+        {
+            fields.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+            if (l1 != null) fields.Add(FieldLabel(l1), 0, row);
+            fields.Add(left, 1, row);
+            if (l1 == null) Grid.SetColumn(left, 0);
+            if (l1 == null) Grid.SetColumnSpan(left, right == null ? 4 : 2);
+            if (right != null) { if (l2 != null) fields.Add(FieldLabel(l2), 2, row); fields.Add(right, 3, row); }
+            else if (l1 != null) Grid.SetColumnSpan(left, 3);
+            row++;
+        }
+        Row(layer, null, "Layer");
+        Row(AnimationNumber(() => a.PeriodMs, v => a.PeriodMs = Math.Max(50, v)), AnimationNumber(() => a.DelayMs, v => a.DelayMs = Math.Max(0, v)),
+            a.Kind is AnimationKind.ColourCycle or AnimationKind.Flipbook ? "Step" : "Period", "Delay");
+        switch (a.Kind)
+        {
+            case AnimationKind.Blink:
+                Row(AnimationNumber(() => a.OnPercent, v => a.OnPercent = Math.Clamp(v, 0, 100)), null, "On %");
+                break;
+            case AnimationKind.Move:
+            {
+                Row(AnimationNumber(() => a.Dx, v => a.Dx = v), AnimationNumber(() => a.Dy, v => a.Dy = v), "Move X", "Move Y");
+                var ping = new CheckBox { IsChecked = a.PingPong, VerticalOptions = LayoutOptions.Center };
+                ping.CheckedChanged += (_, e) => { a.PingPong = e.Value; AnimationChanged(); };
+                Row(new HorizontalStackLayout { Spacing = 4, Children = { ping, new Label { Text = "There and back", FontSize = 12, VerticalOptions = LayoutOptions.Center, TextColor = Theme.Text } } });
+                break;
+            }
+            case AnimationKind.ColourCycle:
+            {
+                var colours = new Entry { Text = string.Join(", ", a.Colours), FontSize = 13, Placeholder = "e.g. 2, 6, 14" };
+                void Commit()
+                {
+                    var list = (colours.Text ?? "").Split(new[] { ',', ' ', ';' }, StringSplitOptions.RemoveEmptyEntries)
+                        .Select(x => int.TryParse(x, out var v) ? v : -1).Where(v => v >= 0 && v < picture.Palette.Count).ToList();
+                    if (list.SequenceEqual(a.Colours)) return;
+                    a.Colours = list;
+                    AnimationChanged();
+                }
+                colours.Completed += (_, _) => Commit();
+                colours.Unfocused += (_, _) => Commit();
+                var addInk = new Chip("+ ink", "Add the current ink colour to the cycle");
+                addInk.Clicked += (_, _) => { a.Colours.Add(ink); AnimationChanged(rebuild: true); };
+                Row(colours, addInk, "Colours");
+                break;
+            }
+            case AnimationKind.Flipbook:
+            {
+                var frames = new Entry { Text = string.Join(", ", a.Frames), FontSize = 13, Placeholder = "picture ids" };
+                void Commit()
+                {
+                    var list = (frames.Text ?? "").Split(new[] { ',', ' ', ';' }, StringSplitOptions.RemoveEmptyEntries).ToList();
+                    if (list.SequenceEqual(a.Frames)) return;
+                    a.Frames = list;
+                    AnimationChanged();
+                }
+                frames.Completed += (_, _) => Commit();
+                frames.Unfocused += (_, _) => Commit();
+                Row(frames, null, "Frames");
+                var subs = ctx.Adventure.Pictures.Where(p => p != picture && p.IsSubroutine).Select(p => p.Id).ToList();
+                body.Children.Add(fields);
+                body.Children.Add(new Label
+                {
+                    Text = "Place a sub-picture (⧉ Sub) in the layer; it shows each frame in turn." + (subs.Count > 0 ? " Sub-pictures: " + string.Join(", ", subs) : ""),
+                    FontSize = 11, TextColor = Theme.SecondaryText,
+                });
+                return Card(body);
+            }
+        }
+        body.Children.Add(fields);
+        return Card(body);
+
+        static View Card(View content) => new Border
+        {
+            Content = content, Padding = new Thickness(8), BackgroundColor = Theme.Window, Stroke = Theme.Border, StrokeThickness = 1,
+            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 5 },
+        };
+    }
+
+    private Entry AnimationNumber(Func<int> get, Action<int> set)
+    {
+        var e = new Entry { Text = get().ToString(), Keyboard = Keyboard.Numeric, FontSize = 13, HorizontalTextAlignment = TextAlignment.End };
+        void Commit()
+        {
+            if (!int.TryParse(e.Text, out var v)) { e.Text = get().ToString(); return; }
+            if (v == get()) return;
+            set(v);
+            e.Text = get().ToString();
+            AnimationChanged();
+        }
+        e.Completed += (_, _) => Commit();
+        e.Unfocused += (_, _) => Commit();
+        return e;
+    }
+
+    private void AnimationChanged(bool rebuild = false)
+    {
+        selfChange = true;
+        try { ctx.Changed(picture); }
+        finally { selfChange = false; }
+        if (rebuild) BuildAnimationSection();
+        UpdateSubtitle();
+        if (picture.HasAnimations && animationTimer is not { IsRunning: true }) SetAnimating(true);
+        canvas.Invalidate();
+    }
+
     // =================================================================== editing operations
 
     private void Snapshot()
@@ -669,6 +880,7 @@ public sealed class PictureEditorView : ContentView
         RefreshImage();
         BuildSelectionSection();
         BuildColourSection();
+        BuildAnimationSection();
         UpdateUndoButtons();
     }
 
@@ -722,7 +934,6 @@ public sealed class PictureEditorView : ContentView
 
     // =================================================================== rendering
 
-    internal IImage? Image;
     internal int Scale = 1;
     internal float OffsetX, OffsetY;
 
@@ -730,15 +941,6 @@ public sealed class PictureEditorView : ContentView
     {
         if (canvas.Width <= 0 || canvas.Height <= 0) return;
         Scale = Math.Max(1, (int)Math.Min((canvas.Width - 16) / picture.Width, (canvas.Height - 16) / picture.Height));
-        try
-        {
-            var png = PictureRenderer.RenderPng(picture, ctx.Adventure, Scale, previewLimit);
-            Image = PlatformImage.FromStream(new MemoryStream(png));
-        }
-        catch (Exception ex)
-        {
-            status.Text = "Render error: " + ex.Message;
-        }
         renderThrottle.Restart();
         canvas.Invalidate();
     }
@@ -1053,7 +1255,15 @@ public sealed class PictureEditorView : ContentView
             // Drop shadow and the picture itself.
             canvas.FillColor = Colors.Black.WithAlpha(0.12f);
             canvas.FillRectangle(ox + 3, oy + 3, w, h);
-            if (view.Image != null) canvas.DrawImage(view.Image, ox, oy, w, h);
+            try
+            {
+                double t = view.animationTimer is { IsRunning: true } ? view.animationClock.Elapsed.TotalMilliseconds : 0;
+                view.renderer.Draw(canvas, new RectF(ox, oy, w, h), pic, view.ctx.Adventure, t, view.previewLimit);
+            }
+            catch (Exception ex)
+            {
+                view.status.Text = "Render error: " + ex.Message;
+            }
             canvas.StrokeColor = Colors.Black.WithAlpha(0.35f);
             canvas.StrokeSize = 1;
             canvas.DrawRectangle(ox - 0.5f, oy - 0.5f, w + 1, h + 1);

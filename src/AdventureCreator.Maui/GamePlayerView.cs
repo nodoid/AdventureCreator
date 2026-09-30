@@ -13,7 +13,7 @@ public sealed class GamePlayerView : ContentView
 
     private readonly Label statusRoom = new() { FontAttributes = FontAttributes.Bold, VerticalOptions = LayoutOptions.Center };
     private readonly Label statusScore = new() { HorizontalOptions = LayoutOptions.End, VerticalOptions = LayoutOptions.Center };
-    private readonly Image picture = new() { Aspect = Aspect.AspectFit, IsVisible = false };
+    private readonly PictureView picture = new() { IsVisible = false };
     private readonly VerticalStackLayout transcript = new() { Spacing = 6, Padding = new Thickness(14, 10) };
     private readonly ScrollView scroller = new();
     private readonly Entry input = new() { Placeholder = "What now?", ReturnType = ReturnType.Send, IsSpellCheckEnabled = false, IsTextPredictionEnabled = false, Keyboard = Keyboard.Plain };
@@ -310,8 +310,12 @@ public sealed class GamePlayerView : ContentView
         var done = new TaskCompletionSource();
         var pictureId = a.IntroPictureId ?? a.FindRoom(a.StartRoomId)?.PictureId;
         var content = new VerticalStackLayout { Spacing = 14, VerticalOptions = LayoutOptions.Center, Padding = new Thickness(24) };
-        if (PictureImages.Source(a, pictureId) is { } src)
-            content.Children.Add(new Image { Source = src, Aspect = Aspect.AspectFit, HeightRequest = Math.Max(160, Height * 0.4) });
+        if (a.FindPicture(pictureId) is { } titlePicture)
+        {
+            var view = new PictureView { HeightRequest = Math.Max(160, Height * 0.4) };
+            view.Show(titlePicture, a);
+            content.Children.Add(view);
+        }
         content.Children.Add(new Label { Text = a.Title, FontSize = 34, FontAttributes = FontAttributes.Bold, TextColor = accent, HorizontalTextAlignment = TextAlignment.Center });
         if (!string.IsNullOrWhiteSpace(a.Author))
             content.Children.Add(new Label { Text = "by " + a.Author, FontSize = 16, TextColor = textColor, HorizontalTextAlignment = TextAlignment.Center });
@@ -538,9 +542,9 @@ public sealed class GamePlayerView : ContentView
     private void ShowPicture(string? id)
     {
         if (engine == null) return;
-        var source = PictureImages.Source(engine.Adventure, id);
-        picture.Source = source;
-        picture.IsVisible = source != null;
+        var pic = engine.Adventure.FindPicture(id);
+        picture.Show(pic, engine.Adventure);
+        picture.IsVisible = pic != null;
         UpdatePictureSize();
     }
 
