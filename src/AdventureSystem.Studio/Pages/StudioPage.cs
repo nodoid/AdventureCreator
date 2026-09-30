@@ -901,13 +901,27 @@ public sealed class StudioPage : ContentPage
         [DevicePlatform.Android] = new[] { "audio/*" },
     });
 
-    private static readonly FilePickerFileType AnyFile = new(new Dictionary<DevicePlatform, IEnumerable<string>>
+    private static readonly FilePickerFileType AdventureFileTypes = FileTypes(new[] { "adventure", "json" });
+    private static readonly FilePickerFileType ImportFileTypes = FileTypes(ImporterRegistry.AllExtensions);
+
+    /// <summary>A picker filter for these extensions (no dot): type identifiers on Apple platforms, ".ext" on Windows.</summary>
+    private static FilePickerFileType FileTypes(IEnumerable<string> extensions)
     {
-        [DevicePlatform.MacCatalyst] = new[] { "public.data", "public.item" },
-        [DevicePlatform.iOS] = new[] { "public.data", "public.item" },
-        [DevicePlatform.WinUI] = new[] { "*" },
-        [DevicePlatform.Android] = new[] { "*/*" },
-    });
+        var list = extensions.Select(e => e.TrimStart('.').ToLowerInvariant()).Distinct().ToList();
+#if MACCATALYST || IOS
+        var apple = list.Select(e => UniformTypeIdentifiers.UTType.CreateFromExtension(e)?.Identifier).OfType<string>().Distinct().ToArray();
+        if (apple.Length == 0) apple = new[] { "public.data" };
+#else
+        var apple = new[] { "public.data" };
+#endif
+        return new(new Dictionary<DevicePlatform, IEnumerable<string>>
+        {
+            [DevicePlatform.MacCatalyst] = apple,
+            [DevicePlatform.iOS] = apple,
+            [DevicePlatform.WinUI] = list.Select(e => "." + e).ToArray(),
+            [DevicePlatform.Android] = new[] { "*/*" },
+        });
+    }
 
     // =========================================================== file commands
 
@@ -924,7 +938,7 @@ public sealed class StudioPage : ContentPage
         {
             if (path == null)
             {
-                var file = await FilePicker.Default.PickAsync(new PickOptions { PickerTitle = "Open adventure (.adventure or .json)", FileTypes = AnyFile });
+                var file = await FilePicker.Default.PickAsync(new PickOptions { PickerTitle = "Open adventure (.adventure or .json)", FileTypes = AdventureFileTypes });
                 if (file == null) return;
                 path = file.FullPath;
                 if (string.IsNullOrEmpty(path) || !File.Exists(path))
@@ -979,7 +993,7 @@ public sealed class StudioPage : ContentPage
         if (!await ConfirmDiscardAsync()) return;
         try
         {
-            var file = await FilePicker.Default.PickAsync(new PickOptions { PickerTitle = "Import a game: PAWS, Quill, GAC, Scott Adams, Quest, Twine or Z-code", FileTypes = AnyFile });
+            var file = await FilePicker.Default.PickAsync(new PickOptions { PickerTitle = "Import a game: PAWS, Quill, GAC, Scott Adams, Quest, Twine or Z-code", FileTypes = ImportFileTypes });
             if (file == null) return;
             await using var s = await file.OpenReadAsync();
             using var ms = new MemoryStream();
