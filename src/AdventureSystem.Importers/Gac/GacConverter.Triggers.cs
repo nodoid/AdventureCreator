@@ -416,7 +416,7 @@ internal sealed partial class GacConverter
             // l + lo OP r + ro  becomes  l OP r + (ro - lo).
             if (l.Kind is TermKind.Var or TermKind.Room && r.Kind is TermKind.Var or TermKind.Room)
             {
-                if (l.Kind == TermKind.Room || r.Kind == TermKind.Room) needRoomIndex = true;
+                if (l.Kind == TermKind.Room || r.Kind == TermKind.Room) needRoomIndex = needExactRoomIndex = true;
                 var type = op == GacOps.Eq ? ConditionType.VarEqualsVar : op == GacOps.Lt ? ConditionType.VarLessVar : ConditionType.VarGreaterVar;
                 return CondLit(type, VariableOf(l), r.Offset - l.Offset, VariableOf(r));
             }
@@ -430,6 +430,7 @@ internal sealed partial class GacConverter
             case TermKind.Room:
                 if (op == GacOps.Eq) return CondLit(ConditionType.PlayerIn, $"r{k}");
                 needRoomIndex = true;
+                roomConstMax = Math.Max(roomConstMax, k);
                 return CondLit(op == GacOps.Lt ? ConditionType.VarLess : ConditionType.VarGreater, "@room", k);
             case TermKind.Rand:
             {

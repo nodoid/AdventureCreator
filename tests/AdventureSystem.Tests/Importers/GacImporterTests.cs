@@ -160,6 +160,46 @@ public class GacImporterTests
         Assert.Equal("Okay.", a.Messages[Msg.Ok]);
     }
 
+    /// <summary>Rooms 1, 2 and 9999 (GAC allows room numbers up to 9999); SHOUT is verb 9.</summary>
+    private static GacTestDatabaseBuilder HighRoomNumbers() => new GacTestDatabaseBuilder { StartRoom = 1 }
+        .Verb(North, "NORTH", "N").Verb(South, "SOUTH", "S").Verb(9, "SHOUT")
+        .Room(1, 0, "You are in the hall.", (North, 9999))
+        .Room(2, 0, "You are in the cellar.")
+        .Room(9999, 0, "You are on the roof.", (South, 1))
+        .Message(1, "Echo!")
+        .Message(241, "You can't do that.");
+
+    [Fact]
+    public void RoomComparedWithConstantsNeedsPlaceholdersOnlyUpToTheConstant()
+    {
+        // Low: IF ( VERB 9 AND ROOM < 3 ) MESS 1 WAIT END
+        var b = HighRoomNumbers().Low(9, "VERB", "ROOM", 3, "<", "AND", "IF", 1, "MESS", "WAIT", "END");
+        var a = new GacImporter().Import(b.BuildSna(), "t.sna").Adventure;
+        Assert.Equal(new[] { "r0", "r1", "r2", "r3", "r9999" }, a.Rooms.Select(r => r.Id));
+
+        var e = new GameEngine(a, randomSeed: 1);
+        e.Start();
+        Assert.Contains("Echo!", e.Submit("shout").Text);
+        e.Submit("n");
+        Assert.Equal("r9999", e.State.CurrentRoomId);
+        Assert.DoesNotContain("Echo!", e.Submit("shout").Text);
+    }
+
+    [Fact]
+    public void RoomUsedAsANumberKeepsEveryRoomIndexEqualToItsNumber()
+    {
+        // Low: IF ( VERB 9 ) ROOM CSET 7 WAIT END   (counter 7 = the room number)
+        var b = HighRoomNumbers().Low(9, "VERB", "IF", "ROOM", 7, "CSET", "WAIT", "END");
+        var a = new GacImporter().Import(b.BuildSna(), "t.sna").Adventure;
+        Assert.Equal(10000, a.Rooms.Count);
+
+        var e = new GameEngine(a, randomSeed: 1);
+        e.Start();
+        e.Submit("n");
+        e.Submit("shout");
+        Assert.Equal(9999, e.GetVar("c7"));
+    }
+
     [Fact]
     public void TextEncodingRoundTripsCaseAndPunctuationRuns()
     {

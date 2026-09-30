@@ -203,7 +203,7 @@ internal sealed partial class GacConverter
                 if (value.Offset != 0) add(new GameAction(ActionType.AddVar, name, value.Offset), OutKind.Other);
                 return;
             case TermKind.Room:
-                needRoomIndex = true;
+                needRoomIndex = needExactRoomIndex = true;
                 add(new GameAction(ActionType.CopyVar, name, b: "@room"), OutKind.Other);
                 if (value.Offset != 0) add(new GameAction(ActionType.AddVar, name, value.Offset), OutKind.Other);
                 return;

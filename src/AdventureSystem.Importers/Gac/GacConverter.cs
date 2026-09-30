@@ -22,6 +22,9 @@ internal sealed partial class GacConverter
     private readonly SortedSet<int> markers = new();
     private readonly SortedSet<int> counters = new();
     private bool needRoomIndex;
+    // The highest constant ROOM is compared with (< or >), when ROOM is never copied or compared with a variable.
+    private int roomConstMax = -1;
+    private bool needExactRoomIndex;
     private bool usesDarkness;
     private int? strength;
     private readonly HashSet<string> seenNotes = new();
@@ -80,7 +83,7 @@ internal sealed partial class GacConverter
 
         if (strength is int st) s.MaxCarriedWeight = st;
         if (usesDarkness) AddDarkness();
-        if (needRoomIndex) FillRoomGaps();
+        if (needRoomIndex) FillRoomGaps(needExactRoomIndex ? int.MaxValue : roomConstMax);
         BuildVariables();
         AddMappingNotes();
         return adv;
@@ -386,16 +389,25 @@ internal sealed partial class GacConverter
         Note($"Darkness: GAC markers 1 (light) and 2 (lamp) are combined into variable \"{DarkVar}\" (the DarknessVariable) by the subroutine \"{DarknessRoutine}\", run after every SET/RESE of those markers.");
     }
 
-    /// <summary>Makes Rooms[i].Id == "r{i}" so that "@room" (the room's index) equals the GAC room number.</summary>
-    private void FillRoomGaps()
+    /// <summary>
+    /// Makes Rooms[i].Id == "r{i}" for every room numbered up to <paramref name="upTo"/>, so that "@room" (the room's
+    /// index) equals the GAC room number there; higher-numbered rooms follow in order. When ROOM is only compared with
+    /// constants, that keeps every comparison exact without thousands of placeholders for rooms numbered up to 9999.
+    /// </summary>
+    private void FillRoomGaps(int upTo)
     {
         var byNumber = adv.Rooms.ToDictionary(r => int.Parse(r.Id[1..]));
-        int max = byNumber.Keys.DefaultIfEmpty(0).Max();
+        int max = Math.Min(byNumber.Keys.DefaultIfEmpty(0).Max(), upTo);
         var list = new List<Room>();
         for (int n = 0; n <= max; n++)
             list.Add(byNumber.TryGetValue(n, out var r) ? r : new Room { Id = $"r{n}", Name = $"(unused GAC room {n})", Description = "" });
+        list.AddRange(byNumber.Where(kv => kv.Key > max).OrderBy(kv => kv.Key).Select(kv => kv.Value));
+        int added = list.Count - byNumber.Count;
         adv.Rooms = list;
-        Note("ROOM is compared with < or > somewhere, so placeholder rooms were added to make each room's index equal its GAC number (@room).");
+        if (added > 0)
+            Note(upTo == int.MaxValue
+                ? $"ROOM is used as a number somewhere, so {added} placeholder rooms were added to make each room's index equal its GAC number (@room)."
+                : $"ROOM is compared with < or > (up to {upTo}), so {added} placeholder rooms were added to make each room's index up to there equal its GAC number (@room).");
     }
 
     private void AddMappingNotes()
