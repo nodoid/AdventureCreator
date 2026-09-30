@@ -45,7 +45,8 @@ The JSON mirrors the classes in `src/AdventureCreator.Core/Model`:
   "Variables": [ { "Name": "rested", "InitialValue": 0 } ],
   "Pictures": [ { "Id": "pic_study", "Width": 256, "Height": 176, "RenderMode": "FullColour",
                   "Commands": [ { "Op": "Clear", "Color": 16 }, { "Op": "FilledRectangle", "X": 40, "Y": 110, "X2": 200, "Y2": 120 } ] } ],
-  "Sounds": [ { "Id": "snd_sigh", "Name": "Sigh", "AssetName": "sounds/sigh.wav", "Volume": 1 } ],
+  "Sounds": [ { "Id": "snd_sigh", "Name": "Sigh", "AssetName": "sounds/sigh.wav", "Volume": 1, "Repeat": false, "CutOffSeconds": 0,
+                "Effect": { "Preset": "Pickup", "Wave": "Square", "Frequency": 880, "JumpSemitones": 7, "JumpAtMs": 70, "…": "…" } } ],
   "Vocabulary": { "Verbs": [ { "Id": "comfort", "Words": ["comfort", "console"], "Grammar": ["* {person}"] } ] },
   "Messages": { "CantGo": "The house won't let you go that way." }
 }

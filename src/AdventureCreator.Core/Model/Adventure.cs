@@ -288,6 +288,16 @@ public sealed class SoundAsset
     public string Name { get; set; } = "";
     /// <summary>Name of the entry in <see cref="Adventure.Assets"/> (e.g. "sounds/wind.mp3").</summary>
     public string AssetName { get; set; } = "";
+    /// <summary>Loudness, 0–1 (the Studio shows it as 0–10).</summary>
     public double Volume { get; set; } = 1.0;
+    /// <summary>Play on a loop until stopped (StopSound, or leaving a room whose sound it is).</summary>
+    public bool Repeat { get; set; }
+    /// <summary>Stop playing after this many seconds (0 = play to the end). Ignored when <see cref="Repeat"/> is on.</summary>
+    public double CutOffSeconds { get; set; }
+    /// <summary>
+    /// When set, the sound is a generated effect: <see cref="AssetName"/> holds the WAV rendered from these settings,
+    /// which the Studio's sound effects editor can change at any time.
+    /// </summary>
+    public Audio.SoundEffect? Effect { get; set; }
     public override string ToString() => string.IsNullOrEmpty(Name) ? Id : Name;
 }

@@ -83,6 +83,8 @@ The same guide is available in the Studio under **Help › User Guide…** (⇧�
 * The Studio's picture designer shows pictures exactly as the Player does. It can import PNG, JPEG or HEIC images as backgrounds or stamps.
 
 ### Audio
+* A **sound effects designer** (sfxr style) with 14 presets, Randomise and Mutate, and sliders for tone, pitch jumps, envelope, filters, crush and echo.
+* A **waveform editor** for WAV sounds (trim, delete, fades, normalise, volume, reverse, echo, with undo), plus per-sound Volume (0–10), Repeat and Cut-off settings.
 * Rooms can have looping ambient sound. The `PlaySound` and `StopSound` actions control audio from triggers.
 * WAV, MP3 and M4A play on every platform.
 

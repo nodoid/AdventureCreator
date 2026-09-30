@@ -3,7 +3,10 @@ using Plugin.Maui.Audio;
 
 namespace AdventureCreator.Maui;
 
-/// <summary>Plays an adventure's sound assets: one looping ambient track plus any number of one-shot effects.</summary>
+/// <summary>
+/// Plays an adventure's sound assets: one looping ambient track plus any number of one-shot effects. Honours each
+/// sound's Repeat and cut-off settings.
+/// </summary>
 public sealed class AudioService : IDisposable
 {
     private readonly IAudioManager manager;
@@ -21,6 +24,7 @@ public sealed class AudioService : IDisposable
         if (Muted || soundId == null) return;
         var sound = adventure.FindSound(soundId);
         if (sound == null || !adventure.Assets.TryGetValue(sound.AssetName, out var data)) return;
+        loop |= sound.Repeat;
         try
         {
             if (loop)
@@ -45,6 +49,7 @@ public sealed class AudioService : IDisposable
                 player.Volume = Math.Clamp(sound.Volume * MasterVolume, 0, 1);
                 player.Play();
                 effects.Add(player);
+                CutOff(player, sound.CutOffSeconds);
             }
         }
         catch (Exception ex)
@@ -53,21 +58,34 @@ public sealed class AudioService : IDisposable
         }
     }
 
-    /// <summary>Plays raw audio bytes (used by the Studio to preview sounds).</summary>
-    public void Preview(byte[] data, double volume = 1)
+    /// <summary>Plays raw audio bytes (used by the Studio to preview sounds), optionally looping or cut off early.</summary>
+    public void Preview(byte[] data, double volume = 1, bool loop = false, double cutOffSeconds = 0)
     {
         StopAll();
         try
         {
             var p = manager.CreatePlayer(new MemoryStream(data));
             p.Volume = Math.Clamp(volume, 0, 1);
+            p.Loop = loop;
             p.Play();
             effects.Add(p);
+            if (!loop) CutOff(p, cutOffSeconds);
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine("Audio preview failed: " + ex.Message);
         }
+    }
+
+    /// <summary>Stops a one-shot sound after <paramref name="seconds"/> (0 = let it finish).</summary>
+    private void CutOff(IAudioPlayer player, double seconds)
+    {
+        if (seconds <= 0) return;
+        _ = Task.Delay(TimeSpan.FromSeconds(seconds)).ContinueWith(_ => MainThread.BeginInvokeOnMainThread(() =>
+        {
+            if (!effects.Contains(player)) return;   // already stopped and disposed
+            try { player.Stop(); } catch { }
+        }));
     }
 
     public void StopAmbient()

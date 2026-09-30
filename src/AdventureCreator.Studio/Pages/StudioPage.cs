@@ -1,3 +1,4 @@
+using AdventureCreator.Core.Audio;
 using System.Collections;
 using System.Collections.ObjectModel;
 using AdventureCreator.Core.Engine;
@@ -174,6 +175,7 @@ public sealed class StudioPage : ContentPage
             if (parts.Length >= 4 && int.TryParse(parts[3], out var command)) editor.SelectCommand(command);
             if (parts.Contains("play")) editor.PlayAnimations();
         }
+        if (parts.Contains("sfx")) NewSoundEffect();
     }
 
     private static PictureEditorView? FindPictureEditor(IView? view) => view switch
@@ -324,7 +326,12 @@ public sealed class StudioPage : ContentPage
         Variable v => new ListRow { Item = v, Title = v.Name, Subtitle = $"starts at {v.InitialValue}" },
         VerbDefinition v => new ListRow { Item = v, Title = v.Id, Subtitle = string.Join(", ", v.Words) },
         Picture p => new ListRow { Item = p, Title = string.IsNullOrWhiteSpace(p.Name) ? p.Id : p.Name, Subtitle = $"{p.Id} · {p.Width}×{p.Height} · {p.Commands.Count} commands" },
-        SoundAsset s => new ListRow { Item = s, Title = string.IsNullOrWhiteSpace(s.Name) ? s.Id : s.Name, Subtitle = $"{s.Id} · {s.AssetName}" },
+        SoundAsset s => new ListRow
+        {
+            Item = s, Title = (s.Effect != null ? "🎛 " : "") + (string.IsNullOrWhiteSpace(s.Name) ? s.Id : s.Name),
+            Subtitle = $"{s.Id} · {(s.Effect != null ? "sound effect" : Path.GetFileName(s.AssetName))} · volume {s.Volume * 10:0.#}" +
+                       (s.Repeat ? " · repeats" : s.CutOffSeconds > 0 ? $" · cut off {s.CutOffSeconds:0.0} s" : ""),
+        },
         _ => new ListRow { Item = o, Title = o.ToString() ?? "" },
     };
 
@@ -490,30 +497,7 @@ public sealed class StudioPage : ContentPage
         };
     }
 
-    private View SoundEditor(SoundAsset s)
-    {
-        var play = new Button { Text = "▶ Play" };
-        play.Clicked += (_, _) =>
-        {
-            if (document.Adventure.Assets.TryGetValue(s.AssetName, out var data)) (testPlayer?.Audio ?? previewAudio).Preview(data, s.Volume);
-        };
-        var stop = new Button { Text = "■ Stop" };
-        stop.Clicked += (_, _) => previewAudio.StopAll();
-        var replace = new Button { Text = "Replace audio file…" };
-        replace.Clicked += async (_, _) => await ImportSoundAsync(s);
-        var size = document.Adventure.Assets.TryGetValue(s.AssetName, out var bytes) ? $"{bytes.Length / 1024.0:0.#} KB" : "missing";
-        return new VerticalStackLayout
-        {
-            Spacing = 10,
-            Children =
-            {
-                Heading(s.Name, $"Sound · {size}"),
-                new HorizontalStackLayout { Spacing = 8, Children = { play, stop, replace } },
-                new ObjectEditor(s, ctx, exclude: new[] { "AssetName" }),
-                new Label { Text = "Play sounds with the PlaySound action, or set a room's Sound for ambient audio. WAV, MP3, M4A/AAC work everywhere; OGG is not supported on Apple platforms.", FontSize = 12, Opacity = 0.7 },
-            },
-        };
-    }
+    private View SoundEditor(SoundAsset s) => new SoundEditorView(s, ctx, testPlayer?.Audio ?? previewAudio);
 
     private readonly AudioService previewAudio = new();
 
@@ -704,7 +688,7 @@ public sealed class StudioPage : ContentPage
         };
         if (section == Section.Sounds)
         {
-            _ = ImportSoundAsync(null);
+            _ = AddSoundAsync();
             return;
         }
         if (item == null || CurrentList is not { } l) return;
@@ -756,6 +740,27 @@ public sealed class StudioPage : ContentPage
         RefreshList();
         if (rows.Count > 0) Select(rows[Math.Clamp(index, 0, rows.Count - 1)].Item);
         else ShowDetail(new Label { Text = "Nothing here yet. Click + to add one.", Opacity = 0.6, Margin = 30 });
+    }
+
+    private async Task AddSoundAsync()
+    {
+        var choice = await DisplayActionSheetAsync("Add a sound", "Cancel", null, "New sound effect", "Import audio file…");
+        if (choice == "New sound effect") NewSoundEffect();
+        else if (choice == "Import audio file…") await ImportSoundAsync(null);
+    }
+
+    private void NewSoundEffect()
+    {
+        var a = document.Adventure;
+        var fx = SfxPresets.Make("Pickup");
+        var sound = new SoundAsset { Id = a.NewId("sfx"), Name = "New sound effect", Effect = fx };
+        sound.AssetName = $"sounds/{sound.Id}.wav";
+        a.Assets[sound.AssetName] = SfxSynth.RenderWav(fx);
+        a.Sounds.Add(sound);
+        ctx.Changed(sound);
+        if (section != Section.Sounds) ShowSection(Section.Sounds);
+        RefreshList();
+        Select(sound);
     }
 
     private async Task ImportSoundAsync(SoundAsset? existing)
@@ -970,6 +975,7 @@ public sealed class StudioPage : ContentPage
         edit.Add(Sync("New Puzzle", () => { ShowSection(Section.Puzzles); AddNew(); }, "P", CmdAlt));
         edit.Add(Sync("New Random Event", () => { ShowSection(Section.Events); AddNew(); }, "E", CmdAlt));
         edit.Add(Sync("New Picture", () => { ShowSection(Section.Pictures); AddNew(); }));
+        edit.Add(Sync("New Sound Effect", NewSoundEffect));
         edit.Add(Sync("New Command", () => { ShowSection(Section.Commands); AddNew(); }));
         edit.Add(new MenuFlyoutSeparator());
         edit.Add(Sync("Duplicate Selected", Duplicate, "D"));
