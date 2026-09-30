@@ -490,7 +490,12 @@ internal sealed class ScottConverter
             case 63: list.Add(new GameAction(ActionType.Lose, text: "The game is now over.")); break;
             case 64:
             case 76:
-                // GoTo already describes the new room.
+                // GoTo already describes the new room. The common GOTO, CLEAR SCREEN, LOOK becomes CLEAR SCREEN, GOTO.
+                if (list.Count >= 2 && list[^1].Type == ActionType.ClearScreen && list[^2].Type == ActionType.GoTo)
+                {
+                    (list[^1], list[^2]) = (list[^2], list[^1]);
+                    break;
+                }
                 if (list.LastOrDefault()?.Type != ActionType.GoTo) list.Add(new GameAction(ActionType.Look));
                 break;
             case 65: Score(list); break;
