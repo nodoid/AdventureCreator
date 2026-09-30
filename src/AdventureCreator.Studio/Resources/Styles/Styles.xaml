@@ -24,10 +24,11 @@
 
     <Style TargetType="Button">
         <Setter Property="TextColor" Value="#1D1D1F" />
-        <Setter Property="BackgroundColor" Value="#E3E6EC" />
+        <Setter Property="BackgroundColor" Value="#D2DAE7" />
+        <Setter Property="BorderColor" Value="#8F9BB0" />
         <Setter Property="FontFamily" Value="OpenSansRegular"/>
         <Setter Property="FontSize" Value="14"/>
-        <Setter Property="BorderWidth" Value="0"/>
+        <Setter Property="BorderWidth" Value="1"/>
         <Setter Property="CornerRadius" Value="8"/>
         <Setter Property="Padding" Value="14,10"/>
         <Setter Property="MinimumHeightRequest" Value="28"/>

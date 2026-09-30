@@ -12,7 +12,9 @@ public static class Theme
     public static readonly Color Text = Color.FromArgb("#1D1D1F");
     public static readonly Color SecondaryText = Color.FromArgb("#6E6E73");
     public static readonly Color Border = Color.FromArgb("#C7C7CC");
-    public static readonly Color Chip = Color.FromArgb("#E3E6EC");
+    public static readonly Color Chip = Color.FromArgb("#D2DAE7");
+    public static readonly Color ChipHover = Color.FromArgb("#BFCADB");
+    public static readonly Color ChipBorder = Color.FromArgb("#8F9BB0");
     public static readonly Color Canvas = Color.FromArgb("#D8DAE0");
     public static readonly Color MapRoom = Color.FromArgb("#DCE6F7");
     public static readonly Color MapDarkRoom = Color.FromArgb("#B8BCC6");

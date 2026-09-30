@@ -345,10 +345,26 @@ public sealed class GamePlayerView : ContentView
 
     private Grid BuildQuitScreen()
     {
-        Button B(string text, Func<Task> action)
+        // Drawn buttons: native macOS push buttons ignore background colours, which made white text invisible.
+        View B(string text, Func<Task> action)
         {
-            var b = new Button { Text = text, WidthRequest = 220, BackgroundColor = accent, TextColor = Colors.White };
-            b.Clicked += async (_, _) => { if (quitScreen != null) quitScreen.IsVisible = false; await action(); };
+            var b = new Border
+            {
+                WidthRequest = 220,
+                Padding = new Thickness(12, 10),
+                BackgroundColor = accent,
+                StrokeThickness = 0,
+                StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 8 },
+                Content = new Label { Text = text, TextColor = Colors.White, FontSize = 15, FontAttributes = FontAttributes.Bold, HorizontalTextAlignment = TextAlignment.Center },
+            };
+            b.GestureRecognizers.Add(new TapGestureRecognizer
+            {
+                Command = new Command(async () => { if (quitScreen != null) quitScreen.IsVisible = false; await action(); }),
+            });
+            var hover = new PointerGestureRecognizer();
+            hover.PointerEntered += (_, _) => b.Opacity = 0.85;
+            hover.PointerExited += (_, _) => b.Opacity = 1;
+            b.GestureRecognizers.Add(hover);
             return b;
         }
         var panel = new VerticalStackLayout

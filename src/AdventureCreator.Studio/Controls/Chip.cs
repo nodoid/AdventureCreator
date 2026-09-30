@@ -7,7 +7,7 @@ namespace AdventureCreator.Studio.Controls;
 public sealed class Chip : Border
 {
     private static readonly Color Normal = Maui.Theme.Chip;
-    private static readonly Color Hover = Maui.Theme.Hover;
+    private static readonly Color Hover = Maui.Theme.ChipHover;
     private static readonly Color Active = Maui.Theme.Accent;
     private readonly Label label;
     private bool selected;
@@ -21,7 +21,7 @@ public sealed class Chip : Border
         Content = label;
         Padding = new Thickness(9, 4);
         Margin = new Thickness(0, 0, 4, 4);
-        StrokeThickness = 0;
+        StrokeThickness = 1;
         StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 5 };
         if (tooltip != null) ToolTipProperties.SetText(this, tooltip);
         GestureRecognizers.Add(new TapGestureRecognizer { Command = new Command(() => Clicked?.Invoke(this, EventArgs.Empty)) });
@@ -47,6 +47,7 @@ public sealed class Chip : Border
     private void Update()
     {
         BackgroundColor = selected ? Active : hovering ? Hover : Normal;
+        Stroke = selected ? Active : Maui.Theme.ChipBorder;
         label.TextColor = selected ? Colors.White : Maui.Theme.Text;
     }
 }

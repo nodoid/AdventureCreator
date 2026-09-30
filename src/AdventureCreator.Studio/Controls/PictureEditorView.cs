@@ -65,12 +65,20 @@ public sealed class PictureEditorView : ContentView
     private readonly CanvasDrawable drawable;
     private readonly Dictionary<Tool, Chip> toolChips = new();
     private readonly Label subtitle = new() { FontSize = 12, TextColor = Theme.SecondaryText };
-    private readonly Label status = new() { FontSize = 12, TextColor = Theme.SecondaryText, VerticalOptions = LayoutOptions.Center };
+    private readonly Label status = new() { FontSize = 12, TextColor = Theme.SecondaryText, VerticalOptions = LayoutOptions.Center, HorizontalTextAlignment = TextAlignment.End, LineBreakMode = LineBreakMode.TailTruncation, MaxLines = 1 };
     private readonly HorizontalStackLayout optionsBar = new() { Spacing = 10, VerticalOptions = LayoutOptions.Center };
     private readonly VerticalStackLayout colourSection = new() { Spacing = 8 };
     private readonly VerticalStackLayout selectionSection = new() { Spacing = 8 };
     private readonly Chip undoChip, redoChip, gridChip, playChip;
     private readonly VerticalStackLayout animationSection = new() { Spacing = 8 };
+
+    // Layout pieces, arranged side by side (wide) or in one scrolling column (narrow).
+    private const double NarrowWidth = 780;
+    private readonly View header, toolbar, optionsRow, canvasFrame;
+    private readonly Border inspectorPane, commandsPanel;
+    private readonly View inspectorContent;
+    private readonly ScrollView inspectorScroll;
+    private bool? narrowLayout;
     private readonly Maui.PictureCanvas renderer = new();
     private readonly Stopwatch animationClock = new();
     private IDispatcherTimer? animationTimer;
@@ -140,14 +148,13 @@ public sealed class PictureEditorView : ContentView
         playChip = new Chip("▶ Animate", "Play the picture's animations");
         playChip.Clicked += (_, _) => SetAnimating(animationTimer is not { IsRunning: true });
 
-        var header = new Grid { ColumnDefinitions = { new(GridLength.Star), new(GridLength.Auto) }, ColumnSpacing = 12 };
-        header.Add(headerText, 0);
-        header.Add(new HorizontalStackLayout { VerticalOptions = LayoutOptions.End, Children = { playChip, undoChip, redoChip, gridChip } }, 1);
-        var toolbar = tools;
+        var headerGrid = new Grid { ColumnDefinitions = { new(GridLength.Star), new(GridLength.Auto) }, ColumnSpacing = 12 };
+        headerGrid.Add(headerText, 0);
+        headerGrid.Add(new HorizontalStackLayout { VerticalOptions = LayoutOptions.End, Children = { playChip, undoChip, redoChip, gridChip } }, 1);
 
-        var optionsRow = new Grid { ColumnDefinitions = { new(GridLength.Star), new(GridLength.Auto) }, MinimumHeightRequest = 30 };
-        optionsRow.Add(optionsBar, 0);
-        optionsRow.Add(status, 1);
+        var optionsGrid = new Grid { ColumnDefinitions = { new(GridLength.Auto), new(GridLength.Star) }, ColumnSpacing = 10, MinimumHeightRequest = 30 };
+        optionsGrid.Add(optionsBar, 0);
+        optionsGrid.Add(status, 1);
 
         // ---------------- canvas
         drawable = new CanvasDrawable(this);
@@ -164,7 +171,7 @@ public sealed class PictureEditorView : ContentView
             status.Text = x >= 0 && y >= 0 && x < picture.Width && y < picture.Height ? $"{x}, {y}" : "";
         };
         canvas.GestureRecognizers.Add(hover);
-        var canvasFrame = new Border { Content = canvas, Stroke = Theme.Border, StrokeThickness = 1, StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 6 } };
+        var canvasBorder = new Border { Content = canvas, Stroke = Theme.Border, StrokeThickness = 1, StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 6 } };
 
         // ---------------- inspector
         var pictureSettings = new ObjectEditor(picture, ctx, only: new[] { "Id", "Name", "Width", "Height", "RenderMode", "LineWidth", "InitialInk", "InitialPaper", "BitmapAsset", "IsSubroutine" },
@@ -187,9 +194,10 @@ public sealed class PictureEditorView : ContentView
                 new FlexLayout { Wrap = Microsoft.Maui.Layouts.FlexWrap.Wrap, Margin = new Thickness(0, 6, 0, 0), Children = { importBackground, importStamp } },
             },
         };
-        var inspectorPane = new Border
+        inspectorContent = inspector;
+        inspectorScroll = new ScrollView();
+        inspectorPane = new Border
         {
-            Content = new ScrollView { Content = inspector },
             BackgroundColor = Theme.Pane,
             Stroke = Theme.Border,
             StrokeThickness = 1,
@@ -249,13 +257,13 @@ public sealed class PictureEditorView : ContentView
         commandsBody.Add(new Border { Content = commandList, Stroke = Theme.Border, StrokeThickness = 1, BackgroundColor = Theme.Pane }, 0);
         commandsBody.Add(commandButtons, 1);
 
-        var commandsToggle = new Grid { ColumnDefinitions = { new(GridLength.Auto), new(GridLength.Star), new(GridLength.Auto) }, ColumnSpacing = 6, Padding = new Thickness(10, 8) };
+        var commandsToggle = new Grid { ColumnDefinitions = { new(GridLength.Auto), new(GridLength.Auto), new(GridLength.Star) }, ColumnSpacing = 6, Padding = new Thickness(10, 8) };
         commandsToggle.Add(commandsArrow, 0);
         commandsToggle.Add(commandsHeader, 1);
-        commandsToggle.Add(new Label { Text = "the picture as text: every shape is one command, drawn in order", FontSize = 11, TextColor = Theme.SecondaryText, VerticalOptions = LayoutOptions.Center }, 2);
+        commandsToggle.Add(new Label { Text = "the picture as text: every shape is one command, drawn in order", FontSize = 11, TextColor = Theme.SecondaryText, VerticalOptions = LayoutOptions.Center, HorizontalTextAlignment = TextAlignment.End, LineBreakMode = LineBreakMode.TailTruncation, MaxLines = 1 }, 2);
         commandsToggle.GestureRecognizers.Add(new TapGestureRecognizer { Command = new Command(() => SetCommandsExpanded(!commandsExpanded, animate: true)) });
         ToolTipProperties.SetText(commandsToggle, "Show or hide the drawing commands");
-        var commandsPanel = new Border
+        commandsPanel = new Border
         {
             Content = new VerticalStackLayout { Children = { commandsToggle, commandsBody } },
             BackgroundColor = Theme.Sidebar,
@@ -264,22 +272,17 @@ public sealed class PictureEditorView : ContentView
         };
 
         // ---------------- layout
-        var root = new Grid
+        header = headerGrid;
+        toolbar = tools;
+        optionsRow = optionsGrid;
+        canvasFrame = canvasBorder;
+        ApplyLayout(narrow: false);
+        SizeChanged += (_, _) => UpdateLayoutForWidth();
+        Loaded += (_, _) =>
         {
-            ClassId = "full",
-            Padding = new Thickness(20, 14, 20, 14),
-            RowSpacing = 8,
-            ColumnSpacing = 14,
-            RowDefinitions = { new(GridLength.Auto), new(GridLength.Auto), new(GridLength.Auto), new(GridLength.Star), new(GridLength.Auto) },
-            ColumnDefinitions = { new(GridLength.Star), new(GridLength.Auto) },
+            if (Parent is VisualElement parent) parent.SizeChanged += (_, _) => UpdateLayoutForWidth();
+            UpdateLayoutForWidth();
         };
-        root.Add(header, 0, 0); Grid.SetColumnSpan(header, 2);
-        root.Add(toolbar, 0, 1); Grid.SetColumnSpan(toolbar, 2);
-        root.Add(optionsRow, 0, 2);
-        root.Add(canvasFrame, 0, 3);
-        root.Add(inspectorPane, 1, 2); Grid.SetRowSpan(inspectorPane, 2);
-        root.Add(commandsPanel, 0, 4); Grid.SetColumnSpan(commandsPanel, 2);
-        Content = root;
 
         // Picture settings edited in the inspector change the document; redraw when that happens.
         void OnDocumentChanged(object? what)
@@ -301,6 +304,66 @@ public sealed class PictureEditorView : ContentView
         UpdateUndoButtons();
     }
 
+    // =================================================================== layout
+
+    /// <summary>The width really available: the detail pane's, which the editor must never exceed.</summary>
+    private double AvailableWidth => Parent is VisualElement { Width: > 0 } parent ? parent.Width : Width;
+
+    private void UpdateLayoutForWidth()
+    {
+        double available = AvailableWidth;
+        if (available <= 0) return;
+        if (Content is View root && Math.Abs(root.WidthRequest - available) > 0.5) root.WidthRequest = available;
+        bool narrow = available < NarrowWidth;
+        if (narrow != narrowLayout) ApplyLayout(narrow);
+        if (narrow)
+        {
+            double canvasWidth = available - 32;
+            canvasFrame.HeightRequest = Math.Clamp(canvasWidth * picture.Height / Math.Max(1, picture.Width) + 24, 220, 520);
+        }
+    }
+
+    private void ApplyLayout(bool narrow)
+    {
+        narrowLayout = narrow;
+        foreach (var v in new[] { header, toolbar, optionsRow, canvasFrame, inspectorPane, commandsPanel })
+            if (v.Parent is Layout layout) layout.Children.Remove(v);
+        inspectorScroll.Content = null;
+        inspectorPane.Content = null;
+
+        if (narrow)
+        {
+            // One column: canvas, then the inspector, then the commands, all in one scrolling page.
+            inspectorPane.WidthRequest = -1;
+            inspectorPane.Content = inspectorContent;
+            var column = new VerticalStackLayout { Spacing = 10, Padding = new Thickness(16, 12), Children = { header, toolbar, optionsRow, canvasFrame, inspectorPane, commandsPanel } };
+            Content = new ScrollView { Content = column, WidthRequest = AvailableWidth > 0 ? AvailableWidth : -1 };
+            return;
+        }
+
+        canvasFrame.HeightRequest = -1;
+        inspectorPane.WidthRequest = 310;
+        inspectorScroll.Content = inspectorContent;
+        inspectorPane.Content = inspectorScroll;
+        var root = new Grid
+        {
+            ClassId = "full",
+            Padding = new Thickness(20, 14, 20, 14),
+            RowSpacing = 8,
+            ColumnSpacing = 14,
+            RowDefinitions = { new(GridLength.Auto), new(GridLength.Auto), new(GridLength.Auto), new(GridLength.Star), new(GridLength.Auto) },
+            ColumnDefinitions = { new(GridLength.Star), new(GridLength.Auto) },
+            WidthRequest = AvailableWidth > 0 ? AvailableWidth : -1,
+        };
+        root.Add(header, 0, 0); Grid.SetColumnSpan(header, 2);
+        root.Add(toolbar, 0, 1); Grid.SetColumnSpan(toolbar, 2);
+        root.Add(optionsRow, 0, 2);
+        root.Add(canvasFrame, 0, 3);
+        root.Add(inspectorPane, 1, 2); Grid.SetRowSpan(inspectorPane, 2);
+        root.Add(commandsPanel, 0, 4); Grid.SetColumnSpan(commandsPanel, 2);
+        Content = root;
+    }
+
     // =================================================================== layout helpers
 
     private static View InspectorHeading(string text) => new VerticalStackLayout
@@ -314,9 +377,9 @@ public sealed class PictureEditorView : ContentView
         },
     };
 
-    private static Button SmallButton(string text, Action action)
+    private static Chip SmallButton(string text, Action action)
     {
-        var b = new Button { Text = text, FontSize = 12, HeightRequest = 28, Padding = new Thickness(10, 0), Margin = new Thickness(0, 0, 6, 6) };
+        var b = new Chip(text);
         b.Clicked += (_, _) => action();
         return b;
     }
