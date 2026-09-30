@@ -35,6 +35,7 @@ public static class ImporterRegistry
         importers.Add(new Quill.QuillImporter());
         importers.Add(new Gac.GacImporter());
         importers.Add(new ZCode.ZCodeImporter());
+        importers.Add(new ScottAdams.ScottAdamsImporter());
     }
 
     /// <summary>File-dialog extensions accepted by any importer.</summary>
