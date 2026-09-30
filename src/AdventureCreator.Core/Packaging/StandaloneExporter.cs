@@ -137,13 +137,7 @@ public static class StandaloneExporter
             if (Directory.Exists(target)) Directory.Delete(target, true);
             CopyDirectory(templatePath, target);
             AdventurePackage.Save(adventure, Path.Combine(target, GameFileName));
-            // Rename the main executable after the game.
-            var exe = Directory.GetFiles(target, "AdventureCreator.Player.exe").FirstOrDefault();
-            if (exe != null)
-            {
-                var renamed = Path.Combine(target, appName + ".exe");
-                if (!File.Exists(renamed)) File.Copy(exe, renamed);
-            }
+            AddNamedWindowsExecutable(target, appName);
         }
         else
         {
@@ -325,8 +319,22 @@ public static class StandaloneExporter
         if (Directory.Exists(destination)) Directory.Delete(destination, true);
         if (File.Exists(destination)) File.Delete(destination);
         if (Directory.Exists(product)) CopyDirectory(product, destination); else File.Copy(product, destination);
+        if (target == BuildTarget.Windows) AddNamedWindowsExecutable(destination, name);
         log("Created " + destination);
         return new BuildResult(code, destination);
+    }
+
+    /// <summary>
+    /// Adds a copy of the Windows player executable named after the game. WinUI looks for its resource index as
+    /// "&lt;exe name&gt;.pri" and crashes at startup without it, so the index is copied under the new name too.
+    /// </summary>
+    private static void AddNamedWindowsExecutable(string folder, string appName)
+    {
+        var exe = Path.Combine(folder, "AdventureCreator.Player.exe");
+        if (!File.Exists(exe)) return;
+        File.Copy(exe, Path.Combine(folder, appName + ".exe"), true);
+        var pri = Path.Combine(folder, "AdventureCreator.Player.pri");
+        if (File.Exists(pri)) File.Copy(pri, Path.Combine(folder, appName + ".pri"), true);
     }
 
     /// <summary>Locates the app a build produced (newest .app / .ipa / signed .apk / Windows publish folder).</summary>

@@ -32,7 +32,7 @@ The same guide is available in the Studio under **Help › User Guide…** (⇧�
 | `src/AdventureCreator.ConsolePlayer` | `adventure-player`, the console player and debugging tool. |
 | `tests/AdventureCreator.Tests` | xUnit tests: parser, engine, walkthroughs, graphics, packaging and all three importers. |
 | `examples/` | `Genesis.adventure` (the main test game) and `TheLighthouse.adventure`. |
-| `build/build-templates.sh` | Builds the player templates used for SDK-free exports. |
+| `build/build-templates.sh`, `.ps1` | Build the player templates used for SDK-free exports. |
 
 ## Features
 
@@ -109,7 +109,7 @@ To create the templates for options 3 and 4, run `build/build-templates.sh` (mac
 ## Building
 
 ```bash
-dotnet test tests/AdventureCreator.Tests                                  # 129 tests
+dotnet test tests/AdventureCreator.Tests                                  # 166 tests
 dotnet build src/AdventureCreator.Studio -f net10.0-maccatalyst           # Studio for macOS
 dotnet build src/AdventureCreator.Player -f net10.0-android               # Player APK
 dotnet run --project src/AdventureCreator.ConsolePlayer -- --example      # play Genesis in the terminal

@@ -130,6 +130,13 @@ build/build-templates.sh           # all console players + the graphical player 
 RIDS=osx-arm64 build/build-templates.sh   # only some console players
 ```
 
+On Windows, use PowerShell:
+
+```powershell
+build\build-templates.ps1                         # Windows graphical player + all console players
+build\build-templates.ps1 -Rids win-x64,win-arm64 # only some console players
+```
+
 This creates:
 * `artifacts/templates/console/<rid>/adventure-player[.exe]`: console players for `osx-arm64`, `osx-x64`, `win-x64` and `linux-x64`
 * `artifacts/templates/Adventure Player.app` on macOS, or `artifacts/templates/windows/` on Windows
@@ -138,7 +145,7 @@ In the export window, choose the template once with **Browse…**; the Studio re
 
 * **Desktop app from a template** copies the Player and puts `game.adventure` inside it.
   * On macOS it goes in `Contents/Resources`; the bundle's display name is set to the game's title and the app is re-signed ad hoc.
-  * On Windows it goes next to the `.exe`, which is also copied under the game's name.
+  * On Windows it goes next to the `.exe`, which is also copied under the game's name (with its `.pri` resource index, which WinUI needs).
 * **Console executable** appends the game package to the player program. The result (about 35 MB, self-contained) runs with no installation: `./MyGame`. Saved positions go to the user's application-data folder.
 
 Ad-hoc-signed Mac apps run on your own Mac. To give them to other people, sign them with a Developer ID and notarise them, or macOS Gatekeeper will block them.
