@@ -412,9 +412,15 @@ internal sealed partial class GacConverter
         }
         if (r.Kind != TermKind.Const)
         {
-            if (op == GacOps.Eq && l.Kind == TermKind.Var && r.Kind == TermKind.Var && l.Offset == r.Offset)
-                return CondLit(ConditionType.VarEqualsVar, l.Var, b: r.Var);
-            throw new GacConvertException("comparing two computed values cannot be converted");
+            // Two computed values – counters, TURN or ROOM, each possibly with a number added:
+            // l + lo OP r + ro  becomes  l OP r + (ro - lo).
+            if (l.Kind is TermKind.Var or TermKind.Room && r.Kind is TermKind.Var or TermKind.Room)
+            {
+                if (l.Kind == TermKind.Room || r.Kind == TermKind.Room) needRoomIndex = true;
+                var type = op == GacOps.Eq ? ConditionType.VarEqualsVar : op == GacOps.Lt ? ConditionType.VarLessVar : ConditionType.VarGreaterVar;
+                return CondLit(type, VariableOf(l), r.Offset - l.Offset, VariableOf(r));
+            }
+            throw new GacConvertException("comparing a random number, noun or verb number with another computed value cannot be converted");
         }
         int k = r.N - l.Offset;
         switch (l.Kind)
@@ -450,6 +456,8 @@ internal sealed partial class GacConverter
         }
         throw new GacConvertException("unsupported comparison");
     }
+
+    private static string VariableOf(Term t) => t.Kind == TermKind.Room ? "@room" : t.Var!;
 
     // ---- operands ---------------------------------------------------------------------------------------------
 

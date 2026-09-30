@@ -20,7 +20,8 @@ public static class References
                         ConditionType.PlayerIn or ConditionType.RoomVisited or ConditionType.ExitOpen => RefKind.Room,
                         ConditionType.ItemCarried or ConditionType.ItemWorn or ConditionType.ItemPresent or ConditionType.ItemIn or ConditionType.ItemExists
                             or ConditionType.ItemOpen or ConditionType.ItemLocked or ConditionType.ItemLit or ConditionType.Noun1Is or ConditionType.Noun2Is => RefKind.Item,
-                        ConditionType.VarEquals or ConditionType.VarGreater or ConditionType.VarLess or ConditionType.VarEqualsVar => RefKind.Variable,
+                        ConditionType.VarEquals or ConditionType.VarGreater or ConditionType.VarLess
+                            or ConditionType.VarEqualsVar or ConditionType.VarGreaterVar or ConditionType.VarLessVar => RefKind.Variable,
                         ConditionType.PuzzleSolved => RefKind.Puzzle,
                         ConditionType.TriggerFired => RefKind.Trigger,
                         ConditionType.NpcFollowing or ConditionType.NpcHostile or ConditionType.NpcDefeated or ConditionType.NpcIn or ConditionType.NpcHasItem => RefKind.Npc,
@@ -34,7 +35,7 @@ public static class References
                     return c.Type switch
                     {
                         ConditionType.ItemIn => RefKind.Location,
-                        ConditionType.VarEqualsVar => RefKind.Variable,
+                        ConditionType.VarEqualsVar or ConditionType.VarGreaterVar or ConditionType.VarLessVar => RefKind.Variable,
                         ConditionType.ExitOpen => RefKind.Direction,
                         ConditionType.NpcIn => RefKind.Location,
                         ConditionType.NpcHasItem => RefKind.Item,
@@ -215,7 +216,9 @@ public static class References
         {
             ConditionType.ItemIn => "A = item, B = location",
             ConditionType.VarEquals or ConditionType.VarGreater or ConditionType.VarLess => "A = variable, N = value",
-            ConditionType.VarEqualsVar => "A, B = variables",
+            ConditionType.VarEqualsVar => "A, B = variables; true when A = B + N (N is an optional offset, usually 0)",
+            ConditionType.VarGreaterVar => "A, B = variables; true when A > B + N (N is an optional offset, usually 0)",
+            ConditionType.VarLessVar => "A, B = variables; true when A < B + N (N is an optional offset, usually 0)",
             ConditionType.Chance => "N = percent chance",
             ConditionType.TurnsAtLeast or ConditionType.ScoreAtLeast or ConditionType.CarriedCountAtLeast => "N = number",
             ConditionType.ExitOpen => "A = room, B = direction",

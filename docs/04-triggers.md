@@ -86,7 +86,7 @@ Wherever an item is expected you can use `$noun1` / `$noun2` (the item the playe
 | ItemExists | the item is anywhere in the game (not nowhere) | A = item |
 | ItemOpen / ItemLocked / ItemLit | the item is open / locked / lit | A = item |
 | VarEquals / VarGreater / VarLess | compare a variable with N | A = variable, N |
-| VarEqualsVar | two variables are equal | A, B = variables |
+| VarEqualsVar / VarGreaterVar / VarLessVar | compare two variables: A = B + N, A > B + N or A < B + N. N is an optional offset, usually 0 (for example *score > best − 5* is A = `score`, B = `best`, N = −5). | A, B = variables, N |
 | Chance | random, N percent of the time | N = 0–100 |
 | TurnsAtLeast / ScoreAtLeast | turns taken / score ≥ N | N |
 | CarriedCountAtLeast | holding at least N items | N |

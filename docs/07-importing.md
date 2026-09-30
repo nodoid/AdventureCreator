@@ -226,6 +226,7 @@ Verification: compared against John Elliott's UnQuill on *Very Big Cave Adventur
   * counter 0 is the score (`@score`; additions become AwardScore)
   * TURN and counters 126/127 → `@turns`
   * ROOM → `@room`. If a game compares ROOM with < or >, placeholder rooms are added so that each room's position equals its GAC number.
+  * Comparisons of two values (`CTR 3 < CTR 4`, `CTR 7 + 2 > TURN`, `ROOM = CTR 5`) become **VarLessVar**, **VarGreaterVar** or **VarEqualsVar** conditions, with any added number kept as the offset.
 * **Darkness:** GAC is dark when markers 1 and 2 are both clear. This is kept in a `gac_dark` variable (the Darkness Variable) and updated after every change to those markers.
 * **Actions:**
   * MESS, LOOK, GET, DROP, TO, SWAP, GOTO → their equivalents
@@ -247,7 +248,7 @@ Verification: compared against John Elliott's UnQuill on *Very Big Cave Adventur
 |---|---|
 | Machines | Amstrad CPC snapshots are implemented from published documentation but **not verified** against a real game. CPC `.dsk` disk images, Commodore 64 and BBC Micro GAC aren't supported. |
 | Protected tapes | Encrypted or custom loaders can't be read from `.tap`/`.tzx`; use a snapshot. |
-| Unconvertible conditions | Expressions such as `CTR a < CTR b` (comparing two counters), or CONN outside a room's local table, are **skipped**. The original line is quoted in the Notes so you can rewrite it as a trigger. |
+| Unconvertible conditions | Comparisons of a random number (RAND), a noun number (NO1/NO2) or the verb number (VBNO) with another computed value, and CONN outside a room's local table, are **skipped**. The original line is quoted in the Notes so you can rewrite it as a trigger. (Comparing two counters, TURN or ROOM with each other *is* converted.) |
 | Actions without equivalents | FIND (go to where an object is), DESC of another room, LIST of another room's objects, setting the score to a fixed value, changing the turn counter, and TEXT (pictures off). Each is noted. |
 | EXIT | Becomes **Win** if the message just before it looks like a victory text, otherwise **Lose**. Check the ending triggers. |
 | Marker 0 | "A room was just described" isn't maintained. |

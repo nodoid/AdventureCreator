@@ -186,6 +186,10 @@ public static class AdventureValidator
                     case ConditionType.VarEquals or ConditionType.VarGreater or ConditionType.VarLess:
                         if (!IsVariable(c.A)) Warn(where, $"Variable \"{c.A}\" is not declared (it starts at 0).");
                         break;
+                    case ConditionType.VarEqualsVar or ConditionType.VarGreaterVar or ConditionType.VarLessVar:
+                        if (!IsVariable(c.A)) Warn(where, $"Variable \"{c.A}\" is not declared (it starts at 0).");
+                        if (!IsVariable(c.B)) Warn(where, $"Variable \"{c.B}\" is not declared (it starts at 0).");
+                        break;
                 }
             }
         }

@@ -257,7 +257,9 @@ public sealed partial class GameEngine
             case ConditionType.VarEquals: return GetVar(c.A ?? "") == c.N;
             case ConditionType.VarGreater: return GetVar(c.A ?? "") > c.N;
             case ConditionType.VarLess: return GetVar(c.A ?? "") < c.N;
-            case ConditionType.VarEqualsVar: return GetVar(c.A ?? "") == GetVar(c.B ?? "");
+            case ConditionType.VarEqualsVar: return GetVar(c.A ?? "") == GetVar(c.B ?? "") + c.N;
+            case ConditionType.VarGreaterVar: return GetVar(c.A ?? "") > GetVar(c.B ?? "") + c.N;
+            case ConditionType.VarLessVar: return GetVar(c.A ?? "") < GetVar(c.B ?? "") + c.N;
             case ConditionType.Chance: return Random.Next(100) < c.N;
             case ConditionType.TurnsAtLeast: return State.Turns >= c.N;
             case ConditionType.ScoreAtLeast: return State.Score >= c.N;

@@ -135,7 +135,7 @@ SCORE also reports "Puzzles solved: n of m". A trigger with the **PuzzleSolved**
 
 ## Variables
 
-Named whole numbers, starting at their **Initial Value**. Test them with VarEquals / VarGreater / VarLess, change them with SetVar / AddVar / CopyVar / RandomVar, and print them with `{var:name}`.
+Named whole numbers, starting at their **Initial Value**. Test them against a number with VarEquals / VarGreater / VarLess, or against another variable with VarEqualsVar / VarGreaterVar / VarLessVar, change them with SetVar / AddVar / CopyVar / RandomVar, and print them with `{var:name}`.
 
 Built-in pseudo-variables:
 

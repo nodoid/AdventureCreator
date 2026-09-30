@@ -336,6 +336,8 @@ LOW PRIORITY
   IF ( VERB 1 ) MESS 2 WAIT END
   IF ( NO1 < 3 AND VERB 4 ) DROP NO1 OKAY END
   IF ( CTR 7 < CTR 8 ) MESS 1 END
+  IF ( CTR 7 + 2 > TURN ) MESS 2 END
+  IF ( RAND 5 < CTR 7 ) MESS 1 END
 ```
 
 ### The import report
@@ -344,13 +346,14 @@ LOW PRIORITY
 Imported with: Graphic Adventure Creator
 Format: GAC (ZX Spectrum, sna48 snapshot)
 
-2 rooms, 3 items, 10 triggers, 3 pictures.
+2 rooms, 3 items, 12 triggers, 3 pictures.
 
 Warnings:
 • Pronoun words (it) refer to the previous noun (GAC noun 255); the engine's own pronoun handling is used.
 • GAC fills spread up and down the seed's column only (not a true flood fill); pictures were converted
   to flood fills and may differ slightly.
-• Skipped low priority condition "IF ( CTR 7 < CTR 8 ) MESS 1 END": comparing two computed values cannot be converted.
+• Skipped low priority condition "IF ( RAND 5 < CTR 7 ) MESS 1 END": comparing a random number, noun or
+  verb number with another computed value cannot be converted.
 ```
 
 ### Rooms, items and vocabulary
@@ -385,7 +388,9 @@ GAC's turn order is *high priority → connections → local conditions → low 
 | `IF ( NOT CARR 2 AND ( 3 < CTR 7 ) ) INCR 0 END` | **`lp3`**: **not Item carried** `o2`, **Variable** `c7` **>** 3 → **Award score** 1 (counter 0 is the score). |
 | `IF ( VERB 1 ) MESS 2 WAIT END` | **`lp4`**, verb `north`, with an **extra condition, not Player in `r1`**. In room 1, NORTH is a real exit, so GAC would already have moved the player before reaching this line. The condition keeps that behaviour. |
 | `IF ( NO1 < 3 AND VERB 4 ) DROP NO1 OKAY END` | **Expanded into one trigger per noun:** `lp5a` (drop `lamp` → Drop item `o1`) and `lp5b` (drop `key` → Drop item `o2`). |
-| `IF ( CTR 7 < CTR 8 ) MESS 1 END` | **Skipped**, with a note (see below). |
+| `IF ( CTR 7 < CTR 8 ) MESS 1 END` | **`lp6`**: **VarLessVar** `c7` < `c8` → Message "The door creaks open." Two counters are compared directly. |
+| `IF ( CTR 7 + 2 > TURN ) MESS 2 END` | **`lp7`**: **VarGreaterVar** `c7` > `@turns` with offset **−2** (shown as *c7 > @turns − 2*). The +2 on the left moves to the right as −2, so the test is exactly the same. |
+| `IF ( RAND 5 < CTR 7 ) MESS 1 END` | **Skipped**, with a note (see below). |
 
 Markers became `m5` and `m10` (0 or 1), and counters became `c7` and `c8`.
 
@@ -409,13 +414,15 @@ p3       Is Subroutine: Plot 5,5
 
 ### What to fix after importing this game
 
-1. **The skipped condition.** The engine can compare a variable with a number, but not two variables with each other, so `IF ( CTR 7 < CTR 8 ) MESS 1 END` wasn't imported. The original line is quoted in the report and the Notes. To rebuild it, track the comparison yourself: wherever the game changes `c7` or `c8`, set a marker variable to say which is larger. Then write a trigger that tests that marker and prints "The door creaks open." If the counters only take a few values, one trigger per combination also works.
+1. **The skipped condition.** `IF ( RAND 5 < CTR 7 ) MESS 1 END` compares a *random number* with a counter, which has no single equivalent condition, so it wasn't imported. The original line is quoted in the report and the Notes. To rebuild it, use a variable `roll` and two triggers:
+   * a **BeforeCommand** trigger with verb and noun `*` (like the other low-priority lines), priority 9993, with the actions **RandomVar** `roll` 5 (a number from 1 to 5) and **Run trigger** `check_roll`
+   * a **Subroutine** trigger `check_roll` with the condition **VarLessVar** `roll` < `c7` and offset **+1** (GAC's RAND 5 gives 0–4, so *roll − 1 < c7* becomes *roll < c7 + 1*), and the action **Message** "The door creaks open."
 2. **Fills.** GAC's fill spreads up and down one column at a time; the Studio uses a true flood fill. Compare the pictures with the original and adjust any that differ, using **Step view** in the picture designer.
 3. **Endings.** A GAC EXIT becomes **Win** if the message before it reads like a victory, otherwise **Lose**. Check them. This game has none.
 4. **Nouns.** Items only get nouns whose words appear in their names. If the player can't refer to an item, add nouns in **Items & People**.
 
 **GAC limitations you may meet:**
-* comparisons of two counters
+* comparing a random number, noun number or verb number with another computed value (two counters, TURN and ROOM *are* converted)
 * CONN outside local tables
 * FIND, DESC or LIST of another room
 * setting the score or turns directly

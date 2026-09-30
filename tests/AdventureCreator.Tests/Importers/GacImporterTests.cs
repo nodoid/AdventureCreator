@@ -41,8 +41,12 @@ public class GacImporterTests
             .Low(North, "VERB", "IF", 2, "MESS", "WAIT", "END")
             // Low: IF ( NO1 < 3 AND VERB 4 ) DROP NO1 OKAY END   (range of nouns → one trigger per noun)
             .Low(1, "NO1", 3, "<", Drop, "VERB", "AND", "IF", "NO1", "DROP", "OKAY", "END")
-            // Low: IF ( CONN 1 ) ... is only convertible in local tables; this one uses an unsupported comparison
+            // Low: IF ( CTR 7 < CTR 8 ) MESS 1 END   (two counters)
             .Low(7, "CTR", 8, "CTR", "<", "IF", 1, "MESS", "END")
+            // Low: IF ( CTR 7 + 2 > TURN ) MESS 2 END   (a counter with an offset against the turn counter)
+            .Low(7, "CTR", 2, "+", "TURN", ">", "IF", 2, "MESS", "END")
+            // Low: IF ( RAND 5 < CTR 7 ) MESS 1 END   (a random number against a counter: still unconvertible)
+            .Low(5, "RAND", 7, "CTR", "<", "IF", 1, "MESS", "END")
             .Picture(1,
                 new object[] { "INK", 2 },
                 new object[] { "LINE", 0, 175, 255, 48 },
@@ -258,8 +262,23 @@ public class GacImporterTests
     public void UnconvertibleConditionIsSkippedWithNote()
     {
         var a = ImportSample(out var result);
-        Assert.Contains(a.Notes, n => n.Contains("CTR 7 < CTR 8"));
-        Assert.Contains(result.Warnings, w => w.Contains("CTR 7 < CTR 8"));
+        Assert.Contains(a.Notes, n => n.Contains("RAND 5 < CTR 7"));
+        Assert.Contains(result.Warnings, w => w.Contains("RAND 5 < CTR 7"));
+        Assert.DoesNotContain(result.Warnings, w => w.Contains("CTR 7 < CTR 8"));
+    }
+
+    [Fact]
+    public void ComparisonsOfTwoCountersAreConverted()
+    {
+        var a = ImportSample(out _);
+        var less = a.Triggers.Single(t => t.Name.Contains("CTR 7 < CTR 8"));
+        var c = Assert.Single(less.Conditions);
+        Assert.Equal((ConditionType.VarLessVar, "c7", "c8", 0), (c.Type, c.A, c.B, c.N));
+
+        // CTR 7 + 2 > TURN  ⇔  c7 > @turns - 2
+        var offset = a.Triggers.Single(t => t.Name.Contains("TURN"));
+        c = Assert.Single(offset.Conditions);
+        Assert.Equal((ConditionType.VarGreaterVar, "c7", "@turns", -2), (c.Type, c.A, c.B, c.N));
     }
 
     [Fact]

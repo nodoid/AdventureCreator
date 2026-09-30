@@ -105,7 +105,9 @@ public enum ConditionType
     VarEquals,         // A = variable, N
     VarGreater,        // A = variable, N
     VarLess,           // A = variable, N
-    VarEqualsVar,      // A, B variables
+    VarEqualsVar,      // A, B variables: A == B + N (N is an optional offset, usually 0)
+    VarGreaterVar,     // A, B variables: A > B + N
+    VarLessVar,        // A, B variables: A < B + N
     Chance,            // N = percent
     TurnsAtLeast,      // N
     ScoreAtLeast,      // N
@@ -155,11 +157,16 @@ public sealed class Condition
             ConditionType.VarEquals => $"{A} == {N}",
             ConditionType.VarGreater => $"{A} > {N}",
             ConditionType.VarLess => $"{A} < {N}",
+            ConditionType.VarEqualsVar => $"{A} == {B}{Offset(N)}",
+            ConditionType.VarGreaterVar => $"{A} > {B}{Offset(N)}",
+            ConditionType.VarLessVar => $"{A} < {B}{Offset(N)}",
             ConditionType.Chance => $"chance {N}%",
             ConditionType.ItemIn => $"{A} in {(string.IsNullOrEmpty(B) ? "nowhere" : B)}",
             _ => $"{Type} {A} {B}{(N != 0 ? " " + N : "")}".TrimEnd(),
         };
         return Negate ? "NOT " + s : s;
+
+        static string Offset(int n) => n > 0 ? $" + {n}" : n < 0 ? $" - {-n}" : "";
     }
 }
 
