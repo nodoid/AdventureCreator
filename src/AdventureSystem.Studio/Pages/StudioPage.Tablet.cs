@@ -31,8 +31,37 @@ public sealed partial class StudioPage
     private Action? releaseDocument;
     private IDispatcherTimer? autosaveTimer;
 
+    /// <summary>The Studio on screen (the iPad has one window), for the menu bar's commands.</summary>
+    public static StudioPage? Current { get; private set; }
+
+    /// <summary>A section's name for menus, e.g. "Items &amp; People".</summary>
+    public static string SectionName(Section s) => SectionTitle(s)[3..].Trim();
+
+    /// <summary>Runs a menu bar command (see AppDelegate.BuildMenu on iOS).</summary>
+    public void RunCommand(string id)
+    {
+        var (verb, arg) = id.Contains(':') ? (id[..id.IndexOf(':')], id[(id.IndexOf(':') + 1)..]) : (id, "");
+        Section Parse() => Enum.Parse<Section>(arg);
+        switch (verb)
+        {
+            case "import": _ = ImportGameAsync(); break;
+            case "export": _ = GameFileExport.ChooseAndExportAsync(this, document.Adventure); break;
+            case "send": _ = SendCopyAsync(); break;
+            case "new": AddNewIn(Parse()); break;
+            case "duplicate": Duplicate(); break;
+            case "delete": _ = DeleteSelectedAsync(); break;
+            case "section" or "show": ShowSection(Parse()); SectionPicked(); break;
+            case "sidebar": ToggleSidebar(); break;
+            case "validate": _ = ValidateAsync(); break;
+            case "previous": testPlayer?.RecallPrevious(); break;
+            case "next": testPlayer?.RecallNext(); break;
+            case "guide": _ = ShowUserGuideAsync(); break;
+        }
+    }
+
     private View BuildTabletLayout(View sidebarScroll)
     {
+        Current = this;
         sidebarPane = sidebarScroll;
         var grid = new Grid { ColumnDefinitions = { sidebarColumn, listColumn, detailColumn } };
         grid.Add(sidebarScroll, 0);
