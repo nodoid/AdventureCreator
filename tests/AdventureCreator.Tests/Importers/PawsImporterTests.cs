@@ -29,6 +29,7 @@ public class PawsImporterTests
         public List<List<(int Verb, int Noun, byte[] Condacts)>> Processes { get; } = new();
         public List<(int Attribute, byte[] Draw)> Pictures { get; } = new();
         public bool Compress { get; set; } = true;
+        public int FreeSpace { get; set; } = 256;
 
         private int Alloc(byte[] data)
         {
@@ -145,6 +146,10 @@ public class PawsImporterTests
             Word(65513, Alloc(Objects.SelectMany(o => new[] { (byte)o.Noun, (byte)o.Adjective }).ToArray()));
             Word(65515, Alloc(Objects.Select(o => (byte)o.Attributes).ToArray()));
 
+            // As in a real PAWS database: the end of the tables, then free space before the pictures.
+            Word(65517, here);
+            here += FreeSpace;
+            Word(65519, here);
             var picAddrs = Pictures.Select(p => Alloc(p.Draw)).ToList();
             int picTable = Alloc(new byte[2 * Locations.Count]);
             for (int i = 0; i < picAddrs.Count; i++) Word(picTable + 2 * i, picAddrs[i]);
@@ -168,7 +173,7 @@ public class PawsImporterTests
     private static byte[] C(params int[] bytes) => bytes.Select(b => (byte)b).ToArray();
     private static int Op(string name) => PawsCondactOpcodes.Of(name);
 
-    private static PawsDatabaseBuilder SampleGame()
+    internal static PawsDatabaseBuilder SampleGame()
     {
         var b = new PawsDatabaseBuilder();
         b.Vocabulary.AddRange(new[]
