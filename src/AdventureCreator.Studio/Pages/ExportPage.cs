@@ -4,7 +4,7 @@ using CommunityToolkit.Maui.Storage;
 
 namespace AdventureCreator.Studio.Pages;
 
-/// <summary>Export dialog: game package, standalone console executable, desktop app from a template, or native builds via the .NET SDK.</summary>
+/// <summary>Export dialog: game file (original, Creator or another format), standalone console executable, desktop app from a template, or native builds via the .NET SDK.</summary>
 public sealed class ExportPage : ContentPage
 {
     private readonly Adventure adventure;
@@ -34,9 +34,6 @@ public sealed class ExportPage : ContentPage
         playerProject.Text = Preferences.Default.Get("export.playerProject", FindPlayerProject() ?? "");
         consoleTemplate.Text = Preferences.Default.Get("export.consoleTemplate", "");
         appTemplate.Text = Preferences.Default.Get("export.appTemplate", "");
-
-        var package = new Button { Text = "Save game package (.adventure)…" };
-        package.Clicked += async (_, _) => await SavePackageAsync();
 
         var console = new Button { Text = "Export console executable…" };
         console.Clicked += async (_, _) => await ExportConsoleAsync();
@@ -71,7 +68,9 @@ public sealed class ExportPage : ContentPage
                 Children =
                 {
                     new Label { Text = $"Export “{adventure.Title}”", FontSize = 20, FontAttributes = FontAttributes.Bold, TextColor = AdventureCreator.Maui.Theme.Accent },
-                    Section("1. Game package", "A single .adventure file containing the game, pictures and sounds. Opens in the Adventure Player on any platform.", package),
+                    Section("1. Game file", "Saves the game as a file: in the format it was imported from (only what changed is rebuilt, and anything that format can't hold is listed in a report), " +
+                        "as an Adventure Creator .adventure package with pictures and sounds (opens in the Adventure Player on any platform), or in another system's format.",
+                        FormatButtons()),
                     Section("2. Native app (all platforms)", "Builds the Adventure Player with this game built in, using the .NET SDK: Android (.apk), iOS/iPadOS, macOS (.app) or Windows (.exe). Requires the .NET SDK with the MAUI workload, and signing identities for Apple platforms." + desktopOnly,
                         new Label { Text = "Player project", FontSize = 12 }, Row(playerProject, BrowseFile(playerProject, "export.playerProject")),
                         new HorizontalStackLayout { Spacing = 8, Children = { new Label { Text = "Target", VerticalOptions = LayoutOptions.Center }, target, build, cancel, runInSimulator } },
@@ -101,6 +100,18 @@ public sealed class ExportPage : ContentPage
             var ok = await StandaloneExporter.RunInSimulatorAsync(lastSimulatorApp, Log);
             Log(ok ? "✔ Running in the simulator (see the DeviceHub / Simulator window)." : "✖ Could not start it in the simulator.");
         };
+    }
+
+    private View FormatButtons()
+    {
+        var stack = new VerticalStackLayout { Spacing = 6 };
+        foreach (var (label, exporter) in GameFileExport.Choices(adventure))
+        {
+            var button = new Button { Text = $"Save as {label}…", HorizontalOptions = LayoutOptions.Start };
+            button.Clicked += async (_, _) => await GameFileExport.ExportAsync(this, adventure, exporter);
+            stack.Children.Add(button);
+        }
+        return stack;
     }
 
     private static View Row(View main, View button)
@@ -149,13 +160,6 @@ public sealed class ExportPage : ContentPage
     {
         var result = await FolderPicker.Default.PickAsync(CancellationToken.None);
         return result.IsSuccessful ? result.Folder?.Path : null;
-    }
-
-    private async Task SavePackageAsync()
-    {
-        var bytes = AdventurePackage.SaveToBytes(adventure);
-        var result = await FileSaver.Default.SaveAsync(StandaloneExporter.SafeFileName(adventure.Title) + AdventurePackage.Extension, new MemoryStream(bytes), CancellationToken.None);
-        Log(result.IsSuccessful ? $"Saved {result.FilePath}" : $"Not saved {result.Exception?.Message}");
     }
 
     private async Task ExportConsoleAsync()

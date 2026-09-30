@@ -1073,6 +1073,7 @@ public sealed class StudioPage : ContentPage
         file.Add(Item("Save As…", () => SaveAsync(true), "S", CmdAltShift));
         file.Add(new MenuFlyoutSeparator());
         file.Add(Item("Import Game…", ImportLegacyAsync, "I", CmdShift));
+        file.Add(Item("Export Game File…", () => GameFileExport.ChooseAndExportAsync(this, document.Adventure), "X", CmdShift));
         file.Add(Item("Export Standalone Game…", ExportAsync, "E", CmdShift));
 
         var edit = new MenuBarItem { Text = "Edit" };
