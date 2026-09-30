@@ -11,7 +11,7 @@ public class ScottAdamsImporterTests
     /// A tiny game in the Scott Adams .dat format: a hall and a vault, a lamp (item 9 is the light source), a door
     /// opened with a key, a treasure, an automatic action and a CONTINUE chain.
     /// </summary>
-    private static byte[] Game()
+    internal static byte[] Game()
     {
         static int V(int verb, int noun) => verb * 150 + noun;
         static int C(int code, int arg) => arg * 20 + code;

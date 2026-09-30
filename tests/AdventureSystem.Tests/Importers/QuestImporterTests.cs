@@ -92,9 +92,9 @@ public class QuestImporterTests
 </asl>
 """;
 
-    private static byte[] Aslx() => System.Text.Encoding.UTF8.GetBytes(Game);
+    internal static byte[] Aslx() => System.Text.Encoding.UTF8.GetBytes(Game);
 
-    private static byte[] Package()
+    internal static byte[] Package()
     {
         var png = Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAAIAAAADCAIAAAA2iEnWAAAAEElEQVR4nGP4z8DAwMDAAAAr/wL+2vT1YQAAAABJRU5ErkJggg==");
         using var ms = new MemoryStream();
