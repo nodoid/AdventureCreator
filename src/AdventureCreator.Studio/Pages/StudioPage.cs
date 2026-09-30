@@ -45,6 +45,18 @@ public sealed class StudioPage : ContentPage
     private static readonly Color PaneBg = Theme.Pane;
     private static readonly Color Accent = Theme.Accent;
 
+    /// <summary>A built-in command, listed under the game's own commands.</summary>
+    private sealed record BuiltInCommand(string Id, string[] Words, string[] Grammar);
+
+    /// <summary>The heading row between the game's commands and the built-in ones.</summary>
+    private sealed class ListHeading { public static readonly ListHeading BuiltInCommands = new(); }
+
+    private static readonly List<BuiltInCommand> BuiltInCommands = Core.Parsing.BuiltInLexicon.VerbTable
+        .Select(row => row.Split('|', 3))
+        .Select(c => new BuiltInCommand(c[0].Trim().TrimEnd('!'), c[1].Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries),
+            c.Length > 2 ? c[2].Split(';', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries) : Array.Empty<string>()))
+        .OrderBy(c => c.Id).ToList();
+
     public sealed class ListRow
     {
         public required object Item { get; init; }
@@ -362,11 +374,25 @@ public sealed class StudioPage : ContentPage
         rows.Clear();
         if (source == null) return;
         var filter = search.Text?.Trim() ?? "";
+        bool Matches(ListRow row) => filter.Length == 0 || row.Title.Contains(filter, StringComparison.OrdinalIgnoreCase) || row.Subtitle.Contains(filter, StringComparison.OrdinalIgnoreCase);
         foreach (var o in source)
         {
             var row = MakeRow(o!);
-            if (filter.Length > 0 && !(row.Title.Contains(filter, StringComparison.OrdinalIgnoreCase) || row.Subtitle.Contains(filter, StringComparison.OrdinalIgnoreCase))) continue;
-            rows.Add(row);
+            if (Matches(row)) rows.Add(row);
+        }
+        if (section == Section.Commands)
+        {
+            // The game's own commands first, then the built-in ones underneath.
+            var custom = document.Adventure.Vocabulary.Verbs.Select(v => v.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var builtIn = BuiltInCommands.Select(c => new ListRow
+            {
+                Item = c, Title = c.Id + (custom.Contains(c.Id) ? "  (extended above)" : ""), Subtitle = string.Join(", ", c.Words),
+            }).Where(Matches).ToList();
+            if (builtIn.Count > 0)
+            {
+                rows.Add(new ListRow { Item = ListHeading.BuiltInCommands, Title = "BUILT-IN COMMANDS", Subtitle = "Select one to see it, or to add words and grammar to it" });
+                foreach (var r in builtIn) rows.Add(r);
+            }
         }
         if (keepSelection && keep != null)
             list.SelectedItem = rows.FirstOrDefault(r => ReferenceEquals(r.Item, keep));
@@ -374,6 +400,12 @@ public sealed class StudioPage : ContentPage
 
     private void Select(object item)
     {
+        if (item is ListHeading)
+        {
+            // Headings can't be selected: keep the previous selection.
+            list.SelectedItem = rows.FirstOrDefault(r => ReferenceEquals(r.Item, selected));
+            return;
+        }
         selected = item;
         list.SelectedItem = rows.FirstOrDefault(r => ReferenceEquals(r.Item, item));
         ShowDetail(EditorFor(item));
@@ -448,6 +480,8 @@ public sealed class StudioPage : ContentPage
                 };
             case VerbDefinition verb:
                 return CommandEditor(verb);
+            case BuiltInCommand builtIn:
+                return BuiltInCommandView(builtIn);
             case Picture pic2:
                 return new PictureEditorView(pic2, ctx);
             case SoundAsset s:
@@ -471,6 +505,36 @@ public sealed class StudioPage : ContentPage
             target.Exits.Add(new Exit { Direction = back, TargetRoomId = room.Id, DoorItemId = exit.DoorItemId });
         }
         ctx.Changed(room);
+    }
+
+    private View BuiltInCommandView(BuiltInCommand c)
+    {
+        var extension = document.Adventure.Vocabulary.Verbs.FirstOrDefault(v => string.Equals(v.Id, c.Id, StringComparison.OrdinalIgnoreCase));
+        var extend = new Button { Text = extension == null ? "Add words or grammar to this command" : "Open your additions to this command", HorizontalOptions = LayoutOptions.Start };
+        extend.Clicked += (_, _) =>
+        {
+            if (extension == null)
+            {
+                // A command with a built-in id extends that command: its words and grammar are added to the built-in ones.
+                extension = new VerbDefinition { Id = c.Id };
+                document.Adventure.Vocabulary.Verbs.Add(extension);
+                ctx.Changed(extension);
+            }
+            RefreshList();
+            Select(extension);
+        };
+        return new VerticalStackLayout
+        {
+            Spacing = 10,
+            Children =
+            {
+                Heading(c.Id, "Built-in command"),
+                new SectionView("Words", new Label { Text = string.Join(", ", c.Words), FontSize = 13 }),
+                new SectionView("Grammar", new Label { Text = c.Grammar.Length == 0 ? "(the verb on its own)" : string.Join("\n", c.Grammar), FontFamily = DeviceInfo.Platform == DevicePlatform.WinUI ? "Consolas" : "Menlo", FontSize = 12 }),
+                new Label { Text = "Built-in commands work in every game. To give this one more words or grammar lines, or a response of your own, add to it; your additions appear at the top of the list. Triggers can use the command id as their Verb.", FontSize = 12, Opacity = 0.75 },
+                extend,
+            },
+        };
     }
 
     private View CommandEditor(VerbDefinition verb)
@@ -555,8 +619,7 @@ public sealed class StudioPage : ContentPage
                     Children =
                     {
                         Heading("Vocabulary", "Words added to the built-in English dictionary"),
-                        new Label { Text = "Item nouns and adjectives are learned automatically from the items. Add new commands in the Commands section.", FontSize = 12, Opacity = 0.7 },
-                        new ObjectEditor(a.Vocabulary, ctx, exclude: new[] { "Verbs" }),
+                        new VocabularyEditorView(a, ctx),
                     },
                 });
                 break;
@@ -718,7 +781,7 @@ public sealed class StudioPage : ContentPage
 
     private void Duplicate()
     {
-        if (selected == null || CurrentList is not { } l) return;
+        if (selected == null || CurrentList is not { } l || !l.Contains(selected)) return;
         var json = System.Text.Json.JsonSerializer.Serialize(selected, selected.GetType(), AdventurePackage.JsonOptions);
         var copy = System.Text.Json.JsonSerializer.Deserialize(json, selected.GetType(), AdventurePackage.JsonOptions)!;
         var a = document.Adventure;
@@ -742,7 +805,7 @@ public sealed class StudioPage : ContentPage
 
     private async Task DeleteSelectedAsync()
     {
-        if (selected == null || CurrentList is not { } l) return;
+        if (selected == null || CurrentList is not { } l || !l.Contains(selected)) return;
         var name = MakeRow(selected).Title;
         if (!await DisplayAlertAsync("Delete", $"Delete “{name}”? References to it elsewhere will be reported by Validate.", "Delete", "Cancel")) return;
         int index = l.IndexOf(selected);
