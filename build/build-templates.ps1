@@ -16,8 +16,8 @@ foreach ($rid in $Rids) {
 
 Write-Host "== Windows graphical player"
 $arch = if ($env:PROCESSOR_ARCHITECTURE -eq 'ARM64') { 'win-arm64' } else { 'win-x64' }
-# TargetFrameworks is narrowed so the runtime id isn't applied to the Android/iOS targets as well.
-dotnet publish src\AdventureCreator.Player -f net10.0-windows10.0.19041.0 -p:TargetFrameworks=net10.0-windows10.0.19041.0 -c Release -r $arch `
+# RuntimeIdentifierOverride (not -r) so the runtime id doesn't flow into the Android/iOS targets of referenced projects.
+dotnet publish src\AdventureCreator.Player -f net10.0-windows10.0.19041.0 -p:TargetFrameworks=net10.0-windows10.0.19041.0 -c Release -p:RuntimeIdentifierOverride=$arch `
     -p:WindowsPackageType=None -p:SelfContained=true -p:WindowsAppSDKSelfContained=true -o "$out\windows"
 if ($LASTEXITCODE -ne 0) { throw "Windows player failed" }
 Write-Host "Templates are in $out"
