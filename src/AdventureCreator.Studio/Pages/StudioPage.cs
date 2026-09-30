@@ -154,7 +154,31 @@ public sealed class StudioPage : ContentPage
         if (DeviceInfo.Platform == DevicePlatform.WinUI) NavigationPage.SetTitleView(this, new ContentView());
         AttachDocument(doc);
         ShowSection(Section.Game);
+#if DEBUG
+        // Development aid for screenshots: AC_STUDIO_DEMO=genesis|lighthouse[:Section[:item[:command]]].
+        if (Environment.GetEnvironmentVariable("AC_STUDIO_DEMO") is { Length: > 0 } demo) OpenDemo(demo);
+#endif
     }
+
+#if DEBUG
+    private void OpenDemo(string demo)
+    {
+        var parts = demo.Split(':');
+        SetDocument(new StudioDocument(parts[0].Equals("genesis", StringComparison.OrdinalIgnoreCase) ? ExampleAdventures.Genesis() : ExampleAdventures.Lighthouse()));
+        if (parts.Length < 2 || !Enum.TryParse<Section>(parts[1], true, out var s)) return;
+        ShowSection(s);
+        if (parts.Length < 3 || !int.TryParse(parts[2], out var index) || index < 0 || index >= rows.Count) return;
+        Select(rows[index].Item);
+        if (parts.Length >= 4 && int.TryParse(parts[3], out var command) && FindPictureEditor(detail) is { } editor) editor.SelectCommand(command);
+    }
+
+    private static PictureEditorView? FindPictureEditor(IView? view) => view switch
+    {
+        PictureEditorView e => e,
+        ContentView cv => FindPictureEditor(cv.Content),
+        _ => null,
+    };
+#endif
 
     // =========================================================== document
 
@@ -334,7 +358,7 @@ public sealed class StudioPage : ContentPage
 
     private void ShowDetail(View view)
     {
-        detail.Content = view is ScrollView or GamePlayerView or Grid { ClassId: "full" } ? view
+        detail.Content = view is ScrollView or GamePlayerView or PictureEditorView or Grid { ClassId: "full" } ? view
             : new ScrollView { Content = new ContentView { Content = view, Padding = new Thickness(24, 18), MaximumWidthRequest = 1100 } };
     }
 
@@ -398,7 +422,7 @@ public sealed class StudioPage : ContentPage
             case VerbDefinition verb:
                 return CommandEditor(verb);
             case Picture pic2:
-                return new VerticalStackLayout { Children = { Heading(pic2.Name, "Picture"), new PictureEditorView(pic2, ctx) } };
+                return new PictureEditorView(pic2, ctx);
             case SoundAsset s:
                 return SoundEditor(s);
         }

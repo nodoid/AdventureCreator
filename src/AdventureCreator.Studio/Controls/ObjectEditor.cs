@@ -45,9 +45,12 @@ public sealed class ObjectEditor : ContentView
     private readonly HashSet<string>? only;
     private readonly HashSet<string> exclude;
     private readonly Action? onStructureChanged;
+    private readonly double labelWidth;
 
-    public ObjectEditor(object target, EditorContext ctx, IEnumerable<string>? only = null, IEnumerable<string>? exclude = null, Action? onStructureChanged = null)
+    public ObjectEditor(object target, EditorContext ctx, IEnumerable<string>? only = null, IEnumerable<string>? exclude = null, Action? onStructureChanged = null,
+        double labelWidth = 170)
     {
+        this.labelWidth = labelWidth;
         this.target = target;
         this.ctx = ctx;
         this.only = only?.ToHashSet();
@@ -60,7 +63,7 @@ public sealed class ObjectEditor : ContentView
     {
         var grid = new Grid
         {
-            ColumnDefinitions = { new ColumnDefinition(new GridLength(170)), new ColumnDefinition(GridLength.Star) },
+            ColumnDefinitions = { new ColumnDefinition(new GridLength(labelWidth)), new ColumnDefinition(GridLength.Star) },
             ColumnSpacing = 12,
             RowSpacing = 8,
         };

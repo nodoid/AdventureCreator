@@ -170,10 +170,11 @@ You can override it in **Game › Settings › Max Score**.
 
 1. **Pictures** (⌘… or View › Pictures): add a picture. Its id is set for you (`pic1`); rename it `pic_study`.
 2. Draw it. For example:
-   * pick dark brown in the ink palette and click **Set background to ink**
+   * pick dark brown in the palette (right) and click **Use as background**
    * choose **▬ Box** and drag a desk
    * choose **⬤ Disc** and drag a pale grey ghost
    * choose **▨ Fill** and click inside shapes to flood them with the ink colour
+   * choose **↖ Select**, click the ghost and drag it into place, or pick another colour to recolour it
 3. In **Rooms › Study**, set **Picture id** to `pic_study`.
 4. **Sounds**: click **+** and choose an audio file (WAV, MP3 or M4A). Give it the id `snd_sigh` and preview it with **▶ Play**.
 5. Use it in the *Give the locket* trigger's PlaySound action. To play a sound on a loop while the player is in a room, set that room's **Sound id** instead.
