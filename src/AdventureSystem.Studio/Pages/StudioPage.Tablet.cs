@@ -17,13 +17,11 @@ public sealed partial class StudioPage
 {
     private enum Pane { Sidebar, List, Detail }
 
-    private const double CompactWidth = 700, RoomyWidth = 1100, SidebarWidth = 280, ListWidth = 320, WatchWidth = 300;
+    private const double CompactWidth = 700, RoomyWidth = 1100, WatchWidth = 300;
 
-    private readonly ColumnDefinition sidebarColumn = new(new GridLength(SidebarWidth));
+    private readonly ColumnDefinition sidebarColumn = new(new GridLength(280));
     private readonly ColumnDefinition detailColumn = new(GridLength.Star);
     private View? sidebarPane;
-    /// <summary>The sidebar as the user last set it; null until then (shown when there's room).</summary>
-    private bool? sidebarWanted;
     private bool compact;
     private Pane pane = Pane.Sidebar;
     private Grid? testPlayGrid;
@@ -51,7 +49,6 @@ public sealed partial class StudioPage
             case "duplicate": Duplicate(); break;
             case "delete": _ = DeleteSelectedAsync(); break;
             case "section" or "show": ShowSection(Parse()); SectionPicked(); break;
-            case "sidebar": ToggleSidebar(); break;
             case "validate": _ = ValidateAsync(); break;
             case "previous": testPlayer?.RecallPrevious(); break;
             case "next": testPlayer?.RecallNext(); break;
@@ -90,10 +87,11 @@ public sealed partial class StudioPage
         }
         else
         {
-            bool showSidebar = sidebarWanted ?? Width >= RoomyWidth;
-            sidebarColumn.Width = new GridLength(showSidebar ? SidebarWidth : 0);
-            sidebarPane.IsVisible = showSidebar;
-            listColumn.Width = new GridLength(hasList ? ListWidth : 0);
+            // The sidebar is always there (narrower columns leave the editor room in portrait).
+            bool roomy = Width >= RoomyWidth;
+            sidebarColumn.Width = new GridLength(roomy ? 280 : 230);
+            sidebarPane.IsVisible = true;
+            listColumn.Width = new GridLength(hasList ? (roomy ? 320 : 280) : 0);
             listPane.IsVisible = hasList;
             detailColumn.Width = GridLength.Star;
             detail.IsVisible = true;
@@ -125,12 +123,6 @@ public sealed partial class StudioPage
         pane = pane == Pane.Detail && HasList(section) ? Pane.List : Pane.Sidebar;
         ApplyTabletLayout();
         UpdateNavBar();
-    }
-
-    private void ToggleSidebar()
-    {
-        sidebarWanted = !(sidebarPane?.IsVisible ?? false);
-        ApplyTabletLayout();
     }
 
     // ------------------------------------------------------------------ list rows
@@ -342,7 +334,6 @@ public sealed partial class StudioPage
         var left = new List<UIBarButtonItem>();
         if (compact && pane != Pane.Sidebar) left.Add(Back(pane == Pane.Detail && HasList(section) ? listTitle.Text : "Studio", GoBack));
         else left.Add(Back("Documents", CloseToBrowser));
-        if (!compact) left.Add(Button("sidebar.left", "Show or hide the sidebar", ToggleSidebar));
         item.LeftItemsSupplementBackButton = false;
         item.LeftBarButtonItems = left.ToArray();
 

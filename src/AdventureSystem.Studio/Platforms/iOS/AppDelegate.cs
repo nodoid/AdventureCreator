@@ -57,10 +57,6 @@ public class AppDelegate : MauiUIApplicationDelegate
 		builder.InsertChildMenuAtStart(Inline(Key("User Guide…", "guide", "?", Cmd | Shift)), UIMenuIdentifier.Help.GetConstant());
 	}
 
-	/// <summary>The system's own View › Show Sidebar (⌃⌘S).</summary>
-	[Export("toggleSidebar:")]
-	public void ToggleSidebar(NSObject sender) => StudioPage.Current?.RunCommand("sidebar");
-
 	[Export("studioCommand:")]
 	public void StudioCommand(UICommand sender)
 	{

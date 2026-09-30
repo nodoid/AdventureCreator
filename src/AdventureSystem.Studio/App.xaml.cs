@@ -26,7 +26,7 @@ public partial class App : Application
 			Title = "Adventure System Studio",
 		};
 #if IOS
-		// Open on the document browser (unless a development demo was asked for), and save whenever the app is put away.
+		// Open on the Studio with the last adventure (unless a development demo was asked for), and save whenever the app is put away.
 		bool demo = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("AC_STUDIO_DEMO")) || !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("AC_STUDIO_DEMO_FILE"));
 		bool shown = false;
 		window.Activated += (_, _) =>
@@ -43,7 +43,7 @@ public partial class App : Application
 				return;
 			}
 #endif
-			DocumentBrowser.Show(studio, false);
+			DocumentBrowser.StartOnStudio(studio);
 		};
 		window.Deactivated += (_, _) => studio.SaveNow();
 		window.Stopped += (_, _) => studio.SaveNow();
