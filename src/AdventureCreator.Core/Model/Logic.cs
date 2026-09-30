@@ -36,6 +36,8 @@ public enum TriggerEvent
     ItemGiven,
     /// <summary>The player has been hurt (by an NPC, a trap or HurtPlayer).</summary>
     PlayerHurt,
+    /// <summary>The player arrives in a room (optionally restricted by <see cref="Trigger.RoomId"/>), before it is described.</summary>
+    BeforeEnterRoom,
 }
 
 /// <summary>

@@ -37,7 +37,7 @@ public sealed partial class GameEngine
     {
         return RunTriggers(ev, ctx, t => ev switch
         {
-            TriggerEvent.EnterRoom or TriggerEvent.LeaveRoom =>
+            TriggerEvent.EnterRoom or TriggerEvent.LeaveRoom or TriggerEvent.BeforeEnterRoom =>
                 string.IsNullOrEmpty(t.RoomId) || string.Equals(t.RoomId, ctx.EventRoomId, StringComparison.OrdinalIgnoreCase),
             TriggerEvent.ItemTaken or TriggerEvent.ItemDropped or TriggerEvent.PuzzleSolved =>
                 IsAny(t.Subject) || string.Equals(t.Subject, ctx.EventSubject, StringComparison.OrdinalIgnoreCase),

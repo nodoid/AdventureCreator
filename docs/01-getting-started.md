@@ -57,7 +57,7 @@ Some fields also accept patterns: for example, a trigger's Verb can be `take|get
 | | Open Example: The Lighthouse (and Genesis in development builds) | |
 | | Save | ⌘S |
 | | Save As… | ⌥⇧⌘S |
-| | Import PAWS / Quill / GAC Game… | ⇧⌘I |
+| | Import Game… | ⇧⌘I |
 | | Export Standalone Game… | ⇧⌘E |
 | Edit | New Room / Item / Trigger / Puzzle / Random Event | ⌥⌘R / ⌥⌘I / ⌥⌘T / ⌥⌘P / ⌥⌘E |
 | | New Picture, New Command | |

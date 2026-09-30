@@ -15,7 +15,7 @@ internal sealed partial class QuestConverter
     private Trigger ScriptTrigger(string id, string name, TriggerEvent ev, XElement scriptElement, XElement? thisObject, string? roomId = null, bool command = false)
     {
         var t = new Trigger { Id = id, Name = name, Event = ev, StopsCommand = false };
-        if (roomId != null && ev is TriggerEvent.AfterDescribe or TriggerEvent.EnterRoom or TriggerEvent.LeaveRoom) t.RoomId = roomId;
+        if (roomId != null && ev is TriggerEvent.AfterDescribe or TriggerEvent.EnterRoom or TriggerEvent.LeaveRoom or TriggerEvent.BeforeEnterRoom) t.RoomId = roomId;
         var thisId = thisObject?.Attribute("name")?.Value is { } n ? (roomIds.TryGetValue(n, out var r) ? r : itemIds.TryGetValue(n, out var i) ? i : null) : null;
         var scope = new Scope(thisId, command, roomId);
         var notes = new List<string>();
@@ -467,7 +467,7 @@ internal sealed partial class QuestConverter
     /// <summary>Quest gamebooks: each page is a room whose options become numbered choices.</summary>
     private void GamebookPages()
     {
-        var pages = Root.Elements("object").Where(o => o.Attribute("name") != null).ToList();
+        var pages = Root.Elements("object").Where(o => o.Attribute("name") != null && !Inherits(o, "editor_player") && o.Attribute("name")!.Value != playerName).ToList();
         foreach (var p in pages) roomIds[p.Attribute("name")!.Value] = Unique(Slug(p.Attribute("name")!.Value));
         foreach (var p in pages)
         {

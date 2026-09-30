@@ -37,6 +37,7 @@ public static class ImporterRegistry
         importers.Add(new ZCode.ZCodeImporter());
         importers.Add(new ScottAdams.ScottAdamsImporter());
         importers.Add(new Quest.QuestImporter());
+        importers.Add(new Twine.TwineImporter());
     }
 
     /// <summary>File-dialog extensions accepted by any importer.</summary>
@@ -50,7 +51,7 @@ public static class ImporterRegistry
     {
         var data = File.ReadAllBytes(path);
         var importer = Detect(data, path)
-            ?? throw new InvalidDataException("The file is not a recognised PAWS, Quill, Graphic Adventure Creator or Z-code game.");
+            ?? throw new InvalidDataException("The file is not a game Adventure Creator can import.");
         return importer.Import(data, path);
     }
 

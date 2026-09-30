@@ -15,7 +15,7 @@ Every result below is real output: the Studio's importers were run on the sample
 The steps are the same for all three systems:
 
 1. Take a snapshot at the game's **first prompt** (`.z80` or `.sna`; GAC can also use unprotected `.tap`/`.tzx` files). See [chapter 7, section 1](07-importing.md#1-getting-a-file-to-import).
-2. **File › Import PAWS / Quill / GAC Game…** (⇧⌘I) and pick the file.
+2. **File › Import Game…** (⇧⌘I) and pick the file.
 3. Read the **Import report**, then keep **Game › Notes** open while you check the game.
 4. **Adventure › Validate** (⌘K), **Test Play** (⌘R), then **File › Save As…**.
 

@@ -13,6 +13,7 @@ events and cut-scenes.
 | **EveryTurn** | At the end of every turn (after the command). | If Verb/Noun are set, only on turns whose command matches. Room restricts it to the player's location. |
 | **Timer** | On turn number **Turn**, and/or every **Interval** turns. | For deadlines and recurring atmosphere. |
 | **GameStart** | Once, before the first room description. | Set-up, opening cut-scenes. |
+| **BeforeEnterRoom** | When the player arrives in a room, before it is described. Moving the player on (GoTo) here skips the room. | Room = which room (empty = any). |
 | **EnterRoom** | After the player arrives in a room (after its description). | Room = which room (empty = any). |
 | **LeaveRoom** | Just before the player leaves a room. | A **Done** action here cancels the move. |
 | **ItemTaken / ItemDropped** | After an item is taken / dropped (by the player or by TakeItem/DropItem). | Subject = the item (empty = any). |

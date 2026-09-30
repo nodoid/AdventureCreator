@@ -20,7 +20,7 @@ Only play and distribute stories you have the right to.
 ## Opening a story
 
 * **Player:** *Open a game…* and choose the story file.
-* **Studio:** **File › Import Game (PAWS, Quill, GAC, Z-code)…** (⇧⌘I). The story becomes a game document. Press
+* **Studio:** **File › Import Game…** (⇧⌘I). The story becomes a game document. Press
   **Test Play** (⌘R) to play it, save it as a `.adventure` package, and export it like any other game.
 * **Console:** `adventure-player story.z5`
 

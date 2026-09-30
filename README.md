@@ -89,8 +89,8 @@ The same guide is available in the Studio under **Help › User Guide…** (⇧�
 * Rooms can have looping ambient sound. The `PlaySound` and `StopSound` actions control audio from triggers.
 * WAV, MP3 and M4A play on every platform.
 
-### Importing legacy games
-*File › Import PAWS / Quill / GAC Game…* accepts `.sna`, `.z80` (48K and 128K), `.tap` and `.tzx` files.
+### Importing games
+*File › Import Game…* accepts classic 8-bit games (`.sna`, `.z80` 48K and 128K, `.tap`, `.tzx`), games from open-source creators, and Z-code stories.
 
 | System | Status |
 |---|---|
@@ -99,6 +99,10 @@ The same guide is available in the Studio under **Help › User Guide…** (⇧�
 | Quill for CPC and C64 | Experimental. |
 | **Graphic Adventure Creator** (Spectrum) | Verified with the manual's example database from the original GAC tape. |
 | GAC for CPC | Implemented from the reGAC documentation; not yet verified. |
+| **Scott Adams format** (ScottKit / ScottFree `.dat`, `.sao`) | The full action table, treasures and the lamp. Checked by playing *Adventureland*. |
+| **Quest 5** (`.aslx`, `.quest`, including gamebooks) | Rooms, objects, exits, commands, verbs, turn scripts, pictures and sounds; scripts (if/else, firsttime, attributes, score…) become triggers. Checked with Quest's own examples, including *Cloak of Darkness*. |
+| **Twine** (published `.html`, `.twee`; Harlowe, SugarCube…) | Passages become rooms and links numbered choices; variables, conditional text, jumps and images. |
+| **Z-code** (`.z1`–`.z8`, `.zblorb`) | Not converted: played by the built-in Z-machine (see *Z-code stories*). |
 
 Every import produces a report. Anything that couldn't be converted exactly is listed in the game's Notes.
 

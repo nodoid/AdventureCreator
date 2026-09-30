@@ -1,12 +1,22 @@
-# 7. Importing PAWS, Quill/Illustrator and GAC games
+# 7. Importing games from other adventure systems
 
-The Studio can convert games written with three classic adventure systems into fully editable Adventure Creator games:
+The Studio can convert games written with other adventure systems into fully editable Adventure Creator games.
+
+**Classic 8-bit systems:**
 
 | System | Publisher, year | Machines supported here |
 |---|---|---|
 | **PAWS** (Professional Adventure Writing System) | Gilsoft, 1986 | ZX Spectrum 48K and 128K |
 | **The Quill**, with pictures from **The Illustrator** | Gilsoft, 1983–85 | ZX Spectrum (versions A and C); Amstrad CPC and Commodore 64 *(experimental)* |
 | **GAC** (Graphic Adventure Creator) | Incentive Software, 1985 | ZX Spectrum; Amstrad CPC *(unverified)* |
+
+**Open-source adventure creators** (see [sections 7–9](#7-scott-adams-format-scottkit-and-scottfree)):
+
+| System | Files | Graphics |
+|---|---|---|
+| **Scott Adams format**: games compiled with the open-source *ScottKit*, played by *ScottFree*, and Scott Adams' own classics | `.dat`, `.sao` | none (the format has none) |
+| **Quest 5** (textadventures.co.uk, MIT licence) | `.aslx` source, `.quest` packages | room pictures and `picture` commands, from the package or the `.aslx` file's folder |
+| **Twine 2 and 1** (Harlowe, SugarCube, Chapbook, Snowman) | published `.html`, Twee `.twee` / `.tw` | `<img>` and `[img[…]]`, embedded or next to the story |
 
 The result is an ordinary game:
 * rooms, items, vocabulary, messages and pictures
@@ -48,7 +58,7 @@ If a tape uses a protected loader, load it in an emulator and take a snapshot in
 
 ## 2. Importing
 
-1. In the Studio choose **File › Import PAWS / Quill / GAC Game…** (⇧⌘I). If the current game has unsaved changes you'll be asked to save it first.
+1. In the Studio choose **File › Import Game…** (⇧⌘I). If the current game has unsaved changes you'll be asked to save it first.
 2. Pick the snapshot or tape. The Studio works out which system made it: PAWS is tried first, then the Quill, then GAC.
 3. The **Import report** shows:
    * the system and version detected
@@ -260,6 +270,97 @@ Verification: compared against John Elliott's UnQuill on *Very Big Cave Adventur
 Verification: the example game from the GAC manual (*ADVINMAN*, from the original GAC editor tape) decodes completely: rooms, objects, verbs, nouns, all messages, every condition line, and a 199-command picture that matches the original byte for byte. *RANSOM* on the same tape is structurally correct, but its tape image is damaged after about address C600h, so its text doesn't decode. Compiled-game snapshots are supported, but were only tested with synthetic data.
 
 ---
+
+## 7. Scott Adams format (ScottKit and ScottFree)
+
+The `.dat` format of Scott Adams' 1978–84 adventures is still used by the open-source **ScottKit** compiler (which turns a readable `.sck` source into `.dat`/`.sao`) and played by **ScottFree**. Compile ScottKit games first, then import the result.
+
+### What is converted
+
+| Scott Adams | Becomes |
+|---|---|
+| Rooms 1…n (room 0 is the store room) | Rooms `r1`…. Descriptions starting with `*` are shown as they are; others get "I'm in a …", as ScottFree does. Names drop the "I'm in" part. |
+| Exits N S E W U D | Exits |
+| Items (with `/WORD/` auto-get words) | Items `o0`…; items with an auto-get word are portable, the others can only be moved by actions. Items marked `*…*` are treasures. Item 9 is the light source. |
+| Words (with `*` synonyms) | Commands and nouns. GET and DROP (words 10 and 18), and words that abbreviate a built-in verb (LOO, INV, SCO…), extend the built-in verbs, so the usual behaviour still applies when no action does. Trigger patterns list every synonym, so CLIMB TREE works where CLIMB is a synonym of GO. |
+| The action table | Triggers `a0`…: command actions stop after the first match, as in ScottFree; automatic actions (verb 0) run every turn with their percentage chance, and once before the first command; CONTINUE runs the following entries. |
+| Conditions (all 20) | Item, room, flag and counter conditions |
+| Actions (all except 80, 87 and 89) | Messages, GET/DROP, GOTO, moving items, flags, darkness (flag 15), death (to the last room), game over, LOOK, SCORE, INVENTORY, lamp refill, SAVE, swaps, counters and the current counter, printing nouns |
+| SCORE | Counts the treasures in the treasure room; storing them all wins |
+| Light time | The lamp burns down each turn, warns when dim and goes out at zero |
+
+Settings: Significant Letters = the game's word length; the carrying limit; "Tell me what to do?" prompt; ScottFree's messages ("O.K.", "I can't go in that direction.").
+
+### Limitations
+
+| Area | Limitation |
+|---|---|
+| Actions 80 and 87 | Swapping with a saved room (used by a few games for time travel) isn't converted. |
+| Action 75 | PUT item WITH item is approximated: the item goes to the other item's starting place. |
+| GET | GET in actions doesn't check the carrying limit. |
+| Moving in the dark | ScottFree's "I fell down and broke my neck" when moving in the dark isn't reproduced. |
+| Pictures | The format has no pictures (SAGA and TI-99 graphics are separate files). |
+
+## 8. Quest 5
+
+**Quest** (by Alex Warren and others; open source under the MIT licence) is the system behind textadventures.co.uk. Games are XML: `.aslx` source files, or `.quest` packages (a zip with the game and its pictures and sounds). Both import. Published `.quest` files include Quest's whole standard library; it is recognised and skipped.
+
+### What is converted
+
+* **Rooms** (alias, description, dark, **picture**), and **exits** with directions or custom words. Locked exits are blocked by a variable that `UnlockExit` clears, with the lock message.
+* **Objects**: name and alias, alternative names (`alt`), look text, take, scenery, containers (open/closed), surfaces, wearables, switchables, light sources, edible and readable objects, characters. Objects inside the player start carried.
+* **Verbs** on objects: text responses become the item's responses; scripts become triggers.
+* **Commands** (`pattern`, including regular-expression patterns): new commands with grammar lines. A command that starts with a built-in verb (put, wear…) extends it.
+* **Turn scripts**, **timers** (every *n* turns instead of *n* seconds), the game's **start** script, objects' `_initialise_`, and rooms' **enter**, **beforeenter**, **firstenter**, **beforefirstenter** and **onexit** scripts.
+* **Scripts**, statement by statement:
+  * `msg`, `MoveObject`, `obj.parent = …`, `player.parent = …`, `AddToInventory`, `RemoveObject`, `MoveObjectHere`
+  * attributes and flags (`obj.attr = true/5`, `+ 1`, `SetObjectFlagOn`) as variables; `visible`, `isopen`, `switchedon` and `worn` as the matching item states
+  * `IncreaseScore`, `game.score`, `finish` (a win, unless the last message talks of losing or dying)
+  * `picture`, `play sound`, `UnlockExit`/`LockExit`, `HelperOpenObject`, `SwitchOn`, enabling turn scripts and timers
+  * **`if` / `else if` / `else`** and **`switch`**: each branch becomes a subroutine trigger, and a guard variable makes sure only the first true branch runs
+  * **`firsttime` / `otherwise`**
+  * conditions: `Got`, `obj.parent =`, `player.parent =`, `GetBoolean`, attribute comparisons, `ListContains(ScopeVisible(), …)`, `IsSwitchedOn`, `RandomChance`, with `and`, `or` and `not`. Simple boolean functions (`return (condition)`) are used inline.
+  * text built up in a local variable (`s = s + "…"`) is printed piece by piece
+* **Text processor** commands: formatting is removed; `{object:…}` and `{command:…}` show their text; conditional and random text keep the first choice (noted).
+* **Gamebooks** (Quest's choice-based mode): pages become rooms and options become numbered choices, as for Twine.
+
+### Limitations
+
+| Area | Limitation |
+|---|---|
+| Functions | Calls to the game's own functions (other than inline conditions), loops (`foreach`, `for`, `while`), `wait`, `ShowMenu`, `do`, and change handlers (`=>`) aren't converted. Each is quoted in the trigger's Notes. |
+| Commands | A command whose script can't be fully converted is dropped if the engine has a built-in verb of that name, so the built-in behaviour is used. |
+| Text | Conditional text processor commands (`{either}`, `{if}`, `{random}`, `{notfirst}`) keep only their first choice. |
+| Lists and strings | String attributes, lists and dictionaries aren't converted. |
+| Timers | Timers count turns, not seconds. |
+| Conversations | ConvLib dialogue pages are skipped. |
+| Presentation | Colours are imported; fonts, the command bar, panes, hyperlinks and the map aren't. |
+| Pictures | Large photographs are kept at full size in the game package (shown scaled down). |
+
+## 9. Twine
+
+**Twine** (by Chris Klimas; open source under the GPL) writes choice-based stories. Import a **published story** (`.html`, from Twine 2's *Publish to File* or Twine 1's *Build*) or **Twee** source (`.twee`, `.tw`).
+
+### What is converted
+
+* **Passages** become rooms; the start passage is the start room.
+* **Links**, `[[text->target]]`, `[[target<-text]]`, `[[text|target]]`, `[[target]]`, Harlowe `(link-goto:)` and `(link:)[(goto:)]`, SugarCube `<<link>>`, become **numbered choices**: the passage lists them as "1. …", "2. …", and the player types the number. The link text stays in the prose.
+* **Variables**: Harlowe `(set: $x to 5)`, `(set: $x to it + 1)`, `(put:)`, SugarCube `<<set $x to 5>>`, `+=`, `-=`, with numbers and true/false. They are set as the passage is entered, before its text is shown. `StoryInit` (SugarCube) and `startup` passages (Harlowe) run at the start. `$x` in the text shows the value.
+* **Conditional text**: Harlowe `(if:)[…](else-if:)[…](else:)[…]` and `(unless:)`, SugarCube `<<if>>…<<elseif>>…<<else>>…<</if>>`, with `is`, `is not`, `>`, `<`, `>=`, `<=`, `gt`, `lt`, `eq`, `and`, `or`, `not`, and visited passages. The text (and any choices in it) appears after the passage, only when the condition holds.
+* **Jumps**: `(goto:)` and `<<goto>>` move straight on without showing the passage.
+* **Images**: the first `<img src>` or `[img[…]]` in a passage becomes its room picture, from embedded `data:` images or files next to the story.
+* **Formatting** (`''bold''`, `//italic//`, HTML tags) is removed.
+
+### Limitations
+
+| Area | Limitation |
+|---|---|
+| Choices | At most 20 choices per passage. Links inside nested conditions aren't converted. |
+| Macros | Other macros (`(either:)`, `(cycling-link:)`, `(click:)`, `<<textbox>>`, `<<audio>>`, widgets, Snowman JavaScript, Chapbook inserts…) are skipped and counted in the report. |
+| Variables | Only numbers and true/false; strings, arrays and datamaps aren't converted. |
+| Layout | Conditional text is shown after the passage's other text rather than in the middle of it. |
+| Images | Web addresses (`http…`) can't be fetched; only PNG, JPEG and GIF images are used. |
+| Styles and scripts | Story stylesheets and JavaScript are ignored. |
 
 ## Troubleshooting
 

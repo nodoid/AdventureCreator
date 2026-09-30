@@ -113,7 +113,9 @@ internal sealed partial class QuestConverter
             if (f.Attribute("name")?.Value is { } n)
                 functions[n] = ((f.Attribute("parameters")?.Value ?? "").Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries).ToList(), f);
 
-        bool gamebook = Root.Elements("include").Any(i => (i.Attribute("ref")?.Value ?? "").Contains("Gamebook", StringComparison.OrdinalIgnoreCase));
+        // Gamebooks include the gamebook library, or (older files) are pages with options and no rooms.
+        bool gamebook = Root.Elements("include").Any(i => (i.Attribute("ref")?.Value ?? "").Contains("Gamebook", StringComparison.OrdinalIgnoreCase))
+                        || (Root.Elements("object").Any(o => o.Element("options") != null) && !Root.Descendants("object").Any(o => Inherits(o, "editor_room") || o.Elements("exit").Any()));
         if (gamebook) GamebookPages();
         else
         {
@@ -230,7 +232,7 @@ internal sealed partial class QuestConverter
             a.Triggers.Add(ScriptTrigger($"{id}_describe", $"{room.Name}: description", TriggerEvent.AfterDescribe, d, o, roomId: id));
         if (Text(o, "picture") is { } pic && PictureFor(pic) is { } p) room.PictureId = p;
         foreach (var e in o.Elements("exit")) Exit(room, e, id);
-        foreach (var (element, ev, once) in new[] { ("beforefirstenter", TriggerEvent.EnterRoom, true), ("firstenter", TriggerEvent.EnterRoom, true), ("beforeenter", TriggerEvent.EnterRoom, false), ("enter", TriggerEvent.EnterRoom, false), ("onexit", TriggerEvent.LeaveRoom, false) })
+        foreach (var (element, ev, once) in new[] { ("beforefirstenter", TriggerEvent.BeforeEnterRoom, true), ("firstenter", TriggerEvent.EnterRoom, true), ("beforeenter", TriggerEvent.BeforeEnterRoom, false), ("enter", TriggerEvent.EnterRoom, false), ("onexit", TriggerEvent.LeaveRoom, false) })
             if (o.Element(element) is { } s && IsScript(s))
             {
                 var t = ScriptTrigger($"{id}_{element}", $"{room.Name}: {element}", ev, s, o, roomId: id);

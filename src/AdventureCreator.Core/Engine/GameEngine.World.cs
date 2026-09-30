@@ -278,6 +278,9 @@ public sealed partial class GameEngine
         ctx ??= new CommandContext(this, null);
         State.CurrentRoomId = roomId;
         State.RoomEnteredTurn = State.Turns;
+        // Triggers that prepare the room (or send the player on elsewhere) before it is described.
+        RunEventTriggers(TriggerEvent.BeforeEnterRoom, new CommandContext(this, ctx.Command) { EventRoomId = roomId, Item1 = ctx.Item1, Word1 = ctx.Word1 });
+        if (!string.Equals(State.CurrentRoomId, roomId, StringComparison.OrdinalIgnoreCase) || State.GameOver) return;
         Describe(ctx, forceFull: false);
         bool first = State.VisitedRooms.Add(roomId);
         NpcsNoticePlayer(ctx);

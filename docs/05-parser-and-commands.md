@@ -59,7 +59,7 @@ Verbs whose natural outcome depends on your game (cut, dig, use…) reply with a
 
 ## Adding new commands
 
-Open **Commands** and click **+**. A command has:
+Open **Commands**. Your own commands are listed first; underneath, under **BUILT-IN COMMANDS**, are all the verbs the parser already knows. Select one to see its words and grammar, and press **Add words or grammar to this command** to extend it (your extension joins the top of the list). Click **+** to add a new command. A command has:
 
 | Field | Meaning |
 |---|---|
@@ -119,7 +119,7 @@ Lines are tried in order; the first that fits wins. If none fits, the command is
 
 ## Vocabulary
 
-The **Vocabulary** section holds words that aren't attached to items or commands:
+The **Vocabulary** section holds words that aren't attached to items or commands. For each kind of word, your own words come first, each with **✕** to remove it; type new words in the box and press **Enter** or **Add** (several at once, separated by commas). Underneath are the words the parser already knows, or has learned from your items, for reference.
 
 | Field | Use |
 |---|---|
@@ -128,8 +128,8 @@ The **Vocabulary** section holds words that aren't attached to items or commands
 | Adjectives | Extra adjectives. |
 | Prepositions | Extra prepositions. |
 | Ignored Words | Words to drop silently (*please* and *very* are already ignored). |
-| Replacements | `phrase = replacement`. If the whole input equals the phrase it is replaced (`xyzzy = say xyzzy`, `sneak west = quietly go west`); single words are also replaced inside sentences (`lift = look under`). |
-| Directions | Extra direction words mapped to an exit direction: `fore = north`, `aft = south`, `starboard = east`. |
+| Replacements | A phrase and what it means. If the whole input equals the phrase it is replaced (`xyzzy` → `say xyzzy`, `sneak west` → `quietly go west`); single words are also replaced inside sentences (`lift` → `look under`). Type both parts and press **Add**. |
+| Directions | Extra direction words mapped to an exit direction: `fore` means north, `aft` south, `starboard` east. Type the word, choose the direction and press **Add**. |
 
 ## Significant letters (retro style)
 
