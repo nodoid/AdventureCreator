@@ -1134,7 +1134,7 @@ public sealed class StudioPage : ContentPage
         ("04-triggers.md", "4. Triggers, conditions and actions"),
         ("05-parser-and-commands.md", "5. The parser and custom commands"),
         ("06-pictures-and-sound.md", "6. Pictures and sound"),
-        ("07-importing.md", "7. Importing PAWS, Quill/Illustrator and GAC"),
+        ("07-importing.md", "7. Importing games from other systems"),
         ("08-exporting.md", "8. Testing, exporting and publishing"),
         ("09-file-format.md", "9. File format"),
         ("10-npcs-and-events.md", "10. NPCs, random events, traps and flooding"),

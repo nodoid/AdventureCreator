@@ -13,7 +13,7 @@ publishing games as standalone apps.
 | [4. Triggers, conditions and actions](04-triggers.md) | Making things happen: events, patterns, all conditions and actions, text placeholders |
 | [5. The parser and custom commands](05-parser-and-commands.md) | What players can type, adding new commands and grammar, vocabulary |
 | [6. Pictures and sound](06-pictures-and-sound.md) | The picture designer, smooth and animated pictures, importing images, the CC0 sound library, the retro synthesiser and the waveform editor |
-| [7. Importing PAWS, Quill/Illustrator and GAC games](07-importing.md) | Getting the files, importing, what is converted, and the limitations |
+| [7. Importing games from other systems](07-importing.md) | PAWS, Quill/Illustrator, GAC, Scott Adams (ScottKit), Quest 5 and Twine: getting the files, importing, what is converted, and the limitations |
 | [8. Testing, exporting and publishing](08-exporting.md) | Test Play, validation, game packages, standalone apps, signing |
 | [9. File format](09-file-format.md) | The `.adventure` package, its JSON and save files |
 | [10. NPCs, random events, traps and flooding](10-npcs-and-events.md) | Characters with a life of their own, things that happen by chance, hazards and health |
