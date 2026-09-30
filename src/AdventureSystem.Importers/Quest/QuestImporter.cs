@@ -273,7 +273,8 @@ internal sealed partial class QuestConverter
     }
 
     private static readonly string[] ContainerTypes = { "container", "container_open", "container_closed", "container_limited", "surface", "container_lockable" };
-    private static readonly string[] KnownVerbs = { "push", "pull", "open", "close", "use", "eat", "drink", "read", "speak", "talk", "listen", "smell", "touch", "sit", "lie", "kiss", "hit", "climb", "move", "search", "turn", "wear", "remove", "take", "drop", "give", "buy" };
+    /// <summary>Verbs Quest defines itself: object properties with these names respond without a <c>verb</c> element.</summary>
+    internal static readonly string[] KnownVerbs = { "push", "pull", "open", "close", "use", "eat", "drink", "read", "speak", "talk", "listen", "smell", "touch", "sit", "lie", "kiss", "hit", "climb", "move", "search", "turn", "wear", "remove", "take", "drop", "give", "buy" };
 
     private void Item(XElement o, string name, XElement? parent)
     {

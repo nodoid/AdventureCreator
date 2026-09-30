@@ -10,7 +10,7 @@ public class TwineImporterTests
     private const string Png = "iVBORw0KGgoAAAANSUhEUgAAAAIAAAADCAIAAAA2iEnWAAAAEElEQVR4nGP4z8DAwMDAAAAr/wL+2vT1YQAAAABJRU5ErkJggg==";
 
     /// <summary>A published Twine 2 story in Harlowe (passage text is HTML-escaped, as Twine writes it).</summary>
-    private static byte[] Harlowe()
+    internal static byte[] Harlowe()
     {
         static string P(int pid, string name, string text) =>
             $"<tw-passagedata pid=\"{pid}\" name=\"{name}\" tags=\"\" position=\"0,0\" size=\"100,100\">{System.Net.WebUtility.HtmlEncode(text)}</tw-passagedata>";
@@ -23,7 +23,7 @@ public class TwineImporterTests
         return System.Text.Encoding.UTF8.GetBytes(html);
     }
 
-    private const string SugarCube = """
+    internal const string SugarCube = """
 :: StoryTitle
 Gold Rush
 

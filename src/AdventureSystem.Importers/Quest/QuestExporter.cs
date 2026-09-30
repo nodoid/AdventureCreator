@@ -53,6 +53,8 @@ public sealed class QuestExporter : IAdventureExporter
         private readonly Dictionary<string, byte[]> files = new();
         private readonly Dictionary<string, string> lockExits = new(StringComparer.OrdinalIgnoreCase);
         private readonly HashSet<string> handled = new();
+        // Verb properties written on objects: those Quest doesn't define itself need a <verb> element.
+        private readonly HashSet<string> objectVerbs = new();
         private static readonly HashSet<string> BuiltInVerbIds = BuiltInLexicon.VerbTable.Select(r => r.Split('|')[0].Trim().TrimEnd('!')).ToHashSet();
 
         private string Name(string id) => names.TryGetValue(id, out var n) ? n : id;
@@ -239,6 +241,7 @@ public sealed class QuestExporter : IAdventureExporter
             if (it.Readable && it.ReadText.Length > 0) sb.Append($"{pad}  <read>{X(Text(it.ReadText))}</read>\n");
             var alt = it.Nouns.Where(n => !it.Name.Contains(n, StringComparison.OrdinalIgnoreCase)).ToList();
             if (alt.Count > 0) sb.Append($"{pad}  <alt type=\"stringlist\">\n").Append(string.Concat(alt.Select(n => $"{pad}    <value>{X(n)}</value>\n"))).Append($"{pad}  </alt>\n");
+            objectVerbs.UnionWith(it.VerbResponses.Keys);
             foreach (var (verb, text) in it.VerbResponses) sb.Append($"{pad}  <{VerbProperty(verb)}>{X(Text(text))}</{VerbProperty(verb)}>\n");
             foreach (var v in a.Variables.Where(v => !guards.Contains(v.Name) && Owner(v.Name).Owner == Name(it.Id)))
                 sb.Append($"{pad}  <attr name=\"{Owner(v.Name).Attribute}\" type=\"int\">{v.InitialValue}</attr>\n");
@@ -248,6 +251,7 @@ public sealed class QuestExporter : IAdventureExporter
             {
                 var script = Chain(group.ToList(), "this");
                 foreach (var t in group) handled.Add(t.Id);
+                objectVerbs.Add(group.Key);
                 sb.Append($"{pad}  <{VerbProperty(group.Key)} type=\"script\">\n").Append(Block(script, depth * 2 + 4)).Append($"{pad}  </{VerbProperty(group.Key)}>\n");
             }
             foreach (var inner in a.Items.Where(i => string.Equals(i.Location, it.Id, StringComparison.OrdinalIgnoreCase))) Item(sb, inner, depth + 1);
@@ -269,6 +273,13 @@ public sealed class QuestExporter : IAdventureExporter
                 sb.Append($"  <verb>\n    <property>{VerbProperty(v.Id)}</property>\n    <pattern>{X(string.Join("; ", words))}</pattern>\n");
                 if (!string.IsNullOrWhiteSpace(v.DefaultResponse)) sb.Append($"    <defaulttext>{X(Text(v.DefaultResponse))}</defaulttext>\n");
                 sb.Append("  </verb>\n");
+            }
+            // Built-in verbs that Quest itself doesn't have (rub, wave…): declared so objects' responses to them work.
+            foreach (var verb in objectVerbs.Select(VerbProperty).Distinct().Where(p => p != "look" && !QuestConverter.KnownVerbs.Contains(p) && !a.Vocabulary.Verbs.Any(v => VerbProperty(v.Id) == p && !BuiltInVerbIds.Contains(v.Id))))
+            {
+                var row = BuiltInLexicon.VerbTable.Select(r => r.Split('|')).FirstOrDefault(r => r[0].Trim().TrimEnd('!') == verb);
+                var words = row?.Length > 1 ? row[1].Split(',').Select(w => w.Trim()).Where(w => w.Length > 0).ToList() : new List<string> { verb };
+                sb.Append($"  <verb>\n    <property>{verb}</property>\n    <pattern>{X(string.Join("; ", words))}</pattern>\n  </verb>\n");
             }
         }
 
