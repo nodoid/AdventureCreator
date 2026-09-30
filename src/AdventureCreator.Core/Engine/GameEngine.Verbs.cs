@@ -653,9 +653,10 @@ public sealed partial class GameEngine
     public SaveGame SaveToSlot(string name)
     {
         name = CleanSlotName(name);
+        if (story != null) State.ZState = Convert.ToBase64String(story.SaveState());
         var save = new SaveGame
         {
-            Name = name, GameTitle = Adventure.Title, SavedAt = DateTime.Now, RoomName = CurrentRoom?.Name ?? "",
+            Name = name, GameTitle = Adventure.Title, SavedAt = DateTime.Now, RoomName = LocationName,
             Score = State.Score, MaxScore = Adventure.ComputeMaxScore(), Turns = State.Turns, State = State.Serialize(),
         };
         SaveStorage.Save(name, save.Serialize());
@@ -681,6 +682,7 @@ public sealed partial class GameEngine
     /// <summary>Saves silently to the autosave slot (hosts call this after each turn). Nothing is saved once the game is over.</summary>
     public void Autosave()
     {
+        if (story is { HasQuit: true }) { try { SaveStorage.Delete(AutosaveSlot); } catch { } return; }
         try
         {
             if (State.GameOver) SaveStorage.Delete(AutosaveSlot);
@@ -732,6 +734,7 @@ public sealed partial class GameEngine
 
         if (save == null) { Say($"There is no saved game called \u201C{name}\u201D.", TextStyle.System); return; }
         State = GameState.Deserialize(save.State);
+        if (story != null) { RestoreStory(save); return; }
         pending = null;
         Say(Msg(Engine.Msg.Restored, null) + (save.Name is "default" ? "" : $" (\u201C{(save.IsAutosave ? "autosave" : save.Name)}\u201D)"), TextStyle.System);
         Describe(null, forceFull: true);

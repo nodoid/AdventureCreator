@@ -67,6 +67,17 @@ public static class AdventurePackage
         return Load(fs);
     }
 
+    /// <summary>
+    /// Opens any game file: an .adventure package, a JSON game, or a Z-code story (.z1–.z8, .zblorb), which becomes a
+    /// game played by the built-in Z-machine.
+    /// </summary>
+    public static Adventure LoadAny(byte[] data, string fileName)
+    {
+        if (ZMachine.ZStory.IsStory(data)) return ZMachine.ZStory.CreateAdventure(data, fileName);
+        if (fileName.EndsWith(".json", StringComparison.OrdinalIgnoreCase)) return FromJson(System.Text.Encoding.UTF8.GetString(data));
+        return Load(data);
+    }
+
     public static Adventure Load(byte[] data)
     {
         using var ms = new MemoryStream(data);

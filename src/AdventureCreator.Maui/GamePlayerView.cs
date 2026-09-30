@@ -223,7 +223,7 @@ public sealed class GamePlayerView : ContentView
     {
         if (engine == null || HostPage is not { } page) return;
         if (engine.IsGameOver) { await page.DisplayAlertAsync("Save game", "The game is over – there's nothing to save.", "OK"); return; }
-        var suggestion = $"{engine.CurrentRoom?.Name} (turn {engine.State.Turns})";
+        var suggestion = $"{engine.LocationName} (turn {engine.State.Turns})";
         var name = await page.DisplayPromptAsync("Save game", "Name this saved position:", "Save", "Cancel", initialValue: suggestion, maxLength: 60);
         if (string.IsNullOrWhiteSpace(name)) return;
         name = name.Replace("\"", "'").Trim();
@@ -550,7 +550,8 @@ public sealed class GamePlayerView : ContentView
     {
         var parts = (status ?? "").Split('|');
         statusRoom.Text = parts.Length > 0 ? parts[0] : "";
-        statusScore.Text = parts.Length >= 4 ? $"Score {parts[1]}/{parts[2]}   Turns {parts[3]}" : "";
+        // "room|score|max|turns"; Z-code stories may have no maximum, or only a status line (one part).
+        statusScore.Text = parts.Length >= 4 ? (parts[2].Length == 0 ? $"Score {parts[1]}   Turns {parts[3]}" : $"Score {parts[1]}/{parts[2]}   Turns {parts[3]}") : "";
         if (parts.Length >= 6) statusScore.Text = $"Health {parts[4]}/{parts[5]}   " + statusScore.Text;
         if (engine != null && statusRoom.Parent is View bar) bar.IsVisible = engine.Adventure.Settings.ShowStatusBar;
     }

@@ -34,6 +34,8 @@ public sealed class GameState
     public Dictionary<string, NpcState> Npcs { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     public int Health { get; set; }
     public int RoomEnteredTurn { get; set; }
+    /// <summary>Z-code stories: the Z-machine's saved state (base 64).</summary>
+    public string? ZState { get; set; }
     /// <summary>Room id -> flags such as "flooded".</summary>
     public Dictionary<string, HashSet<string>> RoomFlags { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     public Dictionary<string, TrapState> Traps { get; set; } = new(StringComparer.OrdinalIgnoreCase);

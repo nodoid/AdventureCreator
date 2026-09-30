@@ -1,3 +1,4 @@
+using AdventureCreator.Core.ZMachine;
 using System.Text;
 using System.Text.RegularExpressions;
 using AdventureCreator.Core.Model;
@@ -42,12 +43,14 @@ public sealed partial class GameEngine
         Parser = new Parser(Lexicon) { SpellingCorrection = adventure.Settings.SpellingCorrection };
         Random = randomSeed.HasValue ? new Random(randomSeed.Value) : new Random();
         State = GameState.Initial(adventure);
+        if (adventure.IsStory) story = ZStory.CreateMachine(adventure, randomSeed);
     }
 
     // ================================================================ public API
 
     public TurnResult Start()
     {
+        if (story != null) return StartStory();
         BeginOutput();
         StartCore();
         EmitStatus();
@@ -78,6 +81,7 @@ public sealed partial class GameEngine
 
     public TurnResult Submit(string input)
     {
+        if (story != null) return SubmitStory(input);
         if (!started) Start();
         BeginOutput();
         try
@@ -300,6 +304,7 @@ public sealed partial class GameEngine
 
     private void EmitStatus()
     {
+        if (story != null) { EmitStoryStatus(); return; }
         var room = CurrentRoom;
         var health = Adventure.Settings.PlayerHealth > 0 ? $"|{State.Health}|{Adventure.Settings.PlayerHealth}" : "";
         Emit(new OutputEvent(OutputKind.Status, $"{room?.Name}|{State.Score}|{Adventure.ComputeMaxScore()}|{State.Turns}{health}", room?.Id));

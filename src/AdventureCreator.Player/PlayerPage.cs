@@ -118,14 +118,12 @@ public sealed class PlayerPage : ContentPage
 	{
 		try
 		{
-			var result = await FilePicker.Default.PickAsync(new PickOptions { PickerTitle = "Open an adventure" });
+			var result = await FilePicker.Default.PickAsync(new PickOptions { PickerTitle = "Open an adventure or a Z-code story" });
 			if (result == null) return;
 			await using var stream = await result.OpenReadAsync();
 			using var ms = new MemoryStream();
 			await stream.CopyToAsync(ms);
-			Play(result.FileName.EndsWith(".json", StringComparison.OrdinalIgnoreCase)
-				? AdventurePackage.FromJson(System.Text.Encoding.UTF8.GetString(ms.ToArray()))
-				: AdventurePackage.Load(ms.ToArray()));
+			Play(AdventurePackage.LoadAny(ms.ToArray(), result.FileName));
 		}
 		catch (Exception ex)
 		{

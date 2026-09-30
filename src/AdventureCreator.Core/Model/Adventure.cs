@@ -19,6 +19,13 @@ public sealed class Adventure
     /// <summary>Text shown when the game starts, before the first room description.</summary>
     public string Introduction { get; set; } = "";
     public string? IntroPictureId { get; set; }
+    /// <summary>
+    /// When set, the game is a Z-code story (Infocom / Inform, versions 1–8) held in this asset, and the engine runs
+    /// it on its Z-machine instead of the rooms and triggers.
+    /// </summary>
+    public string? StoryFile { get; set; }
+    [System.Text.Json.Serialization.JsonIgnore]
+    public bool IsStory => !string.IsNullOrEmpty(StoryFile);
     public string? IntroSoundId { get; set; }
 
     public string StartRoomId { get; set; } = "";

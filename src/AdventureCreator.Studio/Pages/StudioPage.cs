@@ -158,6 +158,17 @@ public sealed class StudioPage : ContentPage
 #if DEBUG
         // Development aid for screenshots: AC_STUDIO_DEMO=genesis|lighthouse[:Section[:item[:command]]].
         if (Environment.GetEnvironmentVariable("AC_STUDIO_DEMO") is { Length: > 0 } demo) OpenDemo(demo);
+        // AC_STUDIO_DEMO_FILE=<path>[|Section]: import a game file (e.g. a Z-code story) and open a section.
+        if (Environment.GetEnvironmentVariable("AC_STUDIO_DEMO_FILE") is { Length: > 0 } demoFile)
+        {
+            var bits = demoFile.Split('|');
+            var data = File.ReadAllBytes(bits[0]);
+            if (ImporterRegistry.Detect(data, bits[0]) is { } importer)
+            {
+                SetDocument(new StudioDocument(importer.Import(data, bits[0]).Adventure));
+                if (bits.Length > 1 && Enum.TryParse<Section>(bits[1], true, out var sec)) ShowSection(sec);
+            }
+        }
 #endif
     }
 
@@ -905,7 +916,7 @@ public sealed class StudioPage : ContentPage
         if (!await ConfirmDiscardAsync()) return;
         try
         {
-            var file = await FilePicker.Default.PickAsync(new PickOptions { PickerTitle = "Import a PAWS, Quill or GAC game (.sna, .z80, .tap, .tzx…)", FileTypes = AnyFile });
+            var file = await FilePicker.Default.PickAsync(new PickOptions { PickerTitle = "Import a game: PAWS, Quill, GAC (.sna, .z80, .tap, .tzx…) or Z-code (.z3, .z5, .z8, .zblorb…)", FileTypes = AnyFile });
             if (file == null) return;
             await using var s = await file.OpenReadAsync();
             using var ms = new MemoryStream();
@@ -914,7 +925,7 @@ public sealed class StudioPage : ContentPage
             var importer = ImporterRegistry.Detect(data, file.FileName);
             if (importer == null)
             {
-                await DisplayAlertAsync("Not recognised", "This file doesn't contain a PAWS, Quill (with or without Illustrator graphics) or Graphic Adventure Creator game that I can find.", "OK");
+                await DisplayAlertAsync("Not recognised", "This file doesn't contain a PAWS, Quill (with or without Illustrator graphics), Graphic Adventure Creator or Z-code game that I can find.", "OK");
                 return;
             }
             var result = await Task.Run(() => importer.Import(data, file.FileName));
@@ -996,7 +1007,7 @@ public sealed class StudioPage : ContentPage
         file.Add(Item("Save", () => SaveAsync(false), "S"));
         file.Add(Item("Save As…", () => SaveAsync(true), "S", CmdAltShift));
         file.Add(new MenuFlyoutSeparator());
-        file.Add(Item("Import PAWS / Quill / GAC Game…", ImportLegacyAsync, "I", CmdShift));
+        file.Add(Item("Import Game (PAWS, Quill, GAC, Z-code)…", ImportLegacyAsync, "I", CmdShift));
         file.Add(Item("Export Standalone Game…", ExportAsync, "E", CmdShift));
 
         var edit = new MenuBarItem { Text = "Edit" };

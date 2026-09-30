@@ -34,6 +34,7 @@ public static class ImporterRegistry
         importers.Add(new Paws.PawsImporter());
         importers.Add(new Quill.QuillImporter());
         importers.Add(new Gac.GacImporter());
+        importers.Add(new ZCode.ZCodeImporter());
     }
 
     /// <summary>File-dialog extensions accepted by any importer.</summary>
@@ -47,7 +48,7 @@ public static class ImporterRegistry
     {
         var data = File.ReadAllBytes(path);
         var importer = Detect(data, path)
-            ?? throw new InvalidDataException("The file is not a recognised PAWS, Quill or Graphic Adventure Creator game.");
+            ?? throw new InvalidDataException("The file is not a recognised PAWS, Quill, Graphic Adventure Creator or Z-code game.");
         return importer.Import(data, path);
     }
 

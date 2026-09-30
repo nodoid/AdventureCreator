@@ -23,4 +23,7 @@
     <ProjectReference Include="..\..\src\AdventureCreator.Importers\AdventureCreator.Importers.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="Fixtures\**\*" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>

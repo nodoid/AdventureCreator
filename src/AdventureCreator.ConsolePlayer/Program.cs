@@ -42,13 +42,13 @@ try
 
     if (argList.Count > 0 && argList[0] is "--example" or "example") game = ExampleAdventures.Genesis();
     else if (argList.Count > 0 && argList[0] is "--lighthouse" or "lighthouse") game = ExampleAdventures.Lighthouse();
-    else if (argList.Count > 0) game = AdventurePackage.Load(argList[0]);
+    else if (argList.Count > 0) game = AdventurePackage.LoadAny(File.ReadAllBytes(argList[0]), argList[0]);
     else game = StandaloneExporter.LocateEmbeddedGame();
 
     if (game == null)
     {
         Console.WriteLine("Adventure Creator Player 1.0 – Copyright © 2026 Paul F.Johnson");
-        Console.WriteLine("usage: adventure-player <game.adventure> | --example | --write-example <path> | --parse <game|example> \"command\"");
+        Console.WriteLine("usage: adventure-player <game.adventure | story.z5 | story.zblorb> | --example | --write-example <path> | --parse <game|example> \"command\"");
         return 1;
     }
 
