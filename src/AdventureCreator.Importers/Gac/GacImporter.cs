@@ -38,6 +38,7 @@ namespace AdventureCreator.Importers.Gac;
 public sealed class GacImporter : IAdventureImporter
 {
     public string Name => "Graphic Adventure Creator";
+    public string Id => "gac";
     public IReadOnlyList<string> Extensions => new[] { "sna", "z80", "tap", "tzx" };
 
     public bool CanImport(byte[] data, string fileName)

@@ -15,6 +15,7 @@ namespace AdventureCreator.Importers.Quill;
 public sealed class QuillImporter : IAdventureImporter
 {
     public string Name => "The Quill / Illustrator (ZX Spectrum, Amstrad CPC, C64)";
+    public string Id => "quill";
     public IReadOnlyList<string> Extensions => new[] { "sna", "z80", "vsf" };
 
     public bool CanImport(byte[] data, string fileName)

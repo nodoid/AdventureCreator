@@ -47,6 +47,8 @@ public sealed class Adventure
 
     /// <summary>Free-form notes, e.g. warnings generated while importing a legacy game.</summary>
     public List<string> Notes { get; set; } = new();
+    /// <summary>Where the game was imported from (null for games made in the Studio). Lets it be exported back.</summary>
+    public SourceOrigin? Origin { get; set; }
 
     /// <summary>Binary assets (bitmap images, audio) keyed by asset name. Stored as separate zip entries in a package.</summary>
     [JsonIgnore]
@@ -307,4 +309,16 @@ public sealed class SoundAsset
     /// </summary>
     public Audio.SoundEffect? Effect { get; set; }
     public override string ToString() => string.IsNullOrEmpty(Name) ? Id : Name;
+}
+
+/// <summary>The system and file a game was imported from.</summary>
+public sealed class SourceOrigin
+{
+    /// <summary>Importer id: paws, quill, gac, scott, quest, twine or zcode.</summary>
+    public string System { get; set; } = "";
+    /// <summary>The detected format, e.g. "PAWS (ZX Spectrum 48K…)" or "Twine story (Harlowe)".</summary>
+    public string Format { get; set; } = "";
+    public string FileName { get; set; } = "";
+    /// <summary>Asset holding the original file, for formats whose export rebuilds it (Spectrum snapshots).</summary>
+    public string? OriginalAsset { get; set; }
 }

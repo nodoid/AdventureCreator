@@ -16,6 +16,7 @@ namespace AdventureCreator.Importers.Quest;
 public sealed class QuestImporter : IAdventureImporter
 {
     public string Name => "Quest 5 (textadventures.co.uk)";
+    public string Id => "quest";
     public IReadOnlyList<string> Extensions => new[] { "aslx", "quest" };
 
     public bool CanImport(byte[] data, string fileName) => ReadGame(data, fileName, out _, out _) != null;

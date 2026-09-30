@@ -177,7 +177,7 @@ public sealed class StudioPage : ContentPage
             var data = File.ReadAllBytes(bits[0]);
             if (ImporterRegistry.Detect(data, bits[0]) is { } importer)
             {
-                SetDocument(new StudioDocument(importer.Import(data, bits[0]).Adventure));
+                SetDocument(new StudioDocument(ImporterRegistry.Run(importer, data, bits[0]).Adventure));
                 if (bits.Length > 1 && Enum.TryParse<Section>(bits[1], true, out var sec)) ShowSection(sec);
             }
         }
@@ -993,7 +993,7 @@ public sealed class StudioPage : ContentPage
                 await DisplayAlertAsync("Not recognised", "This file isn't a game I can import. I can read PAWS, The Quill (with Illustrator pictures), GAC and Scott Adams games, Quest 5 (.aslx, .quest), Twine (published .html or .twee) and Z-code stories (.z3–.z8, .zblorb).", "OK");
                 return;
             }
-            var result = await Task.Run(() => importer.Import(data, path));
+            var result = await Task.Run(() => ImporterRegistry.Run(importer, data, path));
             SetDocument(new StudioDocument(result.Adventure));
             document.MarkChanged();
             var report = $"Imported with: {importer.Name}\nFormat: {result.DetectedFormat}\n\n" +

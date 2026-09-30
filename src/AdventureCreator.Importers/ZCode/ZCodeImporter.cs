@@ -11,6 +11,7 @@ namespace AdventureCreator.Importers.ZCode;
 public sealed class ZCodeImporter : IAdventureImporter
 {
     public string Name => "Z-code story (Infocom / Inform)";
+    public string Id => "zcode";
     public IReadOnlyList<string> Extensions => ZStory.Extensions;
 
     public bool CanImport(byte[] data, string fileName) => ZStory.IsStory(data);

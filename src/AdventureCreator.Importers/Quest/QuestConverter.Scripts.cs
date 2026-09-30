@@ -132,6 +132,18 @@ internal sealed partial class QuestConverter
                 if (Obj(0) is { } of && args.Count > 1 && args[1] is QString flag)
                     list.Add(new GameAction(ActionType.SetVar, Var($"{of}_{flag.Value}"), call.Name.EndsWith("on", StringComparison.OrdinalIgnoreCase) ? 1 : 0));
                 break;
+            // Gamebook flags and counters live on the game.
+            case "setflagon":
+            case "setflagoff":
+                if (args.Count > 0 && args[0] is QString gf) list.Add(new GameAction(ActionType.SetVar, Var($"game_{gf.Value.ToLowerInvariant()}"), call.Name.EndsWith("on", StringComparison.OrdinalIgnoreCase) ? 1 : 0));
+                break;
+            case "increasecounter":
+            case "decreasecounter":
+                if (args.Count > 0 && args[0] is QString ic) list.Add(new GameAction(ActionType.AddVar, Var($"game_{ic.Value.ToLowerInvariant()}"), call.Name.StartsWith("inc", StringComparison.OrdinalIgnoreCase) ? 1 : -1));
+                break;
+            case "setcounter":
+                if (args.Count > 1 && args[0] is QString sc && args[1] is QNumber scn) list.Add(new GameAction(ActionType.SetVar, Var($"game_{sc.Value.ToLowerInvariant()}"), scn.Value));
+                break;
             case "increasescore": list.Add(new GameAction(ActionType.AwardScore, n: Number(args, 0, 1))); break;
             case "decreasescore": list.Add(new GameAction(ActionType.AddVar, "@score", -Number(args, 0, 1))); break;
             case "finish":
@@ -212,6 +224,7 @@ internal sealed partial class QuestConverter
             else NotConverted(st, notes, "Score calculations");
             return;
         }
+        if (owner == null && member.Target is QName { Name: "game" }) owner = "game";
         if (owner == null) { NotConverted(st, notes, "Attributes of unknown objects"); return; }
 
         switch (attr)
@@ -365,6 +378,8 @@ internal sealed partial class QuestConverter
                 return new Condition(ConditionType.ItemLit, lit);
             case QFunc { Name: "RandomChance" } rc when rc.Args.Count == 1 && rc.Args[0] is QNumber pct:
                 return new Condition(ConditionType.Chance, n: pct.Value);
+            case QFunc { Name: "GetBoolean" } gg when gg.Args.Count == 2 && gg.Args[0] is QName { Name: "game" } && gg.Args[1] is QString gattr:
+                return new Condition(ConditionType.VarEquals, Var($"game_{gattr.Value.ToLowerInvariant()}"), 0, negate: true);
             case QFunc { Name: "GetBoolean" } gb when gb.Args.Count == 2 && gb.Args[1] is QString attr && ObjectRef(gb.Args[0], scope) is { } bo:
                 return BooleanAttribute(bo, attr.Value);
             case QMember m when ObjectRef(m.Target, scope) is { } owner:
@@ -419,6 +434,8 @@ internal sealed partial class QuestConverter
     private string? Numeric(QExpr e, Scope scope)
     {
         if (e is QMember { Target: QName { Name: "game" }, Attribute: "score" }) return "@score";
+        if (e is QMember { Target: QName { Name: "game" } } gm) return Var($"game_{gm.Attribute.ToLowerInvariant()}");
+        if (e is QFunc { Name: "GetInt" or "GetAttribute" } gi && gi.Args.Count == 2 && gi.Args[0] is QName { Name: "game" } && gi.Args[1] is QString ga) return Var($"game_{ga.Value.ToLowerInvariant()}");
         if (e is QMember m && ObjectRef(m.Target, scope) is { } owner) return Var($"{owner.TrimStart('@')}_{m.Attribute.ToLowerInvariant()}");
         return null;
     }
@@ -431,6 +448,7 @@ internal sealed partial class QuestConverter
         QNumber n => n.Value.ToString(),
         QBinary { Op: "+" } b => TextOf(b.Left, scope, notes) + TextOf(b.Right, scope, notes),
         QMember { Attribute: "article" or "gender" } m when ObjectRef(m.Target, scope) == "$noun1" => "{the noun1}",
+        QFunc { Name: "GetDefiniteName" } f when f.Args.Count == 1 && ObjectRef(f.Args[0], scope) is "$noun1" or "$noun2" => f.Args[0] is QName { Name: "object2" } ? "{the noun2}" : "{the noun1}",
         QFunc { Name: "GetDisplayAlias" or "GetDisplayName" } f when f.Args.Count == 1 && ObjectRef(f.Args[0], scope) is "$noun1" => "{noun1}",
         QFunc { Name: "GetDisplayAlias" or "GetDisplayName" } f when f.Args.Count == 1 && ObjectRef(f.Args[0], scope) is "$noun2" => "{noun2}",
         QFunc { Name: "GetDisplayAlias" or "GetDisplayName" } f when f.Args.Count == 1 && ObjectRef(f.Args[0], scope) is { } id && a.FindItem(id) is { } it => it.Name,
@@ -475,18 +493,31 @@ internal sealed partial class QuestConverter
             var room = new Room { Id = roomIds[name], Name = Text(p, "alias") ?? name, Description = TextProcessor(Text(p, "description") ?? "") };
             if (Text(p, "picture") is { } pic && PictureFor(pic) is { } pid) room.PictureId = pid;
             int n = 0;
-            foreach (var item in p.Element("options")?.Elements("item") ?? Enumerable.Empty<XElement>())
-            {
-                var target = item.Element("key")?.Value;
-                var text = item.Element("value")?.Value ?? target;
-                if (target == null || !roomIds.TryGetValue(target, out var tid)) continue;
-                Choices.Add(a, room, ++n, tid, text ?? "");
-            }
+            foreach (var (target, text) in Options(p.Element("options")))
+                if (roomIds.TryGetValue(target, out var tid)) Choices.Add(a, room, ++n, tid, text);
             if (p.Element("script") is { } s && IsScript(s))
                 a.Triggers.Add(ScriptTrigger($"{room.Id}_script", $"{room.Name}: page script", TriggerEvent.EnterRoom, s, p, roomId: room.Id));
             a.Rooms.Add(room);
         }
         if (pages.Count > 0) a.StartRoomId = roomIds[pages[0].Attribute("name")!.Value];
         Choices.Configure(a);
+    }
+
+    /// <summary>A page's options: &lt;item&gt; key/value pairs, or a simplestringdictionary ("Page = Text;Page2 = Text").</summary>
+    private static IEnumerable<(string Target, string Text)> Options(XElement? options)
+    {
+        if (options == null) yield break;
+        if (options.Elements("item").Any())
+        {
+            foreach (var item in options.Elements("item"))
+                if (item.Element("key")?.Value is { } key) yield return (key, item.Element("value")?.Value ?? key);
+            yield break;
+        }
+        foreach (var pair in options.Value.Split(';', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
+        {
+            var eq = pair.IndexOf('=');
+            if (eq > 0) yield return (pair[..eq].Trim(), pair[(eq + 1)..].Trim());
+            else yield return (pair, pair);
+        }
     }
 }

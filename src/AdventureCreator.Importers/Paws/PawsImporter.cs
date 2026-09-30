@@ -10,6 +10,7 @@ namespace AdventureCreator.Importers.Paws;
 public sealed class PawsImporter : IAdventureImporter
 {
     public string Name => "PAWS (ZX Spectrum)";
+    public string Id => "paws";
     public IReadOnlyList<string> Extensions { get; } = new[] { "sna", "z80" };
 
     public bool CanImport(byte[] data, string fileName)

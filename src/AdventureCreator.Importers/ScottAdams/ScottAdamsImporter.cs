@@ -12,6 +12,7 @@ namespace AdventureCreator.Importers.ScottAdams;
 public sealed class ScottAdamsImporter : IAdventureImporter
 {
     public string Name => "Scott Adams format (ScottKit / ScottFree)";
+    public string Id => "scott";
     public IReadOnlyList<string> Extensions => new[] { "dat", "sao" };
 
     public bool CanImport(byte[] data, string fileName)

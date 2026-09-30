@@ -16,6 +16,7 @@ namespace AdventureCreator.Importers.Twine;
 public sealed class TwineImporter : IAdventureImporter
 {
     public string Name => "Twine (Harlowe, SugarCube, Chapbook, Twee)";
+    public string Id => "twine";
     public IReadOnlyList<string> Extensions => new[] { "html", "htm", "twee", "tw", "tw2", "txt" };
 
     public bool CanImport(byte[] data, string fileName)
