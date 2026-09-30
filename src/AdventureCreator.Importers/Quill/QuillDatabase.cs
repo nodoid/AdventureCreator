@@ -19,6 +19,9 @@ internal sealed class QuillEntry
     public int Verb { get; init; }
     public int Noun { get; init; }
     public int Address { get; init; }
+    /// <summary>Address and length of the entry's condition/action bytes (both FFh terminators included).</summary>
+    public int Handler { get; set; }
+    public int HandlerLength { get; set; }
     public List<QuillCondact> Conditions { get; } = new();
     public List<QuillCondact> Actions { get; } = new();
 }
@@ -327,6 +330,45 @@ internal sealed class QuillDatabase
         }
     }
 
+    /// <summary>Raw action byte for an action in "late" numbering (the reverse of <see cref="NormaliseAction"/>), or -1 if this version lacks it.</summary>
+    public int DenormaliseAction(int op)
+    {
+        if (Version == 0)
+        {
+            if (op <= A_SCORE) return op;
+            if (op == A_PAUSE) return 11;
+            if (op is >= A_GOTO and <= A_SWAP) return op - 9;
+            if (op >= A_SET) return op - 10;
+            return -1;
+        }
+        if (Version < 10)
+        {
+            if (op is >= A_AUTOG and <= A_AUTOR) return -1;
+            return op >= A_PAUSE ? op - 4 : op;
+        }
+        return op;
+    }
+
+    internal static int ParamCount(int op, QuillPlatform platform) => ActionParamCount(op, platform);
+
+    /// <summary>A text exactly as stored (complemented, terminator included).</summary>
+    public byte[] RawText(int address)
+    {
+        int term = Platform == QuillPlatform.Spectrum ? 0x1F : 0x00;
+        int a = address;
+        for (int guard = 0; guard < 8192; guard++)
+        {
+            int c = 0xFF - this[a++];
+            if (c == term) break;
+            if (Platform == QuillPlatform.Spectrum)
+            {
+                if (c >= 0x10 && c <= 0x15) a++;
+                else if (c == 0x17) a += 2;
+            }
+        }
+        return mem.AsSpan(address, a - address).ToArray();
+    }
+
     private static int ActionParamCount(int op, QuillPlatform platform)
     {
         if (op == A_SWAP || op == A_PLACE) return 2;
@@ -363,6 +405,7 @@ internal sealed class QuillDatabase
             if (result.Count > 4000 || !IsValidAddress(a + 3)) throw new QuillFormatException("condition table not terminated");
             var e = new QuillEntry { Verb = this[a], Noun = this[a + 1], Address = a };
             int p = Ptr(a + 2, "condition entry");
+            e.Handler = p;
             // Conditions
             int guard = 0;
             while (this[p] != 0xFF)
@@ -384,6 +427,7 @@ internal sealed class QuillDatabase
                 e.Actions.Add(new QuillCondact(op, args));
                 p += 1 + n;
             }
+            e.HandlerLength = p + 1 - e.Handler;
             result.Add(e);
             a += 4;
         }
