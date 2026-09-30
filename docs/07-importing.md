@@ -237,7 +237,7 @@ Verification: compared against John Elliott's UnQuill on *Very Big Cave Adventur
   * counters → `c{n}`
   * counter 0 is the score (`@score`; additions become AwardScore)
   * TURN and counters 126/127 → `@turns`
-  * ROOM → `@room`. If a game compares ROOM with < or > against a number, placeholder rooms are added up to that number so that each room's position there equals its GAC number; higher-numbered rooms follow in order. If it copies ROOM into a counter or compares it with another value, placeholders are added for every gap, up to the highest room number.
+  * ROOM → `@room` when it only names the room (`ROOM = 5` becomes **PlayerIn**). When a game compares ROOM with < or > or uses it as a number, it becomes the variable `gac_room`, kept equal to the GAC room number by a `gac_room_n` Before Enter Room trigger for each room. (GAC rooms can be numbered up to 9999, which is too many to match by position.) A room you add in the Studio has no such trigger, so give it one if the game compares ROOM there.
   * Comparisons of two values (`CTR 3 < CTR 4`, `CTR 7 + 2 > TURN`, `ROOM = CTR 5`) become **VarLessVar**, **VarGreaterVar** or **VarEqualsVar** conditions, with any added number kept as the offset.
 * **Darkness:** GAC is dark when markers 1 and 2 are both clear. This is kept in a `gac_dark` variable (the Darkness Variable) and updated after every change to those markers.
 * **Actions:**

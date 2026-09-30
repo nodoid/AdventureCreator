@@ -126,6 +126,24 @@ public class GacExporterTests
     }
 
     [Fact]
+    public void Edited_trigger_comparing_ROOM_is_compiled_back_to_ROOM()
+    {
+        // Low: IF ( VERB 3 AND ROOM < 2 ) MESS 2 WAIT END   (GET does something special in room 1 only)
+        var sna = Sample().Low(Get, "VERB", "ROOM", 2, "<", "AND", "IF", 2, "MESS", "WAIT", "END").BuildSna();
+        var a = Import(sna, "game.sna");
+        var get = a.Triggers.Single(t => t.Conditions.Any(c => c.A == "gac_room"));
+        get.Actions[0] = GameAction.Say("Only in the hall.");
+        var result = new GacExporter().Export(a);
+        Assert.DoesNotContain(result.Warnings, w => w.Contains("gac_room") || w.Contains("BeforeEnterRoom"));
+
+        var again = Import(result.Data, "game.sna");
+        Assert.Equal(2, again.Rooms.Count);
+        Assert.Equal(2, again.Triggers.Count(t => t.Id.StartsWith("gac_room_")));
+        Assert.Contains("Only in the hall.", Play(again, "get"));
+        Assert.DoesNotContain("Only in the hall.", Play(again, "n", "get"));
+    }
+
+    [Fact]
     public void Deleted_rooms_objects_and_triggers_are_removed()
     {
         var a = Import(Sample().BuildSna(), "game.sna");

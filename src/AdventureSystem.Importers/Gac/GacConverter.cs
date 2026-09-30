@@ -8,6 +8,8 @@ internal sealed partial class GacConverter
 {
     private const string DarkVar = "gac_dark";
     private const string DarknessRoutine = "gac_darkness";
+    /// <summary>The GAC room number (ROOM), kept by "gac_room_n" BeforeEnterRoom triggers since GAC rooms are numbered up to 9999.</summary>
+    private const string RoomVar = "gac_room";
     private const int CarriedRoom = 255;
 
     private readonly GacDatabase db;
@@ -21,10 +23,7 @@ internal sealed partial class GacConverter
     private readonly Dictionary<int, SortedSet<int>> exitRooms = new();
     private readonly SortedSet<int> markers = new();
     private readonly SortedSet<int> counters = new();
-    private bool needRoomIndex;
-    // The highest constant ROOM is compared with (< or >), when ROOM is never copied or compared with a variable.
-    private int roomConstMax = -1;
-    private bool needExactRoomIndex;
+    private bool usesRoomNumber;
     private bool usesDarkness;
     private int? strength;
     private readonly HashSet<string> seenNotes = new();
@@ -83,7 +82,7 @@ internal sealed partial class GacConverter
 
         if (strength is int st) s.MaxCarriedWeight = st;
         if (usesDarkness) AddDarkness();
-        if (needRoomIndex) FillRoomGaps(needExactRoomIndex ? int.MaxValue : roomConstMax);
+        if (usesRoomNumber) AddRoomNumber();
         BuildVariables();
         AddMappingNotes();
         return adv;
@@ -390,24 +389,22 @@ internal sealed partial class GacConverter
     }
 
     /// <summary>
-    /// Makes Rooms[i].Id == "r{i}" for every room numbered up to <paramref name="upTo"/>, so that "@room" (the room's
-    /// index) equals the GAC room number there; higher-numbered rooms follow in order. When ROOM is only compared with
-    /// constants, that keeps every comparison exact without thousands of placeholders for rooms numbered up to 9999.
+    /// Keeps <see cref="RoomVar"/> equal to the GAC number of the player's room: one BeforeEnterRoom trigger per room,
+    /// run before anything else when the player arrives (including the start of the game).
     /// </summary>
-    private void FillRoomGaps(int upTo)
+    private void AddRoomNumber()
     {
-        var byNumber = adv.Rooms.ToDictionary(r => int.Parse(r.Id[1..]));
-        int max = Math.Min(byNumber.Keys.DefaultIfEmpty(0).Max(), upTo);
-        var list = new List<Room>();
-        for (int n = 0; n <= max; n++)
-            list.Add(byNumber.TryGetValue(n, out var r) ? r : new Room { Id = $"r{n}", Name = $"(unused GAC room {n})", Description = "" });
-        list.AddRange(byNumber.Where(kv => kv.Key > max).OrderBy(kv => kv.Key).Select(kv => kv.Value));
-        int added = list.Count - byNumber.Count;
-        adv.Rooms = list;
-        if (added > 0)
-            Note(upTo == int.MaxValue
-                ? $"ROOM is used as a number somewhere, so {added} placeholder rooms were added to make each room's index equal its GAC number (@room)."
-                : $"ROOM is compared with < or > (up to {upTo}), so {added} placeholder rooms were added to make each room's index up to there equal its GAC number (@room).");
+        foreach (var room in adv.Rooms)
+        {
+            int n = int.Parse(room.Id[1..]);
+            adv.Triggers.Add(new Trigger
+            {
+                Id = $"{RoomVar}_{n}", Name = "GAC room number", Event = TriggerEvent.BeforeEnterRoom, RoomId = room.Id,
+                Priority = 100000, Actions = { new GameAction(ActionType.SetVar, RoomVar, n) },
+            });
+        }
+        adv.Variables.Add(new Variable { Name = RoomVar, InitialValue = db.StartRoom, Description = "GAC ROOM: the number of the player's room" });
+        Note($"ROOM is used as a number, so it is kept in the variable \"{RoomVar}\" by a \"{RoomVar}_n\" trigger for each room.");
     }
 
     private void AddMappingNotes()

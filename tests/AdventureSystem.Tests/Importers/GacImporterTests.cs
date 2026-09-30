@@ -170,28 +170,29 @@ public class GacImporterTests
         .Message(241, "You can't do that.");
 
     [Fact]
-    public void RoomComparedWithConstantsNeedsPlaceholdersOnlyUpToTheConstant()
+    public void RoomComparedWithANumberUsesTheRoomNumberWithoutPlaceholderRooms()
     {
         // Low: IF ( VERB 9 AND ROOM < 3 ) MESS 1 WAIT END
         var b = HighRoomNumbers().Low(9, "VERB", "ROOM", 3, "<", "AND", "IF", 1, "MESS", "WAIT", "END");
         var a = new GacImporter().Import(b.BuildSna(), "t.sna").Adventure;
-        Assert.Equal(new[] { "r0", "r1", "r2", "r3", "r9999" }, a.Rooms.Select(r => r.Id));
+        Assert.Equal(new[] { "r1", "r2", "r9999" }, a.Rooms.Select(r => r.Id));
 
         var e = new GameEngine(a, randomSeed: 1);
         e.Start();
+        Assert.Equal(1, e.GetVar("gac_room"));
         Assert.Contains("Echo!", e.Submit("shout").Text);
         e.Submit("n");
-        Assert.Equal("r9999", e.State.CurrentRoomId);
+        Assert.Equal(9999, e.GetVar("gac_room"));
         Assert.DoesNotContain("Echo!", e.Submit("shout").Text);
     }
 
     [Fact]
-    public void RoomUsedAsANumberKeepsEveryRoomIndexEqualToItsNumber()
+    public void RoomCopiedToACounterIsTheGacRoomNumber()
     {
         // Low: IF ( VERB 9 ) ROOM CSET 7 WAIT END   (counter 7 = the room number)
         var b = HighRoomNumbers().Low(9, "VERB", "IF", "ROOM", 7, "CSET", "WAIT", "END");
         var a = new GacImporter().Import(b.BuildSna(), "t.sna").Adventure;
-        Assert.Equal(10000, a.Rooms.Count);
+        Assert.Equal(3, a.Rooms.Count);
 
         var e = new GameEngine(a, randomSeed: 1);
         e.Start();

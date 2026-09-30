@@ -416,7 +416,7 @@ internal sealed partial class GacConverter
             // l + lo OP r + ro  becomes  l OP r + (ro - lo).
             if (l.Kind is TermKind.Var or TermKind.Room && r.Kind is TermKind.Var or TermKind.Room)
             {
-                if (l.Kind == TermKind.Room || r.Kind == TermKind.Room) needRoomIndex = needExactRoomIndex = true;
+                if (l.Kind == TermKind.Room || r.Kind == TermKind.Room) usesRoomNumber = true;
                 var type = op == GacOps.Eq ? ConditionType.VarEqualsVar : op == GacOps.Lt ? ConditionType.VarLessVar : ConditionType.VarGreaterVar;
                 return CondLit(type, VariableOf(l), r.Offset - l.Offset, VariableOf(r));
             }
@@ -429,9 +429,8 @@ internal sealed partial class GacConverter
                 return CondLit(op == GacOps.Eq ? ConditionType.VarEquals : op == GacOps.Lt ? ConditionType.VarLess : ConditionType.VarGreater, l.Var, k);
             case TermKind.Room:
                 if (op == GacOps.Eq) return CondLit(ConditionType.PlayerIn, $"r{k}");
-                needRoomIndex = true;
-                roomConstMax = Math.Max(roomConstMax, k);
-                return CondLit(op == GacOps.Lt ? ConditionType.VarLess : ConditionType.VarGreater, "@room", k);
+                usesRoomNumber = true;
+                return CondLit(op == GacOps.Lt ? ConditionType.VarLess : ConditionType.VarGreater, RoomVar, k);
             case TermKind.Rand:
             {
                 int max = Math.Max(1, l.N);
@@ -458,7 +457,7 @@ internal sealed partial class GacConverter
         throw new GacConvertException("unsupported comparison");
     }
 
-    private static string VariableOf(Term t) => t.Kind == TermKind.Room ? "@room" : t.Var!;
+    private static string VariableOf(Term t) => t.Kind == TermKind.Room ? RoomVar : t.Var!;
 
     // ---- operands ---------------------------------------------------------------------------------------------
 

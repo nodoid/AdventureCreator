@@ -14,7 +14,8 @@ internal sealed partial class GacCompiler
     private static bool OfLine(string id, string line) =>
         id == line || id.StartsWith(line, StringComparison.Ordinal) && id[line.Length] is '.' or (>= 'a' and <= 'z');
 
-    private static bool Helper(Trigger t) => t.Id.StartsWith("gac_darkness", StringComparison.Ordinal);
+    /// <summary>Triggers the importer adds to model GAC's interpreter (darkness, the room number): not GAC code.</summary>
+    private static bool Helper(Trigger t) => t.Id.StartsWith("gac_darkness", StringComparison.Ordinal) || t.Id.StartsWith("gac_room_", StringComparison.Ordinal);
 
     private readonly List<Compiled> appended = new();
 
@@ -108,7 +109,7 @@ internal sealed partial class GacCompiler
         {
             case "@score": return (VarKind.Counter, 0);
             case "@turns": return (VarKind.Turns, 0);
-            case "@room": return (VarKind.Room, 0);
+            case "@room": case "gac_room": return (VarKind.Room, 0);
             case null: return null;
         }
         if (Numbered(name, 'm') is int m and < 256) return (VarKind.Marker, m);
