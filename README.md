@@ -109,6 +109,9 @@ Every import produces a report. Anything that couldn't be converted exactly is l
 ### Z-code stories
 * A built-in **Z-machine** plays Infocom and Inform games (versions 1–8, including version 6 with Blorb pictures) in the Player, Test Play, the console player and exported apps, with save slots and undo. It passes the CZECH and Praxix conformance tests. See the [guide, chapter 12](docs/12-z-code.md).
 
+### Exporting back to other formats
+*File › Export Game File…* saves a game in the format it was imported from, in Adventure Creator's `.adventure` format, or in another system's format. The formats are PAWS, Quill and GAC snapshots and tapes, Scott Adams `.dat`, Quest `.aslx`/`.quest`, Twine HTML/Twee and Z-code/Blorb. For the 8-bit systems, only what you changed is rebuilt, and an unchanged game exports byte-for-byte identical. A report lists anything the format can't hold. See the [guide, chapter 8](docs/08-exporting.md).
+
 ### Standalone games
 *File › Export Standalone Game…* offers four outputs:
 

@@ -50,11 +50,53 @@ The test project includes complete walkthrough tests for both example games and 
 
 Games are saved as **`.adventure` packages**: a single file containing the game and all its pictures and sounds (see [chapter 9](09-file-format.md)). The Studio can also open plain `.json` game files.
 
+## Exporting the game file — File › Export Game File… (⇧⌘X)
+
+This saves the game as a single file, in one of these formats:
+
+* **The format it was imported from.** This is listed first, marked *original format*. A PAWS game goes back to a `.sna` or `.z80` snapshot, a Quest game to `.aslx`, and so on.
+* **Adventure Creator** (`.adventure`). This is the same as *File › Save As…*.
+* **Another system's format**, for any system that can hold the game (Quest, Twine, Scott Adams, Z-code…).
+
+The same choices are at the top of the *Export Standalone Game…* window, under **1. Game file**.
+
+After exporting, a report gives a summary and lists anything the format couldn't hold, with a count. Things the target system has no place for are always reported, never dropped silently. Examples are a sound in a Scott Adams game, or a timer in PAWS.
+
+### Back to the original format
+
+| Imported from | Exported as | How |
+|---|---|---|
+| **PAWS** (`.sna`, `.z80`, 48K and 128K) | the same snapshot format | Only what you changed is rebuilt (see below). An unchanged game comes out byte-for-byte identical. |
+| **The Quill** (`.sna`, `.z80`) | the same snapshot format | As for PAWS. Illustrator pictures are kept. |
+| **GAC** (`.sna`, `.z80`, `.tap`, `.tzx`) | the same file type | As for PAWS. Tape blocks get correct lengths and checksums. |
+| **Scott Adams** (`.dat`) | a ScottFree / ScottKit `.dat` | The game is compiled into Scott Adams' tables. |
+| **Quest 5** (`.aslx`, `.quest`) | `.aslx`, or `.quest` when it has pictures or sounds | Rooms, objects, exits, verbs and commands; triggers become Quest scripts. Gamebooks stay gamebooks. |
+| **Twine** (`.html`, `.twee`) | Twine 2 archive, or Twee 3 if it came from Twee | Keeps the story format (Harlowe or SugarCube). |
+| **Z-code** (`.z1`–`.z8`, `.zblorb`) | the story file, or a Blorb with its pictures | The story is stored unchanged. |
+
+**How the 8-bit exports work.** The Studio keeps a copy of the original file inside the game package, so this works after saving and reopening too. When you export, the original is imported again and compared with your game:
+
+* **Unchanged** locations, objects, texts, words and table entries keep their original bytes. This includes table entries with condacts the importer couldn't translate.
+* **Edited and new** things are compiled into the system's own form: PAWS condacts, Quill table entries or GAC condition lines, messages, vocabulary and connections. New commands get new words, and new variables get free flags.
+* **Deleted** locations and objects keep their numbers but are left empty, because other entries refer to them by number.
+
+The database is then laid out in the memory it came from. For PAWS it is laid out exactly as the PAWS editor does it, including 128K RAM pages. If your changes no longer fit, the export stops with *"The game is N bytes too big…"*.
+
+If a Quill game doesn't fit, its longest texts may be moved into memory the original left empty. The report says so, so check that game in an emulator. Edited or new pictures can't be written back to the 8-bit formats; the original pictures are kept and the report says so.
+
+Exported PAWS, Quill and GAC games have been checked in the Fuse emulator. An edited PAWS game and an edited Quill game both showed their new descriptions, renamed objects and new commands when played in the original interpreters.
+
+**Things that don't translate.** A few things have no place in some systems:
+
+* Room names: PAWS, Quill and GAC take the name from the description.
+* Game-start and room-entry triggers: PAWS runs these in Process 1, after the location is described.
+* Winning: PAWS and The Quill only have END.
+
 ## Exporting — File › Export Standalone Game… (⇧⌘E)
 
 | Option | Produces | Needs | Platforms |
 |---|---|---|---|
-| **1. Game package** | `MyGame.adventure` | nothing | Opens in the Adventure Player on any platform (*Open a game…*), and in the console player |
+| **1. Game file** | `MyGame.adventure`, or the game in its original or another system's format | nothing | The `.adventure` package opens in the Adventure Player on any platform (*Open a game…*), and in the console player |
 | **2. Native app** | An app with the game built in | .NET SDK + MAUI workload (+ Xcode and signing for Apple) | Android `.apk`, iOS/iPadOS, macOS `.app`, Windows `.exe` |
 | **3. Desktop app from a template** | A copy of the Player app with the game inside, named after the game | a prebuilt template | macOS, Windows |
 | **4. Console executable** | One self-contained text-only program | a prebuilt template | macOS, Windows, Linux |
