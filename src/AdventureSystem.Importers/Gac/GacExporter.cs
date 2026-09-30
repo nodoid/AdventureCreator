@@ -59,9 +59,12 @@ public sealed class GacExporter : IAdventureExporter
             var database = rawDb.Serialize();
             bool dataFile = found.DataFile != null;
             int limit = dataFile ? 0xFF58 : rawDb.FreeLimit();
-            // A data file keeps the padding the editor saved after the dictionary.
-            int tail = found.DataFile is { } df ? Math.Max(0, df.Start + df.Data.Length - rawDb.End) : 2;
+            // A data file keeps the padding the editor saved after the dictionary. A snapshot needs none (the
+            // runtime finds words by counting), but when the database changed size two zeros are written if they
+            // fit, so a reader sees where the dictionary ends.
             int end = rawDb.Start + database.Length;
+            int tail = found.DataFile is { } df ? Math.Max(0, df.Start + df.Data.Length - rawDb.End)
+                : end == rawDb.End ? 0 : Math.Clamp(limit - end, 0, 2);
             if (end + tail > limit)
                 throw new InvalidOperationException($"The game is {end + tail - limit} bytes too big for the memory the GAC database can use.");
             var padding = dataFile ? memory.AsSpan(rawDb.End, tail).ToArray() : new byte[tail];

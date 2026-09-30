@@ -143,6 +143,51 @@ public class GacExporterTests
         Assert.DoesNotContain("Only in the hall.", Play(again, "n", "get"));
     }
 
+    private static ExportResult ForcedExport(Adventure a) =>
+        (ExportResult)typeof(GacExporter).GetMethod("Export", BindingFlags.NonPublic | BindingFlags.Instance)!
+            .Invoke(new GacExporter(), new object[] { a, true })!;
+
+    private static int SnaOffset(int address) => 27 + address - 0x4000;
+
+    [Fact]
+    public void A_database_followed_by_other_bytes_can_still_be_rebuilt_and_edited()
+    {
+        // As in real games, the byte after the dictionary isn't a zero (the builder writes one).
+        var db = Sample().BuildDatabase();
+        var sna = Sample().BuildSna();
+        sna[SnaOffset(GacTestDatabaseBuilder.DatabaseAddress + db.Length - 1)] = 0x9A;
+        Assert.Equal(sna, ForcedExport(Import(sna, "game.sna")).Data);
+
+        var a = Import(sna, "game.sna");
+        a.FindRoom("r2")!.Description = "A garden.";                     // shorter: fits
+        var again = Import(new GacExporter().Export(a).Data, "game.sna");
+        Assert.Equal("A garden.", again.FindRoom("r2")!.Description);
+
+        a.FindRoom("r2")!.Description = "You are in the rose garden, which smells wonderful.";   // longer: no room
+        var error = Assert.Throws<InvalidOperationException>(() => new GacExporter().Export(a));
+        Assert.Contains("too big", error.Message);
+    }
+
+    [Fact]
+    public void A_database_that_reaches_into_the_UDGs_may_use_memory_up_to_the_top()
+    {
+        // Messages fill memory until the database ends just past $FF58, where the UDGs normally start.
+        var b = Sample();
+        int id = 10;
+        while (GacTestDatabaseBuilder.DatabaseAddress + b.BuildDatabase().Length <= 0xFF58)
+            b.Message(id++, string.Join(" ", Enumerable.Repeat("ZIGZAG", 100)));
+        int end = GacTestDatabaseBuilder.DatabaseAddress + b.BuildDatabase().Length - 1;   // without the builder's zero
+        Assert.InRange(end, 0xFF59, 0xFFE0);
+        var sna = b.BuildSna();
+        for (int x = end; x < 0x10000; x++) sna[SnaOffset(x)] = 0x42;       // what is left of the UDGs
+        Assert.Equal(sna, ForcedExport(Import(sna, "game.sna")).Data);
+
+        var a = Import(sna, "game.sna");
+        a.FindRoom("r2")!.Description = "You are in the garden. ZIGZAG.";
+        var again = Import(new GacExporter().Export(a).Data, "game.sna");
+        Assert.Equal("You are in the garden. ZIGZAG.", again.FindRoom("r2")!.Description);
+    }
+
     [Fact]
     public void Deleted_rooms_objects_and_triggers_are_removed()
     {

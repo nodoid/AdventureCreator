@@ -82,9 +82,11 @@ After exporting, a report gives a summary and lists anything the format couldn't
 
 The database is then laid out in the memory it came from. For PAWS it is laid out exactly as the PAWS editor does it, including 128K RAM pages. If your changes no longer fit, the export stops with *"The game is N bytes too big…"*.
 
+A GAC game can grow into the empty memory straight after its database. A GAC game that already reaches into the user-defined graphics (the top of memory) can use the rest of memory up to the end. Many GAC games are nearly full, so an edit that adds text may not fit; shortening other text makes room.
+
 If a Quill game doesn't fit, its longest texts may be moved into memory the original left empty. The report says so, so check that game in an emulator. Edited or new pictures can't be written back to the 8-bit formats; the original pictures are kept and the report says so.
 
-Exported PAWS, Quill and GAC games have been checked in the Fuse emulator. An edited PAWS game and an edited Quill game both showed their new descriptions, renamed objects and new commands when played in the original interpreters.
+Exported PAWS, Quill and GAC games have been checked in the Fuse emulator. An edited PAWS game, an edited Quill game and edited GAC games all showed their new descriptions when played in the original interpreters, and the PAWS and Quill games also showed renamed objects and new commands.
 
 **Things that don't translate.** A few things have no place in some systems:
 

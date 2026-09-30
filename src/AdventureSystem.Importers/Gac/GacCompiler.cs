@@ -221,8 +221,20 @@ internal sealed partial class GacCompiler
             list.Add((number, RoomEntry(room, number, old != null && original.TryGetValue(number, out var o) ? o : null)));
         }
         if (list.Count != raw.Rooms.Count) Changed = true;
+        list = InOriginalOrder(list, raw.Rooms);
         raw.Rooms.Clear();
         raw.Rooms.AddRange(list);
+    }
+
+    /// <summary>
+    /// Entries in the order the original table had them (games don't always keep them sorted by number), new ones
+    /// last, so a rebuilt table differs from the original only where something was edited.
+    /// </summary>
+    private static List<(int, byte[])> InOriginalOrder(List<(int, byte[])> list, List<(int Id, byte[] Bytes)> original)
+    {
+        var position = new Dictionary<int, int>();
+        for (int i = 0; i < original.Count; i++) position.TryAdd(original[i].Id, i);
+        return list.OrderBy(e => position.TryGetValue(e.Item1, out var i) ? i : int.MaxValue).ToList();
     }
 
     private static bool SameExits(Room x, Room y) => J(x.Exits.Select(e => (e.Direction, e.TargetRoomId, e.Conditions.Count, e.Hidden)).ToList())
@@ -287,6 +299,7 @@ internal sealed partial class GacCompiler
             list.Add((number, entry.ToArray()));
         }
         if (list.Count != raw.Objects.Count) Changed = true;
+        list = InOriginalOrder(list, raw.Objects);
         raw.Objects.Clear();
         raw.Objects.AddRange(list);
     }

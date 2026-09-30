@@ -223,9 +223,14 @@ internal sealed class GacRawDatabase
     private static string TokenString(byte[] entry) =>
         new(entry.Skip(1).Select(c => (char)(c & 0x7F)).ToArray());
 
-    /// <summary>The free bytes after the database: a run of zeros, below the UDGs at $FF58.</summary>
+    /// <summary>
+    /// One past the last byte the database may use: its own extent, then a run of zeros below the UDGs at $FF58.
+    /// A Spectrum game whose database already reaches into the UDGs has overwritten them, so it may use the rest of
+    /// memory up to $FFFF.
+    /// </summary>
     public int FreeLimit()
     {
+        if (Layout.Machine == GacMachine.Spectrum && End > 0xFF58) return 0x10000;
         int a = End;
         while (a < 0xFF58 && mem[a] == 0) a++;
         return a;
