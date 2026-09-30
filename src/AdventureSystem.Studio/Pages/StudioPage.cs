@@ -206,6 +206,16 @@ public sealed partial class StudioPage : ContentPage
         SetDocument(new StudioDocument(parts[0].Equals("genesis", StringComparison.OrdinalIgnoreCase) ? ExampleAdventures.Genesis() : ExampleAdventures.Lighthouse()));
         if (parts.Length < 2 || !Enum.TryParse<Section>(parts[1], true, out var s)) return;
         ShowSection(s);
+        // lighthouse:TestPlay:n;look plays those commands.
+        if (s == Section.TestPlay && parts.Length >= 3)
+        {
+            Dispatcher.DispatchDelayed(TimeSpan.FromSeconds(1.5), async () =>
+            {
+                foreach (var command in parts[2].Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                    if (testPlayer != null) await testPlayer.SubmitAsync(command);
+            });
+            return;
+        }
         if (parts.Length < 3 || !int.TryParse(parts[2], out var index) || index < 0 || index >= rows.Count) return;
         Select(rows[index].Item);
         if (FindPictureEditor(detail) is { } editor)
@@ -698,13 +708,7 @@ public sealed partial class StudioPage : ContentPage
         var loadBtn = new Button { Text = "Load position…" };
         loadBtn.Clicked += async (_, _) => { if (testPlayer != null) await testPlayer.ShowLoadDialogAsync(); };
         var walkthrough = new Button { Text = "Run commands…" };
-        walkthrough.Clicked += async (_, _) =>
-        {
-            var text = await DisplayPromptAsync("Run commands", "Commands separated by semicolons (a quick walkthrough test):", maxLength: 4000);
-            if (string.IsNullOrWhiteSpace(text) || testPlayer == null) return;
-            foreach (var c in text.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-                await testPlayer.SubmitAsync(c);
-        };
+        walkthrough.Clicked += async (_, _) => await RunCommandsAsync();
         void UpdateWatch()
         {
             var e = testPlayer?.Engine;
@@ -764,6 +768,15 @@ public sealed partial class StudioPage : ContentPage
         testPlayer.Load(clone, new FileSaveStorage(Path.Combine(FileSystem.AppDataDirectory, "TestSaves", StandaloneExporter.SafeFileName(clone.Title))));
         testPlayer.TurnCompleted += (_, _) => UpdateWatch();
         Dispatcher.DispatchDelayed(TimeSpan.FromMilliseconds(300), UpdateWatch);
+    }
+
+    /// <summary>Asks for commands separated by semicolons and plays them (a quick walkthrough test).</summary>
+    private async Task RunCommandsAsync()
+    {
+        var text = await DisplayPromptAsync("Run commands", "Commands separated by semicolons (a quick walkthrough test):", maxLength: 4000);
+        if (string.IsNullOrWhiteSpace(text) || testPlayer == null) return;
+        foreach (var c in text.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            await testPlayer.SubmitAsync(c);
     }
 
     // =========================================================== add / duplicate / delete

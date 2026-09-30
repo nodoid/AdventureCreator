@@ -6,6 +6,11 @@ public static class WindowSizing
     /// <summary>Sets the preferred size (clamped to the screen), centres the window, and sets a minimum size.</summary>
     public static void Apply(Window window, double width, double height, double minWidth, double minHeight)
     {
+#if DEBUG
+        // Development aid for store screenshots: AC_WINDOW_SIZE=1440x900 asks for exactly that size.
+        if (Environment.GetEnvironmentVariable("AC_WINDOW_SIZE")?.Split('x') is [var ws, var hs] && double.TryParse(ws, out var fw) && double.TryParse(hs, out var fh))
+            (width, height) = (fw, fh);
+#endif
         // Never ask for more than the screen: small displays and VMs would otherwise get a window that runs off-screen.
         var display = DeviceDisplay.Current.MainDisplayInfo;
         double density = display.Density > 0 ? display.Density : 1;

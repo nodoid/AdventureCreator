@@ -52,8 +52,21 @@ public sealed partial class StudioPage
             case "validate": _ = ValidateAsync(); break;
             case "previous": testPlayer?.RecallPrevious(); break;
             case "next": testPlayer?.RecallNext(); break;
+            case "runcommands": EnsureTestPlay(); _ = RunCommandsAsync(); break;
+            case "savepos": EnsureTestPlay(); if (testPlayer != null) _ = testPlayer.ShowSaveDialogAsync(); break;
+            case "loadpos": EnsureTestPlay(); if (testPlayer != null) _ = testPlayer.ShowLoadDialogAsync(); break;
+            case "watch": EnsureTestPlay(); ToggleWatch(); break;
+            case "commandline": EnsureTestPlay(); testPlayer?.FocusInput(); break;
             case "guide": _ = ShowUserGuideAsync(); break;
         }
+    }
+
+    /// <summary>Test Play commands work from anywhere: they open Test Play first.</summary>
+    private void EnsureTestPlay()
+    {
+        if (section == Section.TestPlay && testPlayer != null) return;
+        ShowSection(Section.TestPlay);
+        ItemPicked();
     }
 
     private View BuildTabletLayout(View sidebarScroll)

@@ -17,6 +17,7 @@ public partial class App : Application
 		{
 			Title = AppInfo.Current.Name,
 		};
+		AdventureSystem.Maui.ScreenshotAids.Apply(window);
 		if (DeviceInfo.Idiom == DeviceIdiom.Desktop || DeviceInfo.Platform == DevicePlatform.MacCatalyst)
 		{
 			AdventureSystem.Maui.WindowSizing.Apply(window, 900, 820, 480, 500);

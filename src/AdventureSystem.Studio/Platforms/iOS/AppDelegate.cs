@@ -50,7 +50,14 @@ public class AppDelegate : MauiUIApplicationDelegate
 			Key("Test Play", "show:TestPlay", "r"),
 			Key("Validate", "validate", "k"),
 			Key("Show Map", "show:Map", "m", Cmd | Shift),
-			Inline(Key("Previous Command", "previous", UIKeyCommand.UpArrow, Cmd | Alt), Key("Next Command", "next", UIKeyCommand.DownArrow, Cmd | Alt)),
+			Inline(
+				Key("Go to Command Line", "commandline", "l"),
+				Key("Previous Command", "previous", UIKeyCommand.UpArrow, Cmd | Alt),
+				Key("Next Command", "next", UIKeyCommand.DownArrow, Cmd | Alt),
+				Key("Run Commands…", "runcommands", "r", Cmd | Shift),
+				Key("Save Position…", "savepos", "s", Cmd | Alt),
+				Key("Load Position…", "loadpos", "l", Cmd | Alt),
+				Key("Show or Hide Watch", "watch", "0", Cmd | Alt)),
 		});
 		builder.InsertSiblingMenuAfter(adventure, UIMenuIdentifier.View.GetConstant());
 

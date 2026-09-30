@@ -75,6 +75,19 @@ public sealed class PlayerPage : ContentPage
 			embedded = true;
 			Play(game);
 		}
+#if DEBUG
+		// Development aid for store screenshots: AC_PLAYER_DEMO=lighthouse[;command;command…] plays the example.
+		else if (Environment.GetEnvironmentVariable("AC_PLAYER_DEMO") is { Length: > 0 } demo)
+		{
+			var parts = demo.Split(';', StringSplitOptions.TrimEntries);
+			player.AutosaveEnabled = false;
+			var example = parts[0].Equals("genesis", StringComparison.OrdinalIgnoreCase) ? ExampleAdventures.Genesis() : ExampleAdventures.Lighthouse();
+			example.Settings.PagedOutput = false;   // no *more* stops in the middle of a screenshot
+			Play(example);
+			await Task.Delay(1500);
+			foreach (var command in parts.Skip(1).Where(c => c.Length > 0)) await player.SubmitAsync(command);
+		}
+#endif
 	}
 
 	protected override void OnDisappearing()

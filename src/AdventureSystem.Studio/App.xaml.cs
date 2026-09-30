@@ -25,6 +25,7 @@ public partial class App : Application
 		{
 			Title = "Adventure System Studio",
 		};
+		AdventureSystem.Maui.ScreenshotAids.Apply(window);
 #if IOS
 		// Open on the Studio with the last adventure (unless a development demo was asked for), and save whenever the app is put away.
 		bool demo = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("AC_STUDIO_DEMO")) || !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("AC_STUDIO_DEMO_FILE"));

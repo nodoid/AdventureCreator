@@ -267,7 +267,7 @@ public sealed class GamePlayerView : ContentView
     /// <summary>If an autosave exists, offers to continue from it. Returns true if the player continued.</summary>
     public async Task<bool> OfferContinueAsync()
     {
-        if (engine == null || HostPage is not { } page || engine.ReadSave(GameEngine.AutosaveSlot) is not { Turns: > 0 } auto) return false;
+        if (!AutosaveEnabled || engine == null || HostPage is not { } page || engine.ReadSave(GameEngine.AutosaveSlot) is not { Turns: > 0 } auto) return false;
         if (!await page.DisplayAlertAsync("Continue?", $"Continue where you left off?\n{auto.RoomName}, turn {auto.Turns}, score {auto.Score}/{auto.MaxScore}", "Continue", "New game"))
             return false;
         transcript.Children.Clear();
@@ -464,10 +464,13 @@ public sealed class GamePlayerView : ContentView
 
     public void FocusInput() => input.Focus();
 
-    /// <summary>On phones the on-screen keyboard would cover the game, so the command box only takes focus on larger screens.</summary>
+    /// <summary>
+    /// The command box only takes focus by itself on the desktop: on a phone or tablet the on-screen keyboard would
+    /// come up over the game (tap the box to type).
+    /// </summary>
     private void FocusIfDesktop()
     {
-        if (DeviceInfo.Idiom != DeviceIdiom.Phone) input.Focus();
+        if (DeviceInfo.Platform == DevicePlatform.MacCatalyst || DeviceInfo.Platform == DevicePlatform.WinUI) input.Focus();
     }
 
     private string? Previous()

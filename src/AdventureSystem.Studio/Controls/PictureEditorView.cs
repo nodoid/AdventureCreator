@@ -310,7 +310,12 @@ public sealed class PictureEditorView : ContentView
         {
             if (!selfChange && ReferenceEquals(what, picture)) { UpdateSubtitle(); RefreshImage(); BuildColourSection(); }
         }
-        Loaded += (_, _) => ctx.Document.Changed += OnDocumentChanged;
+        Loaded += (_, _) =>
+        {
+            ctx.Document.Changed += OnDocumentChanged;
+            // An animated picture plays as soon as it's opened (■ Stop freezes it for editing).
+            if (picture.HasAnimations) SetAnimating(true);
+        };
         Unloaded += (_, _) => { ctx.Document.Changed -= OnDocumentChanged; animationTimer?.Stop(); };
 
         bool expanded = false;
