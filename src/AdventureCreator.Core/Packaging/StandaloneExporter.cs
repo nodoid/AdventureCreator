@@ -256,8 +256,7 @@ public static class StandaloneExporter
         var args = new StringBuilder();
         // Simulator apps are built, not published (publishing produces a signed device archive).
         args.Append(target == BuildTarget.iOSSimulator ? "build" : "publish");
-        // Only the chosen platform is restored and built (faster, and a runtime id never leaks into the other targets).
-        args.Append($" \"{playerProject}\" -f {framework} -p:TargetFrameworks={framework} -c {options.Configuration}");
+        args.Append($" \"{playerProject}\" -f {framework} -c {options.Configuration}");
         // Android/Windows build in a private folder per export. The Apple SDK mis-places the app executable when
         // --artifacts-path is used, so Apple targets build in the project's own bin/obj with a full (non-incremental)
         // build, which guarantees the new game, title and bundle id are used.
