@@ -150,6 +150,8 @@ public sealed class StudioPage : ContentPage
         ((Grid)Content).Add(statusBar, 0, 1);
 
         BuildMenus();
+        // Windows: the navigation bar only hosts the menus; the window's own title bar already shows the title.
+        if (DeviceInfo.Platform == DevicePlatform.WinUI) NavigationPage.SetTitleView(this, new ContentView());
         AttachDocument(doc);
         ShowSection(Section.Game);
     }

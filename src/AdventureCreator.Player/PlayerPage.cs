@@ -60,6 +60,7 @@ public sealed class PlayerPage : ContentPage
 		// Mac windows show the title in the title bar and menus in the system menu bar, so no navigation bar is needed.
 		// Windows shows MenuBarItems inside the navigation bar, so it must stay visible there.
 		NavigationPage.SetHasNavigationBar(this, DeviceInfo.Platform != DevicePlatform.MacCatalyst);
+		if (DeviceInfo.Platform == DevicePlatform.WinUI) NavigationPage.SetTitleView(this, new ContentView());
 		BuildMenus();
 	}
 
