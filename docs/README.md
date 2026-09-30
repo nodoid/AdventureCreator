@@ -17,6 +17,7 @@ publishing games as standalone apps.
 | [8. Testing, exporting and publishing](08-exporting.md) | Test Play, validation, game packages, standalone apps, signing |
 | [9. File format](09-file-format.md) | The `.adventure` package, its JSON and save files |
 | [10. NPCs, random events, traps and flooding](10-npcs-and-events.md) | Characters with a life of their own, things that happen by chance, hazards and health |
+| [11. Import walkthroughs](11-import-walkthroughs.md) | A PAWS, a Quill/Illustrator and a GAC game imported step by step: what each part becomes in the Studio, the limitations you'll meet, and how to fix them |
 
 **Quick start:** open the Studio, choose **File › Open Example: The Lighthouse**, then **Adventure › Test Play** (⌘R).
 Play a few moves, then look at the Rooms, Items and Triggers sections to see how the game is built.

@@ -15,7 +15,7 @@ The full **[User Guide](docs/README.md)** covers:
 * a reference for rooms, items, triggers, the parser and custom commands
 * NPCs, random events, traps, flooding and health
 * pictures and sound
-* **importing PAWS, Quill/Illustrator and GAC games, with their limitations**
+* **importing PAWS, Quill/Illustrator and GAC games, with their limitations**, plus a step-by-step walkthrough for each system
 * exporting standalone games, and the file format
 
 The same guide is available in the Studio under **Help › User Guide…** (⇧⌘?).

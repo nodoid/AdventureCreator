@@ -16,6 +16,8 @@ You can play it straight away, edit it, add sound and new puzzles, and export it
 
 Only import games you have the right to use: your own, public-domain or freely distributable titles, or for private study.
 
+For a worked example of each system, showing an original listing, the import report and exactly what every entry becomes in the Studio, see **[chapter 11, Import walkthroughs](11-import-walkthroughs.md)**.
+
 ---
 
 ## 1. Getting a file to import

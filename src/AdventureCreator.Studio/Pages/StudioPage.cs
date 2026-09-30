@@ -1024,6 +1024,7 @@ public sealed class StudioPage : ContentPage
         ("08-exporting.md", "8. Testing, exporting and publishing"),
         ("09-file-format.md", "9. File format"),
         ("10-npcs-and-events.md", "10. NPCs, random events, traps and flooding"),
+        ("11-import-walkthroughs.md", "11. Import walkthroughs (PAWS, Quill, GAC)"),
     };
 
     private async Task ShowUserGuideAsync()
