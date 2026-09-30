@@ -61,6 +61,8 @@
 
 		<!-- The user guide (docs/*.md), shown by Help › User Guide. -->
 		<MauiAsset Include="..\..\docs\*.md" LogicalName="docs/%(Filename)%(Extension)" />
+		<!-- The built-in CC0 sound library (Sounds › Sound library), with its credits and licences. -->
+		<MauiAsset Include="..\..\assets\sounds\*" LogicalName="sounds/%(Filename)%(Extension)" />
 	</ItemGroup>
 
 	<ItemGroup>

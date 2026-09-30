@@ -6,4 +6,9 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <!-- The few library sounds used by the example games (the Studio bundles the whole library). CC0 – see assets/sounds/CREDITS.md. -->
+    <EmbeddedResource Include="..\..\assets\sounds\waves.wav;..\..\assets\sounds\foghorn.wav;..\..\assets\sounds\creak.wav;..\..\assets\sounds\fanfare.wav;..\..\assets\sounds\wind.wav;..\..\assets\sounds\engine_hum.wav;..\..\assets\sounds\alarm.wav;..\..\assets\sounds\explosion_deep.wav;..\..\assets\sounds\force_field.wav"
+                      LogicalName="sounds.%(Filename)%(Extension)" />
+  </ItemGroup>
 </Project>

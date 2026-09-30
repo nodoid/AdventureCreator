@@ -63,8 +63,6 @@ public sealed class SoundEditorView : ContentView
         var playSelection = Button("▶ Selection", "Play the selected part", () => Play(selectionOnly: true));
         var stop = Button("■ Stop", "Stop playing", () => audio.StopAll());
         var replace = Button("Replace with audio file…", "Import a WAV, MP3 or M4A file in place of this sound", async () => await ReplaceAsync());
-        var makeEffect = Button("Make it a sound effect", "Replace this sound with a generated effect you can design", () => StartEffect("Pickup"));
-        makeEffect.IsVisible = sound.Effect == null;
 
         Content = new VerticalStackLayout
         {
@@ -72,11 +70,12 @@ public sealed class SoundEditorView : ContentView
             Children =
             {
                 new VerticalStackLayout { Spacing = 2, Children = { title, subtitle } },
-                new FlexLayout { Wrap = Microsoft.Maui.Layouts.FlexWrap.Wrap, Children = { play, playSelection, stop, replace, makeEffect } },
+                new FlexLayout { Wrap = Microsoft.Maui.Layouts.FlexWrap.Wrap, Children = { play, playSelection, stop, replace } },
                 waveFrame,
                 timeInfo,
                 status,
                 PlaybackSettings(),
+                libraryView,
                 designer,
                 editTools,
                 new SectionView("Sound", new ObjectEditor(sound, ctx, only: new[] { "Id", "Name" })),
@@ -94,6 +93,7 @@ public sealed class SoundEditorView : ContentView
         LoadSamples();
         BuildDesigner();
         BuildEditTools();
+        _ = LoadLibraryAsync();
     }
 
     // =================================================================== loading and saving
@@ -147,7 +147,9 @@ public sealed class SoundEditorView : ContentView
             if (undo.Count > 50) undo.RemoveAt(0);
             redo.Clear();
         }
-        if (!sound.AssetName.EndsWith(".wav", StringComparison.OrdinalIgnoreCase))
+        // Edited audio is WAV, and gets its own file if another sound shares the old one.
+        bool shared = ctx.Adventure.Sounds.Any(s => s != sound && s.AssetName == sound.AssetName);
+        if (shared || !sound.AssetName.EndsWith(".wav", StringComparison.OrdinalIgnoreCase))
         {
             var old = sound.AssetName;
             sound.AssetName = UniqueAssetName();
@@ -184,6 +186,7 @@ public sealed class SoundEditorView : ContentView
 
     // =================================================================== playback settings
 
+    private readonly Switch repeat = new() { VerticalOptions = LayoutOptions.Center, HorizontalOptions = LayoutOptions.Start };
     private readonly Grid cutOffRow = new() { ColumnDefinitions = { new(new GridLength(90)), new(GridLength.Star), new(new GridLength(70)) }, ColumnSpacing = 8 };
     private readonly Slider cutOffSlider = new() { Minimum = 0, Maximum = 10, VerticalOptions = LayoutOptions.Center };
     private readonly Label cutOffValue = new() { FontSize = 12, TextColor = Theme.SecondaryText, HorizontalTextAlignment = TextAlignment.End, VerticalOptions = LayoutOptions.Center };
@@ -216,7 +219,7 @@ public sealed class SoundEditorView : ContentView
         var volumeRow = Row("Volume", volume, volumeValue);
         ToolTipProperties.SetText(volumeRow, "How loud the sound plays in the game, from 0 (silent) to 10 (full)");
 
-        var repeat = new Switch { IsToggled = sound.Repeat, VerticalOptions = LayoutOptions.Center, HorizontalOptions = LayoutOptions.Start };
+        repeat.IsToggled = sound.Repeat;
         repeat.Toggled += (_, e) =>
         {
             sound.Repeat = e.Value;
@@ -265,6 +268,122 @@ public sealed class SoundEditorView : ContentView
         waveform.Invalidate();
     }
 
+    // =================================================================== sound library
+
+    private static IReadOnlyList<SoundLibraryEntry>? library;
+    private static string libraryCategory = "";
+    private readonly VerticalStackLayout libraryView = new() { Spacing = 8 };
+
+    /// <summary>Names new sounds get, which choosing a library sound replaces with its own name.</summary>
+    public static readonly string[] DefaultNames = { "New sound", "New sound effect" };
+
+    private async Task LoadLibraryAsync()
+    {
+        try
+        {
+            if (library == null)
+            {
+                await using var stream = await FileSystem.OpenAppPackageFileAsync("sounds/library.json");
+                using var reader = new StreamReader(stream);
+                library = SoundLibrary.Parse(await reader.ReadToEndAsync());
+            }
+        }
+        catch (Exception ex)
+        {
+            library = Array.Empty<SoundLibraryEntry>();
+            status.Text = "The sound library couldn't be loaded: " + ex.Message;
+        }
+        BuildLibrary();
+    }
+
+    private void BuildLibrary()
+    {
+        libraryView.Children.Clear();
+        if (library == null || library.Count == 0) return;
+        libraryView.Children.Add(Heading("Sound library"));
+        libraryView.Children.Add(new Label
+        {
+            Text = $"{library.Count} free recordings (CC0: yours to use in any game). ▶ to listen, Use to put it in this sound. Credits: Help › Sound Library Credits.",
+            FontSize = 12, TextColor = Theme.SecondaryText,
+        });
+
+        var categories = SoundLibrary.Categories(library);
+        if (!categories.Contains(libraryCategory)) libraryCategory = categories[0];
+        var tabs = new FlexLayout { Wrap = Microsoft.Maui.Layouts.FlexWrap.Wrap };
+        foreach (var c in categories)
+        {
+            var chip = new Chip(c) { IsSelected = c == libraryCategory };
+            chip.Clicked += (_, _) => { libraryCategory = c; BuildLibrary(); };
+            tabs.Children.Add(chip);
+        }
+        var synth = new Chip("🎛 Retro synthesiser", "Generate a retro beep-style effect from settings instead");
+        synth.IsSelected = sound.Effect != null;
+        synth.Clicked += (_, _) => { if (sound.Effect == null) StartEffect("Pickup"); };
+        tabs.Children.Add(synth);
+        libraryView.Children.Add(tabs);
+
+        var tiles = new FlexLayout { Wrap = Microsoft.Maui.Layouts.FlexWrap.Wrap };
+        foreach (var e in library.Where(e => e.Category == libraryCategory))
+        {
+            var listen = new Chip("▶", "Listen");
+            listen.Clicked += async (_, _) => { if (await LibraryBytesAsync(e) is { } b) audio.Preview(b, sound.Volume); };
+            var use = new Chip("Use", $"Use \"{e.Name}\" for this sound (Undo puts the old one back)");
+            use.Clicked += async (_, _) => await UseLibrarySoundAsync(e);
+            var text = new VerticalStackLayout
+            {
+                Spacing = 0, VerticalOptions = LayoutOptions.Center,
+                Children =
+                {
+                    new Label { Text = e.Name, FontSize = 13, TextColor = Theme.Text, LineBreakMode = LineBreakMode.TailTruncation },
+                    new Label { Text = $"{e.Seconds:0.0} s{(e.Loop ? " · loops" : "")}", FontSize = 11, TextColor = Theme.SecondaryText },
+                },
+            };
+            var row = new Grid { ColumnDefinitions = { new(GridLength.Star), new(GridLength.Auto), new(GridLength.Auto) }, ColumnSpacing = 2 };
+            row.Add(text, 0);
+            row.Add(listen, 1);
+            row.Add(use, 2);
+            ToolTipProperties.SetText(text, $"{e.Name} – {e.Author}, {e.Source} ({e.Licence})");
+            tiles.Children.Add(new Border
+            {
+                Content = row, WidthRequest = 250, HeightRequest = 50, Margin = new Thickness(0, 0, 8, 8), Padding = new Thickness(10, 4, 6, 0),
+                BackgroundColor = Theme.Pane, Stroke = Theme.Border, StrokeThickness = 1,
+                StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 6 },
+            });
+        }
+        libraryView.Children.Add(tiles);
+    }
+
+    private static async Task<byte[]?> LibraryBytesAsync(SoundLibraryEntry e)
+    {
+        try
+        {
+            await using var stream = await FileSystem.OpenAppPackageFileAsync("sounds/" + e.File);
+            using var ms = new MemoryStream();
+            await stream.CopyToAsync(ms);
+            return ms.ToArray();
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private async Task UseLibrarySoundAsync(SoundLibraryEntry e)
+    {
+        if (await LibraryBytesAsync(e) is not { } bytes) { status.Text = $"\"{e.Name}\" couldn't be loaded."; return; }
+        bool wasEffect = sound.Effect != null;
+        Store(bytes, null);
+        if (DefaultNames.Contains(sound.Name)) sound.Name = e.Name;
+        sound.Repeat = e.Loop;
+        repeat.IsToggled = e.Loop;
+        UpdateCutOff();
+        ctx.Changed(sound);
+        if (wasEffect) BuildDesigner();
+        BuildLibrary();
+        status.Text = $"Using \"{e.Name}\" by {e.Author}." + (e.Loop ? " Repeat is on, as it's made to loop." : "");
+        Play(false);
+    }
+
     // =================================================================== effect designer
 
     private void StartEffect(string preset, int? seed = null)
@@ -272,6 +391,7 @@ public sealed class SoundEditorView : ContentView
         var fx = SfxPresets.Make(preset, seed);
         Store(SfxSynth.RenderWav(fx), fx);
         BuildDesigner();
+        BuildLibrary();
         if (autoPlay.IsChecked) Play(false);
     }
 
@@ -281,7 +401,12 @@ public sealed class SoundEditorView : ContentView
         var fx = sound.Effect;
         if (fx == null) return;
 
-        designer.Children.Add(Heading("Sound effect designer"));
+        designer.Children.Add(Heading("Retro synthesiser"));
+        designer.Children.Add(new Label
+        {
+            Text = "This sound is generated from the settings below, like the beeps of 8-bit games. For real-world sounds, pick one from the sound library above.",
+            FontSize = 12, TextColor = Theme.SecondaryText,
+        });
         var presets = new FlexLayout { Wrap = Microsoft.Maui.Layouts.FlexWrap.Wrap };
         foreach (var (name, icon) in SfxPresets.Names)
         {

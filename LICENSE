@@ -27,6 +27,13 @@ this project. It does not cover, and cannot grant rights in:
     (Apache License 2.0), the font8x8 bitmap font (public domain), and the NuGet
     packages the projects reference (.NET MAUI, CommunityToolkit.Maui,
     Plugin.Maui.Audio – see their licences).
+  * The sound library in assets/sounds: recordings by Kenney (kenney.nl),
+    rubberduck, WuxiaScrub, jasinski/qubodup, fvcalderan, Musheran,
+    SketchMan3, JaggedStone and pyranostudios, all released under Creative
+    Commons Zero (CC0 1.0, public domain). See assets/sounds/CREDITS.md for
+    every sound and its source, assets/sounds/CC0-1.0.txt for the licence
+    text and assets/sounds/Kenney-License.txt. The example games use some of
+    these recordings.
   * Characters, names and trademarks belonging to others. In particular the
     "Genesis" example adventure is a fan work inspired by Doctor Who; Doctor Who,
     the Daleks, Davros and related names are owned by the BBC.

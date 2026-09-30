@@ -1,0 +1,89 @@
+# pack	file	id	name	category	loop	maxSeconds
+K-RPG	doorOpen_1.ogg	door_open	Door opens	Doors and locks	0	0
+K-RPG	doorOpen_2.ogg	door_open_2	Door opens (heavy)	Doors and locks	0	0
+K-RPG	doorClose_1.ogg	door_close	Door closes	Doors and locks	0	0
+K-RPG	doorClose_4.ogg	door_close_2	Door slams	Doors and locks	0	0
+K-RPG	creak1.ogg	creak	Creak	Doors and locks	0	0
+K-RPG	creak3.ogg	creak_2	Long creak	Doors and locks	0	0
+K-RPG	metalLatch.ogg	latch	Metal latch	Doors and locks	0	0
+RD100	key_open_01.ogg	unlock	Key unlocks	Doors and locks	0	0
+RDRPG	lock_01.ogg	lock	Lock	Doors and locks	0	0
+RD100	wooded_box_open.ogg	chest_open	Chest opens	Doors and locks	0	0
+K-SCI	doorOpen_000.ogg	scifi_door_open	Sci-fi door opens	Doors and locks	0	0
+K-SCI	doorClose_000.ogg	scifi_door_close	Sci-fi door closes	Doors and locks	0	0
+K-IMP	footstep_wood_000.ogg	step_wood	Footstep, wood	Footsteps	0	0
+K-IMP	footstep_concrete_000.ogg	step_stone	Footstep, stone	Footsteps	0	0
+K-IMP	footstep_grass_000.ogg	step_grass	Footstep, grass	Footsteps	0	0
+K-IMP	footstep_snow_000.ogg	step_snow	Footstep, snow	Footsteps	0	0
+K-IMP	footstep_carpet_000.ogg	step_carpet	Footstep, carpet	Footsteps	0	0
+RD100v2	sfx100v2_footstep_wet_01.ogg	step_wet	Footstep, wet	Footsteps	0	0
+K-RPG	footstep05.ogg	step_leather	Footstep, leather boot	Footsteps	0	0
+K-RPG	handleCoins.ogg	coins	Coins	Objects	0	0
+RDRPG	item_gem_04.ogg	gem	Gem	Objects	0	0
+K-RPG	bookOpen.ogg	book_open	Book opens	Objects	0	0
+K-RPG	bookClose.ogg	book_close	Book closes	Objects	0	0
+K-RPG	bookFlip1.ogg	page_turn	Page turns	Objects	0	0
+RD100	paper_01.ogg	paper	Paper	Objects	0	0
+K-RPG	cloth1.ogg	cloth	Cloth	Objects	0	0
+K-RPG	drawKnife1.ogg	draw_blade	Blade drawn	Objects	0	0
+K-RPG	chop.ogg	chop	Chop	Objects	0	0
+K-RPG	metalPot1.ogg	metal_pot	Metal pot	Objects	0	0
+RD100	switch_01.ogg	switch	Switch	Objects	0	0
+RDRPG	item_stone_01.ogg	stone	Stone	Objects	0	0
+K-IMP	impactGlass_light_000.ogg	glass	Glass clink	Objects	0	0
+K-IMP	impactGlass_heavy_000.ogg	glass_break	Glass breaks	Objects	0	0
+K-IMP	impactPunch_heavy_000.ogg	punch	Punch	Impacts	0	0
+RD100	hit_01.ogg	hit	Hit	Impacts	0	0
+K-IMP	impactWood_heavy_000.ogg	wood_thump	Wooden thump	Impacts	0	0
+K-IMP	impactMetal_heavy_000.ogg	metal_clang	Metal clang	Impacts	0	0
+K-IMP	impactBell_heavy_000.ogg	bell	Bell	Impacts	0	0
+K-IMP	impactSoft_heavy_000.ogg	thud	Soft thud	Impacts	0	0
+RD100	slam_06.ogg	slam	Slam	Impacts	0	0
+RDRPG	stones_01.ogg	rockfall	Falling stones	Impacts	0	0
+RDBANG	shot_01.ogg	gunshot	Gunshot	Impacts	0	0
+RDBANG	cannon_01.ogg	cannon	Cannon	Impacts	0	0
+RD100	explosion.ogg	explosion	Explosion	Explosions	0	0
+K-SCI	lowFrequency_explosion_000.ogg	explosion_deep	Deep explosion	Explosions	0	0
+K-SCI	explosionCrunch_000.ogg	explosion_crunch	Crunching explosion	Explosions	0	0
+RDBANG	bang_01.ogg	bang	Bang	Explosions	0	0
+RDBANG	fw_01.ogg	firework	Firework	Explosions	0	0
+RDWATER	splash_01.ogg	splash	Splash	Water	0	0
+RDWATER	splash_05.ogg	splash_small	Small splash	Water	0	0
+RDWATER	bubble_01.ogg	bubbles	Bubbles	Water	0	0
+RD100	plop_01.ogg	drip	Drip	Water	0	0
+RDWATER	loop_water_01.ogg	stream	Running water	Water	1	12
+QUBO	wave_01_cc0-18363__jasinski__alkaibeach.flac	waves	Sea waves	Water	1	0
+RDLOOP	water_boiling.ogg	boiling	Boiling water	Water	1	10
+RD100v2	sfx100v2_thunder_01.ogg	thunder	Thunder	Weather and ambience	0	0
+WUXIA	rain-thunder.ogg	storm	Rain and thunderclap	Weather and ambience	0	23	15
+RDWATER	loop_rain.ogg	rain	Rain	Weather and ambience	1	12
+SKETCH	wind_woosh_loop.ogg	wind	Wind	Weather and ambience	1	0
+MUSH-R	low-rumbling.mp3	rumble	Low rumble	Weather and ambience	1	12
+JAGGED	dungeon_ambient_1.ogg	dungeon	Dungeon ambience	Weather and ambience	1	20
+RDLOOP	machine_01.ogg	machinery	Machinery	Weather and ambience	1	10
+RDLOOP	alarm_01.ogg	alarm	Alarm	Weather and ambience	1	10
+MUSH-F	foghorn_kinda_gross.mp3	foghorn	Foghorn	Weather and ambience	0	0
+PYRANO	whoosh2.wav	whoosh	Whoosh	Weather and ambience	0	0
+RDRPG	spell_01.ogg	spell	Spell	Magic and sci-fi	0	0
+RDRPG	spell_fire_01.ogg	fire_spell	Fire spell	Magic and sci-fi	0	0
+K-SCI	forceField_000.ogg	force_field	Force field	Magic and sci-fi	0	0
+K-SCI	laserSmall_000.ogg	laser	Laser	Magic and sci-fi	0	0
+K-SCI	laserLarge_000.ogg	laser_big	Big laser	Magic and sci-fi	0	0
+K-SCI	laserRetro_000.ogg	laser_retro	Retro laser	Magic and sci-fi	0	0
+K-DIG	powerUp1.ogg	power_up	Power-up	Magic and sci-fi	0	0
+K-DIG	zap1.ogg	zap	Zap	Magic and sci-fi	0	0
+K-DIG	phaserUp1.ogg	phaser	Phaser	Magic and sci-fi	0	0
+K-DIG	phaseJump1.ogg	teleport	Teleport	Magic and sci-fi	0	0
+K-SCI	computerNoise_000.ogg	computer	Computer	Magic and sci-fi	0	0
+K-SCI	spaceEngineLow_000.ogg	engine_hum	Engine hum	Magic and sci-fi	1	0
+RDRPG	creature_monster_01.ogg	monster	Monster	Creatures	0	0
+RDRPG	creature_hurt_01.ogg	hurt	Hurt	Creatures	0	0
+RDRPG	creature_die_01.ogg	creature_dies	Creature dies	Creatures	0	0
+RDRPG	creature_slime_01.ogg	slime	Slime	Creatures	0	0
+K-UI	confirmation_001.ogg	confirm	Confirm	Interface and music	0	0
+K-UI	error_001.ogg	error	Error	Interface and music	0	0
+K-UI	click_001.ogg	click	Click	Interface and music	0	0
+K-UI	select_001.ogg	select	Select	Interface and music	0	0
+K-UI	question_001.ogg	question	Question	Interface and music	0	0
+K-UI	bong_001.ogg	bong	Bong	Interface and music	0	0
+FVC	fanfare_3.ogg	fanfare	Fanfare	Interface and music	0	0

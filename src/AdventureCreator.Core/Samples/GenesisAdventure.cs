@@ -1,3 +1,4 @@
+using AdventureCreator.Core.Audio;
 using AdventureCreator.Core.Model;
 
 namespace AdventureCreator.Core.Samples;
@@ -696,18 +697,19 @@ public static partial class ExampleAdventures
         return a;
     }
 
+    /// <summary>Recordings from the built-in CC0 sound library (credits in assets/sounds/CREDITS.md).</summary>
     private static void AddGenesisSounds(Adventure a)
     {
-        void Add(string id, string name, string file, byte[] data, double volume = 1)
+        void Add(string id, string name, string library, double volume = 1)
         {
-            a.Assets["sounds/" + file] = data;
-            a.Sounds.Add(new SoundAsset { Id = id, Name = name, AssetName = "sounds/" + file, Volume = volume });
+            a.Assets[$"sounds/{library}.wav"] = SoundLibrary.Embedded(library) ?? throw new InvalidOperationException($"Missing library sound {library}.");
+            a.Sounds.Add(new SoundAsset { Id = id, Name = name, AssetName = $"sounds/{library}.wav", Volume = volume });
         }
-        Add("g_wind", "Wind over No Man's Land", "wind.wav", SoundSynth.Wind(), 0.5);
-        Add("g_hum", "Bunker machinery", "hum.wav", SoundSynth.Hum(), 0.35);
-        Add("g_siren", "Alarm", "siren.wav", SoundSynth.Siren(), 0.6);
-        Add("g_explosion", "Explosion", "explosion.wav", SoundSynth.Explosion());
-        Add("g_demat", "Dematerialisation", "demat.wav", SoundSynth.Dematerialise());
+        Add("g_wind", "Wind over No Man's Land", "wind", 0.6);
+        Add("g_hum", "Bunker machinery", "engine_hum", 0.4);
+        Add("g_siren", "Alarm", "alarm", 0.6);
+        Add("g_explosion", "Explosion", "explosion_deep");
+        Add("g_demat", "Dematerialisation", "force_field", 0.8);
     }
 
     // Colour indices (Palettes.Extended)

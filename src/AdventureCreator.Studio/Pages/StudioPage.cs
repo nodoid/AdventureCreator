@@ -176,6 +176,7 @@ public sealed class StudioPage : ContentPage
             if (parts.Contains("play")) editor.PlayAnimations();
         }
         if (parts.Contains("sfx")) NewSoundEffect();
+        if (parts.Contains("newsound")) _ = NewLibrarySoundAsync();
     }
 
     private static PictureEditorView? FindPictureEditor(IView? view) => view switch
@@ -744,18 +745,48 @@ public sealed class StudioPage : ContentPage
 
     private async Task AddSoundAsync()
     {
-        var choice = await DisplayActionSheetAsync("Add a sound", "Cancel", null, "New sound effect", "Import audio file…");
-        if (choice == "New sound effect") NewSoundEffect();
+        var choice = await DisplayActionSheetAsync("Add a sound", "Cancel", null, "From the sound library", "Import audio file…", "Retro synth effect");
+        if (choice == "From the sound library") await NewLibrarySoundAsync();
         else if (choice == "Import audio file…") await ImportSoundAsync(null);
+        else if (choice == "Retro synth effect") NewSoundEffect();
+    }
+
+    /// <summary>A new sound that starts as the library's first recording; its editor opens on the library to choose another.</summary>
+    private async Task NewLibrarySoundAsync()
+    {
+        byte[] bytes;
+        try
+        {
+            await using var stream = await FileSystem.OpenAppPackageFileAsync("sounds/door_open.wav");
+            using var ms = new MemoryStream();
+            await stream.CopyToAsync(ms);
+            bytes = ms.ToArray();
+        }
+        catch (Exception ex)
+        {
+            await DisplayAlertAsync("Sound library", "The sound library couldn't be opened: " + ex.Message, "OK");
+            return;
+        }
+        var a = document.Adventure;
+        var sound = new SoundAsset { Id = a.NewId("snd"), Name = SoundEditorView.DefaultNames[0] };
+        sound.AssetName = $"sounds/{sound.Id}.wav";
+        a.Assets[sound.AssetName] = bytes;
+        AddSound(sound);
     }
 
     private void NewSoundEffect()
     {
         var a = document.Adventure;
         var fx = SfxPresets.Make("Pickup");
-        var sound = new SoundAsset { Id = a.NewId("sfx"), Name = "New sound effect", Effect = fx };
+        var sound = new SoundAsset { Id = a.NewId("sfx"), Name = SoundEditorView.DefaultNames[1], Effect = fx };
         sound.AssetName = $"sounds/{sound.Id}.wav";
         a.Assets[sound.AssetName] = SfxSynth.RenderWav(fx);
+        AddSound(sound);
+    }
+
+    private void AddSound(SoundAsset sound)
+    {
+        var a = document.Adventure;
         a.Sounds.Add(sound);
         ctx.Changed(sound);
         if (section != Section.Sounds) ShowSection(Section.Sounds);
@@ -975,7 +1006,7 @@ public sealed class StudioPage : ContentPage
         edit.Add(Sync("New Puzzle", () => { ShowSection(Section.Puzzles); AddNew(); }, "P", CmdAlt));
         edit.Add(Sync("New Random Event", () => { ShowSection(Section.Events); AddNew(); }, "E", CmdAlt));
         edit.Add(Sync("New Picture", () => { ShowSection(Section.Pictures); AddNew(); }));
-        edit.Add(Sync("New Sound Effect", NewSoundEffect));
+        edit.Add(Item("New Sound…", () => { ShowSection(Section.Sounds); return AddSoundAsync(); }));
         edit.Add(Sync("New Command", () => { ShowSection(Section.Commands); AddNew(); }));
         edit.Add(new MenuFlyoutSeparator());
         edit.Add(Sync("Duplicate Selected", Duplicate, "D"));
@@ -1005,6 +1036,7 @@ public sealed class StudioPage : ContentPage
         help.Add(Item("User Guide…", ShowUserGuideAsync, "?", CmdShift));
         help.Add(new MenuFlyoutSeparator());
         help.Add(Item("Parser & Command Reference", () => Navigation.PushModalAsync(new ReportPage("Parser & command reference", HelpText.ParserReference(document.Adventure)))));
+        help.Add(Item("Sound Library Credits", ShowSoundCreditsAsync));
         help.Add(Item("Triggers, Conditions & Actions", () => Navigation.PushModalAsync(new ReportPage("Triggers, conditions & actions", HelpText.TriggerReference()))));
         help.Add(Item("About Adventure Creator Studio", () => DisplayAlertAsync("Adventure Creator Studio",
             $"Version {AppInfo.Current.VersionString}\nCopyright © 2026 Paul F.Johnson\n\nCreate text and graphic adventures, import PAWS, Quill (+ Illustrator) and GAC games, and export them as standalone apps.", "OK")));
@@ -1047,6 +1079,20 @@ public sealed class StudioPage : ContentPage
         catch (Exception ex)
         {
             await DisplayAlertAsync("User Guide", "The guide could not be opened: " + ex.Message, "OK");
+        }
+    }
+
+    private async Task ShowSoundCreditsAsync()
+    {
+        try
+        {
+            await using var stream = await FileSystem.OpenAppPackageFileAsync("sounds/CREDITS.md");
+            using var reader = new StreamReader(stream);
+            await Navigation.PushModalAsync(new ReportPage("Sound library credits and licences", HelpText.MarkdownToText(await reader.ReadToEndAsync())));
+        }
+        catch (Exception ex)
+        {
+            await DisplayAlertAsync("Sound library", "The credits could not be opened: " + ex.Message, "OK");
         }
     }
 

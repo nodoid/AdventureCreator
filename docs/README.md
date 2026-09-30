@@ -12,7 +12,7 @@ publishing games as standalone apps.
 | [3. Rooms, items and characters](03-world-reference.md) | Every property of rooms, exits, items, characters, puzzles and variables |
 | [4. Triggers, conditions and actions](04-triggers.md) | Making things happen: events, patterns, all conditions and actions, text placeholders |
 | [5. The parser and custom commands](05-parser-and-commands.md) | What players can type, adding new commands and grammar, vocabulary |
-| [6. Pictures and sound](06-pictures-and-sound.md) | The picture designer, smooth and animated pictures, importing images, the sound effects designer and waveform editor |
+| [6. Pictures and sound](06-pictures-and-sound.md) | The picture designer, smooth and animated pictures, importing images, the CC0 sound library, the retro synthesiser and the waveform editor |
 | [7. Importing PAWS, Quill/Illustrator and GAC games](07-importing.md) | Getting the files, importing, what is converted, and the limitations |
 | [8. Testing, exporting and publishing](08-exporting.md) | Test Play, validation, game packages, standalone apps, signing |
 | [9. File format](09-file-format.md) | The `.adventure` package, its JSON and save files |

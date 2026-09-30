@@ -1,3 +1,4 @@
+using AdventureCreator.Core.Audio;
 using AdventureCreator.Core.Model;
 
 namespace AdventureCreator.Core.Samples;
@@ -661,16 +662,17 @@ public static partial class ExampleAdventures
             new PictureAnimation { Name = "Ship's lights", Kind = AnimationKind.Blink, Layer = "lights", PeriodMs = 1400, OnPercent = 70 }));
     }
 
+    /// <summary>Recordings from the built-in CC0 sound library (credits in assets/sounds/CREDITS.md).</summary>
     private static void AddSounds(Adventure a)
     {
-        void Add(string id, string name, string file, byte[] data, double volume = 1)
+        void Add(string id, string name, string library, double volume = 1)
         {
-            a.Assets["sounds/" + file] = data;
-            a.Sounds.Add(new SoundAsset { Id = id, Name = name, AssetName = "sounds/" + file, Volume = volume });
+            a.Assets[$"sounds/{library}.wav"] = SoundLibrary.Embedded(library) ?? throw new InvalidOperationException($"Missing library sound {library}.");
+            a.Sounds.Add(new SoundAsset { Id = id, Name = name, AssetName = $"sounds/{library}.wav", Volume = volume });
         }
-        Add("snd_waves", "Waves", "waves.wav", SoundSynth.Waves(), 0.5);
-        Add("snd_foghorn", "Foghorn", "foghorn.wav", SoundSynth.Foghorn());
-        Add("snd_creak", "Creaking stairs", "creak.wav", SoundSynth.Creak());
-        Add("snd_fanfare", "Fanfare", "fanfare.wav", SoundSynth.Fanfare());
+        Add("snd_waves", "Waves", "waves", 0.6);
+        Add("snd_foghorn", "Foghorn", "foghorn");
+        Add("snd_creak", "Creaking stairs", "creak", 0.8);
+        Add("snd_fanfare", "Fanfare", "fanfare", 0.8);
     }
 }

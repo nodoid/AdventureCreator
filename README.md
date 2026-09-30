@@ -83,7 +83,8 @@ The same guide is available in the Studio under **Help › User Guide…** (⇧�
 * The Studio's picture designer shows pictures exactly as the Player does. It can import PNG, JPEG or HEIC images as backgrounds or stamps.
 
 ### Audio
-* A **sound effects designer** (sfxr style) with 14 presets, Randomise and Mutate, and sliders for tone, pitch jumps, envelope, filters, crush and echo.
+* A **sound library** of 88 real recordings (doors, footsteps, impacts, explosions, water, weather, magic, creatures, interface sounds and more), all **CC0**: free to use in any game. Credits and licences are in [`assets/sounds/CREDITS.md`](assets/sounds/CREDITS.md).
+* A **retro synthesiser** (sfxr style) for 8-bit beeps, with presets, Randomise, Mutate and sliders.
 * A **waveform editor** for WAV sounds (trim, delete, fades, normalise, volume, reverse, echo, with undo), plus per-sound Volume (0–10), Repeat and Cut-off settings.
 * Rooms can have looping ambient sound. The `PlaySound` and `StopSound` actions control audio from triggers.
 * WAV, MP3 and M4A play on every platform.
@@ -150,4 +151,4 @@ Nothing personal is kept in the repository.
 
 ## Licence
 
-Adventure Creator is released under the **[DILLIGAF License](LICENSE)**: use, copy, change, share or sell it however you like, with no warranty. Third-party components (fonts, NuGet packages) keep their own licences. The *Genesis* example uses BBC-owned characters and isn't covered.
+Adventure Creator is released under the **[DILLIGAF License](LICENSE)**: use, copy, change, share or sell it however you like, with no warranty. Third-party components (fonts, NuGet packages) keep their own licences. The sound library's recordings are CC0 (public domain); see [assets/sounds/CREDITS.md](assets/sounds/CREDITS.md). The *Genesis* example uses BBC-owned characters and isn't covered.
