@@ -102,6 +102,9 @@ The same guide is available in the Studio under **Help › User Guide…** (⇧�
 
 Every import produces a report. Anything that couldn't be converted exactly is listed in the game's Notes.
 
+### Z-code stories
+* A built-in **Z-machine** plays Infocom and Inform games (versions 1–8, including version 6 with Blorb pictures) in the Player, Test Play, the console player and exported apps, with save slots and undo. It passes the CZECH and Praxix conformance tests. See the [guide, chapter 12](docs/12-z-code.md).
+
 ### Standalone games
 *File › Export Standalone Game…* offers four outputs:
 

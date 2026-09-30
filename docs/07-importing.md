@@ -16,6 +16,8 @@ You can play it straight away, edit it, add sound and new puzzles, and export it
 
 Only import games you have the right to use: your own, public-domain or freely distributable titles, or for private study.
 
+**Z-code stories** (Infocom and Inform, `.z3`, `.z5`, `.z8`, `.zblorb`…) can be imported the same way, but they aren't converted: they play on the built-in Z-machine. See [chapter 12](12-z-code.md).
+
 For a worked example of each system, showing an original listing, the import report and exactly what every entry becomes in the Studio, see **[chapter 11, Import walkthroughs](11-import-walkthroughs.md)**.
 
 ---
