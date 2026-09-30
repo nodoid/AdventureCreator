@@ -63,7 +63,11 @@ public sealed class GacImporter : IAdventureImporter
         return result;
     }
 
-    internal sealed record Located(byte[] Memory, GacLayout Layout, string Format, byte[]? Punctuation, List<string> Warnings);
+    internal sealed record Located(byte[] Memory, GacLayout Layout, string Format, byte[]? Punctuation, List<string> Warnings)
+    {
+        /// <summary>A tape of GAC data files: the one imported.</summary>
+        public TapeFile? DataFile { get; init; }
+    }
 
     internal static Located? Locate(byte[] data, string fileName)
     {
@@ -148,7 +152,7 @@ public sealed class GacImporter : IAdventureImporter
         if (dataFiles.Count > 1)
             warnings.Add($"The tape holds {dataFiles.Count} GAC data files ({string.Join(", ", dataFiles.Select(f => $"\"{f.Name}\""))}); imported \"{chosen.Name}\" (the largest one whose dictionary decodes).");
         byte[]? punct = layout.HasPunctuationMagic(image) ? null : GacLayout.PunctuationMagic;
-        return new Located(image, layout, $"GAC (ZX Spectrum data file \"{chosen.Name}\")", punct, warnings);
+        return new Located(image, layout, $"GAC (ZX Spectrum data file \"{chosen.Name}\")", punct, warnings) { DataFile = chosen };
     }
 
     private static void Place(byte[] mem, TapeFile f)
