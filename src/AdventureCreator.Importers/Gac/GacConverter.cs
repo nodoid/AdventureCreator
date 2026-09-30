@@ -113,7 +113,7 @@ internal sealed partial class GacConverter
         ("out", new[] { "out", "exit", "leave", "outside", "sal", "salir", "fuera", "sortir" }),
     };
 
-    private static string? CanonicalDirection(IEnumerable<string> words)
+    internal static string? CanonicalDirection(IEnumerable<string> words)
     {
         foreach (var w in words)
             foreach (var (canonical, list) in DirectionWords)
