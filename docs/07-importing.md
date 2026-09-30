@@ -1,6 +1,6 @@
 # 7. Importing games from other adventure systems
 
-The Studio can convert games written with other adventure systems into fully editable Adventure Creator games.
+The Studio can convert games written with other adventure systems into fully editable Adventure System games.
 
 **Classic 8-bit systems:**
 
@@ -364,7 +364,7 @@ Settings: Significant Letters = the game's word length; the carrying limit; "Tel
 
 ## Exporting back
 
-An imported game can be saved in the format it came from with *File › Export Game File…*, or in Adventure Creator's own format. For PAWS, Quill and GAC, only the parts you changed are rebuilt. See [chapter 8](08-exporting.md#exporting-the-game-file--file--export-game-file-x).
+An imported game can be saved in the format it came from with *File › Export Game File…*, or in Adventure System's own format. For PAWS, Quill and GAC, only the parts you changed are rebuilt. See [chapter 8](08-exporting.md#exporting-the-game-file--file--export-game-file-x).
 
 ## Troubleshooting
 

@@ -1,8 +1,8 @@
 # 12. Z-code stories (Infocom and Inform)
 
-Adventure Creator has a built-in **Z-machine**, the virtual machine used by Infocom's games (*Zork*, *Planetfall*,
+Adventure System has a built-in **Z-machine**, the virtual machine used by Infocom's games (*Zork*, *Planetfall*,
 *Trinity*…) and by games written with Inform 6, Inform 7 (Z-code builds), ZIL and Dialog. Z-code stories play
-everywhere Adventure Creator games play: the Player on every platform, the Studio's Test Play, the console player,
+everywhere Adventure System games play: the Player on every platform, the Studio's Test Play, the console player,
 and exported standalone apps.
 
 ## Supported files
@@ -31,7 +31,7 @@ The game's title comes from the Blorb's metadata, or the file name. A Blorb's co
 * The story's own text appears in the transcript. The Player shows its own `>` prompt.
 * The **status bar** shows the story's status line: location, score and moves for version 1–3 stories, or the top line of the upper window for later versions.
 * **UNDO** uses the story's own undo, and several levels are kept.
-* **SAVE** and **RESTORE** use Adventure Creator's named save slots, with the usual Save / Load dialogs on desktop and phones. Positions are saved between turns. *Continue where you left off?* works too.
+* **SAVE** and **RESTORE** use Adventure System's named save slots, with the usual Save / Load dialogs on desktop and phones. Positions are saved between turns. *Continue where you left off?* works too.
 * Typing **QUIT** asks the story's own question, then ends the game.
 
 ## Version 6
@@ -51,6 +51,6 @@ Version 6 stories run on a virtual 640×400 screen with 8 windows:
 | Timed input | Real-time input (Border Zone and some Inform games) waits for the player instead of timing out. |
 | Sound | Only beeps. Sampled sounds in Blorb files aren't played. |
 | Transcripts and command files | SCRIPT (transcripts) and command replay (`input_stream`) aren't supported. |
-| Saves | Saves are Adventure Creator save slots, not Quetzal files, so they can't be moved to other interpreters. |
+| Saves | Saves are Adventure System save slots, not Quetzal files, so they can't be moved to other interpreters. |
 
-**Conformance:** the interpreter passes the standard test programs *CZECH* (all 406 tests, with output identical to the reference apart from interpreter-identity fields) and *Praxix* (all tests). Both run in Adventure Creator's automated tests.
+**Conformance:** the interpreter passes the standard test programs *CZECH* (all 406 tests, with output identical to the reference apart from interpreter-identity fields) and *Praxix* (all tests). Both run in Adventure System's automated tests.

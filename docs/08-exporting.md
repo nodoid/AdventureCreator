@@ -33,7 +33,7 @@ Export warns you if there are errors.
 
 ### Automated tests (for developers)
 
-`AdventureCreator.Core` can run a game without any UI:
+`AdventureSystem.Core` can run a game without any UI:
 
 ```csharp
 var engine = new GameEngine(AdventurePackage.Load("mygame.adventure"), randomSeed: 1);
@@ -55,7 +55,7 @@ Games are saved as **`.adventure` packages**: a single file containing the game 
 This saves the game as a single file, in one of these formats:
 
 * **The format it was imported from.** This is listed first, marked *original format*. A PAWS game goes back to a `.sna` or `.z80` snapshot, a Quest game to `.aslx`, and so on.
-* **Adventure Creator** (`.adventure`). This is the same as *File › Save As…*.
+* **Adventure System** (`.adventure`). This is the same as *File › Save As…*.
 * **Another system's format**, for any system that can hold the game (Quest, Twine, Scott Adams, Z-code…).
 
 The same choices are at the top of the *Export Standalone Game…* window, under **1. Game file**.
@@ -107,7 +107,7 @@ Options 2–4 need the desktop Studio running outside the Mac App Store sandbox.
 
 The launch screen of an exported game shows the game's own picture, title and author on its background colour. The exporter generates it. Android 12 and later only show the app icon while launching, but the Player's title screen still shows the name.
 
-1. **Player project**: the path to `src/AdventureCreator.Player/AdventureCreator.Player.csproj`. It is found automatically when the Studio runs from a source checkout.
+1. **Player project**: the path to `src/AdventureSystem.Player/AdventureSystem.Player.csproj`. It is found automatically when the Studio runs from a source checkout.
 2. Choose the **Target** and click **Build with .NET SDK…**, then choose an output folder. The targets are:
    * **Android**: an `.apk`
    * **iOS**: a signed `.ipa` for devices
@@ -129,7 +129,7 @@ To do the same by hand:
 xcrun simctl boot "iPhone 16 Pro"
 open /Applications/Xcode.app/Contents/Applications/DeviceHub.app     # Xcode 27; older Xcode: open -a Simulator
 xcrun simctl install booted "My Game.app"
-xcrun simctl launch booted com.adventurecreator.game.mygame
+xcrun simctl launch booted com.adventuresystem.game.mygame
 ```
 
 ### Trying an export on Android
@@ -138,21 +138,21 @@ Start an emulator (Android Studio › Device Manager, or `emulator -avd <name>`)
 
 ```bash
 adb install -r "My Game.apk"
-adb shell monkey -p com.adventurecreator.game.mygame -c android.intent.category.LAUNCHER 1
+adb shell monkey -p com.adventuresystem.game.mygame -c android.intent.category.LAUNCHER 1
 ```
 
 If the install fails with `INSTALL_FAILED_INSUFFICIENT_STORAGE`, the emulator is full. Create a separate test emulator with a bigger data partition rather than deleting apps.
 
 Behind the scenes the Studio:
 * saves the game as `game.adventure`
-* runs `dotnet publish -f <framework> -c Release -p:EmbeddedGame=<package> -p:GameTitle="<title>" -p:GameId=com.adventurecreator.game.<name>`
+* runs `dotnet publish -f <framework> -c Release -p:EmbeddedGame=<package> -p:GameTitle="<title>" -p:GameId=com.adventuresystem.game.<name>`
 
 The Player then includes the game as an app asset and opens straight into it, with the game's title as the app name.
 
 You can run the same command yourself in a terminal or a CI pipeline:
 
 ```bash
-dotnet publish src/AdventureCreator.Player -f net10.0-android -c Release \
+dotnet publish src/AdventureSystem.Player -f net10.0-android -c Release \
   -p:EmbeddedGame=$PWD/MyGame.adventure -p:GameTitle="My Game" -p:GameId=com.example.mygame \
   -p:AndroidPackageFormat=apk -o out/android
 ```
@@ -195,7 +195,7 @@ Ad-hoc-signed Mac apps run on your own Mac. To give them to other people, sign t
 ## Code signing of the Studio and Player themselves
 
 Signing details are kept out of the repository, in a local file.
-* Without it, the apps use the ids `com.adventurecreator.player` / `com.adventurecreator.studio` and build unsigned. That is fine for simulators, emulators, Android, Windows and local Mac builds.
+* Without it, the apps use the ids `com.adventuresystem.player` / `com.adventuresystem.studio` and build unsigned. That is fine for simulators, emulators, Android, Windows and local Mac builds.
 * To sign, copy **`signing.local.props.example`** to **`signing.local.props`** in the repository root and fill in, for each app and build type:
   * your App ID (bundle id)
   * your signing identity (e.g. `Apple Development: Your Name (TEAMID)`)

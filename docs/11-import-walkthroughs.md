@@ -6,7 +6,7 @@ This chapter follows one small game from each retro system through the importer.
 * **where every part lands in the Studio**, entry by entry
 * **the limitations you'll meet**, and how to fix them
 
-Every result below is real output: the Studio's importers were run on the sample games in the test suite (`tests/AdventureCreator.Tests/Importers`). [Chapter 7](07-importing.md) is the reference for all three systems; this chapter shows it in practice.
+Every result below is real output: the Studio's importers were run on the sample games in the test suite (`tests/AdventureSystem.Tests/Importers`). [Chapter 7](07-importing.md) is the reference for all three systems; this chapter shows it in practice.
 
 ---
 

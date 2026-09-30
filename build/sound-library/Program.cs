@@ -1,5 +1,5 @@
 using System.Text.Json;
-using AdventureCreator.Core.Audio;
+using AdventureSystem.Core.Audio;
 
 // args: manifest.tsv convDir outDir
 var sources = new Dictionary<string, (string Pack, string Author, string Url)>

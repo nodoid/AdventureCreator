@@ -4,7 +4,7 @@
 
 | Program | Platforms | Use it to |
 |---|---|---|
-| **Adventure Creator Studio** | macOS, Windows, iPad | Write, import, test and export games |
+| **Adventure System Studio** | macOS, Windows, iPad | Write, import, test and export games |
 | **Adventure Player** | Android, iPhone, iPad, macOS, Windows | Play games; exported games are copies of the Player with one game built in |
 | **adventure-player** (console) | macOS, Windows, Linux | Play games in a terminal; debug the parser; export tiny standalone text games |
 
@@ -13,16 +13,16 @@
 You need the .NET 10 SDK with the MAUI workload (`dotnet workload install maui`). For Apple platforms you also need Xcode.
 
 ```bash
-dotnet test tests/AdventureCreator.Tests                                 # run the test suite
-dotnet build src/AdventureCreator.Studio -f net10.0-maccatalyst          # Studio for macOS
-dotnet build src/AdventureCreator.Studio -f net10.0-windows10.0.19041.0  # Studio for Windows (on Windows)
-dotnet build src/AdventureCreator.Player -f net10.0-android              # Player for Android (.apk)
-dotnet build src/AdventureCreator.Player -f net10.0-ios                  # Player for iPhone/iPad
-dotnet run --project src/AdventureCreator.ConsolePlayer -- --lighthouse  # play an example in the terminal
+dotnet test tests/AdventureSystem.Tests                                 # run the test suite
+dotnet build src/AdventureSystem.Studio -f net10.0-maccatalyst          # Studio for macOS
+dotnet build src/AdventureSystem.Studio -f net10.0-windows10.0.19041.0  # Studio for Windows (on Windows)
+dotnet build src/AdventureSystem.Player -f net10.0-android              # Player for Android (.apk)
+dotnet build src/AdventureSystem.Player -f net10.0-ios                  # Player for iPhone/iPad
+dotnet run --project src/AdventureSystem.ConsolePlayer -- --lighthouse  # play an example in the terminal
 ```
 
 The built apps are under each project's `bin/` folder, for example
-`src/AdventureCreator.Studio/bin/Debug/net10.0-maccatalyst/maccatalyst-arm64/Adventure Creator Studio.app`.
+`src/AdventureSystem.Studio/bin/Debug/net10.0-maccatalyst/maccatalyst-arm64/Adventure System Studio.app`.
 
 ## A tour of the Studio
 

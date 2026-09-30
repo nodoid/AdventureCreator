@@ -14,7 +14,7 @@ You can unzip it, edit `adventure.json` by hand or with scripts, and zip it agai
 
 ## `adventure.json`
 
-The JSON mirrors the classes in `src/AdventureCreator.Core/Model`:
+The JSON mirrors the classes in `src/AdventureSystem.Core/Model`:
 * property names are PascalCase
 * enums are written as strings
 * null values are omitted
@@ -124,4 +124,4 @@ The game state includes:
 * player health, traps, flooded rooms and room flags
 * how often each random event has happened
 
-The Player stores them in its application-data folder (`Saves/<game title>/`). The Studio's Test Play uses `TestSaves/<game title>/`. The console player stores them under the user's application-data folder (`AdventureCreator/Saves/<game title>/`).
+The Player stores them in its application-data folder (`Saves/<game title>/`). The Studio's Test Play uses `TestSaves/<game title>/`. The console player stores them under the user's application-data folder (`AdventureSystem/Saves/<game title>/`).

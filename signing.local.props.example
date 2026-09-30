@@ -9,25 +9,25 @@
   -->
 
   <!-- Player -->
-  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'AdventureCreator.Player' And '$(GameId)' == ''">
+  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'AdventureSystem.Player' And '$(GameId)' == ''">
     <ApplicationId>com.example.adventureplayer</ApplicationId>
     <ApplicationId Condition="$(TargetFramework.Contains('-maccatalyst'))">maccatalyst.com.example.adventureplayer</ApplicationId>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'AdventureCreator.Player' And '$(GameId)' == '' And $(TargetFramework.Contains('-ios')) And '$(Configuration)' == 'Debug'">
+  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'AdventureSystem.Player' And '$(GameId)' == '' And $(TargetFramework.Contains('-ios')) And '$(Configuration)' == 'Debug'">
     <CodesignKey>Apple Development: Your Name (XXXXXXXXXX)</CodesignKey>
     <CodesignProvision>your-player-development-profile</CodesignProvision>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'AdventureCreator.Player' And '$(GameId)' == '' And $(TargetFramework.Contains('-ios')) And '$(Configuration)' == 'Release'">
+  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'AdventureSystem.Player' And '$(GameId)' == '' And $(TargetFramework.Contains('-ios')) And '$(Configuration)' == 'Release'">
     <CodesignKey>Apple Distribution: Your Name (TEAMID)</CodesignKey>
     <CodesignProvision>your-player-distribution-profile</CodesignProvision>
   </PropertyGroup>
 
   <!-- Studio -->
-  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'AdventureCreator.Studio'">
-    <ApplicationId>com.example.adventurecreator</ApplicationId>
-    <ApplicationId Condition="$(TargetFramework.Contains('-maccatalyst'))">maccatalyst.com.example.adventurecreator</ApplicationId>
+  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'AdventureSystem.Studio'">
+    <ApplicationId>com.example.adventuresystem</ApplicationId>
+    <ApplicationId Condition="$(TargetFramework.Contains('-maccatalyst'))">maccatalyst.com.example.adventuresystem</ApplicationId>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'AdventureCreator.Studio' And $(TargetFramework.Contains('-maccatalyst')) And '$(Configuration)' == 'Release'">
+  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'AdventureSystem.Studio' And $(TargetFramework.Contains('-maccatalyst')) And '$(Configuration)' == 'Release'">
     <EnableCodeSigning>true</EnableCodeSigning>
     <CodesignKey>Apple Distribution: Your Name (TEAMID)</CodesignKey>
     <CodesignProvision>your-studio-mac-app-store-profile</CodesignProvision>

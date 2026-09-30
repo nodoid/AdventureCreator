@@ -1,10 +1,10 @@
-# Adventure Creator
+# Adventure System
 
 Version 1.0 · Copyright © 2026 Paul F.Johnson · Released under the [DILLIGAF License](LICENSE): do what you like with it.
 
 A .NET 10 / .NET MAUI system for writing, importing and publishing text and graphic adventure games.
 
-* **Adventure Creator Studio**: the editor, for **macOS**, **Windows** and **iPad**. It has a desktop-style menu bar, keyboard shortcuts and a sidebar, list and detail layout.
+* **Adventure System Studio**: the editor, for **macOS**, **Windows** and **iPad**. It has a desktop-style menu bar, keyboard shortcuts and a sidebar, list and detail layout.
 * **Adventure Player**: plays games on **Android**, **iPhone/iPad**, **macOS** and **Windows**. Exported games are copies of the Player with the game built in.
 * **Console player**: a single-file terminal executable that runs any game, or a game appended to it.
 
@@ -24,13 +24,13 @@ The same guide is available in the Studio under **Help › User Guide…** (⇧�
 
 | Project | What it is |
 |---|---|
-| `src/AdventureCreator.Core` | Game model, parser, engine, picture renderer, packaging, exporters and example games. No UI dependencies. |
-| `src/AdventureCreator.Importers` | Importers for PAWS, The Quill (+ Illustrator) and Graphic Adventure Creator. |
-| `src/AdventureCreator.Maui` | Shared MAUI UI: `GamePlayerView`, audio (Plugin.Maui.Audio), picture display, light theme. |
-| `src/AdventureCreator.Studio` | The Studio app (Mac Catalyst, Windows, iPadOS). |
-| `src/AdventureCreator.Player` | The Player app (Android, iOS, Mac Catalyst, Windows). It embeds a game when built with `-p:EmbeddedGame=…`. |
-| `src/AdventureCreator.ConsolePlayer` | `adventure-player`, the console player and debugging tool. |
-| `tests/AdventureCreator.Tests` | xUnit tests: parser, engine, walkthroughs, graphics, packaging and all three importers. |
+| `src/AdventureSystem.Core` | Game model, parser, engine, picture renderer, packaging, exporters and example games. No UI dependencies. |
+| `src/AdventureSystem.Importers` | Importers for PAWS, The Quill (+ Illustrator) and Graphic Adventure Creator. |
+| `src/AdventureSystem.Maui` | Shared MAUI UI: `GamePlayerView`, audio (Plugin.Maui.Audio), picture display, light theme. |
+| `src/AdventureSystem.Studio` | The Studio app (Mac Catalyst, Windows, iPadOS). |
+| `src/AdventureSystem.Player` | The Player app (Android, iOS, Mac Catalyst, Windows). It embeds a game when built with `-p:EmbeddedGame=…`. |
+| `src/AdventureSystem.ConsolePlayer` | `adventure-player`, the console player and debugging tool. |
+| `tests/AdventureSystem.Tests` | xUnit tests: parser, engine, walkthroughs, graphics, packaging and all three importers. |
 | `examples/` | `Genesis.adventure` (the main test game) and `TheLighthouse.adventure`. |
 | `build/build-templates.sh`, `.ps1` | Build the player templates used for SDK-free exports. |
 
@@ -110,7 +110,7 @@ Every import produces a report. Anything that couldn't be converted exactly is l
 * A built-in **Z-machine** plays Infocom and Inform games (versions 1–8, including version 6 with Blorb pictures) in the Player, Test Play, the console player and exported apps, with save slots and undo. It passes the CZECH and Praxix conformance tests. See the [guide, chapter 12](docs/12-z-code.md).
 
 ### Exporting back to other formats
-*File › Export Game File…* saves a game in the format it was imported from, in Adventure Creator's `.adventure` format, or in another system's format. The formats are PAWS, Quill and GAC snapshots and tapes, Scott Adams `.dat`, Quest `.aslx`/`.quest`, Twine HTML/Twee and Z-code/Blorb. For the 8-bit systems, only what you changed is rebuilt, and an unchanged game exports byte-for-byte identical. A report lists anything the format can't hold. See the [guide, chapter 8](docs/08-exporting.md).
+*File › Export Game File…* saves a game in the format it was imported from, in Adventure System's `.adventure` format, or in another system's format. The formats are PAWS, Quill and GAC snapshots and tapes, Scott Adams `.dat`, Quest `.aslx`/`.quest`, Twine HTML/Twee and Z-code/Blorb. For the 8-bit systems, only what you changed is rebuilt, and an unchanged game exports byte-for-byte identical. A report lists anything the format can't hold. See the [guide, chapter 8](docs/08-exporting.md).
 
 ### Standalone games
 *File › Export Standalone Game…* offers four outputs:
@@ -125,11 +125,11 @@ To create the templates for options 3 and 4, run `build/build-templates.sh` (mac
 ## Building
 
 ```bash
-dotnet test tests/AdventureCreator.Tests                                  # 166 tests
-dotnet build src/AdventureCreator.Studio -f net10.0-maccatalyst           # Studio for macOS
-dotnet build src/AdventureCreator.Player -f net10.0-android               # Player APK
-dotnet run --project src/AdventureCreator.ConsolePlayer -- --example      # play Genesis in the terminal
-dotnet run --project src/AdventureCreator.ConsolePlayer -- --parse example "quietly open the door"
+dotnet test tests/AdventureSystem.Tests                                  # 166 tests
+dotnet build src/AdventureSystem.Studio -f net10.0-maccatalyst           # Studio for macOS
+dotnet build src/AdventureSystem.Player -f net10.0-android               # Player APK
+dotnet run --project src/AdventureSystem.ConsolePlayer -- --example      # play Genesis in the terminal
+dotnet run --project src/AdventureSystem.ConsolePlayer -- --parse example "quietly open the door"
 ```
 
 Windows targets are added automatically when you build on Windows.
@@ -137,7 +137,7 @@ Windows targets are added automatically when you build on Windows.
 ## Code signing
 
 Nothing personal is kept in the repository.
-* Without any setup, the default ids are `com.adventurecreator.player` and `com.adventurecreator.studio`, and builds are unsigned. Simulators, Android, Windows and local Mac builds all work that way.
+* Without any setup, the default ids are `com.adventuresystem.player` and `com.adventuresystem.studio`, and builds are unsigned. Simulators, Android, Windows and local Mac builds all work that way.
 * To sign for devices or the App Store, copy `signing.local.props.example` to **`signing.local.props`** in the repository root and fill in your App IDs, signing identities and provisioning profile names. This file is ignored by git, and both apps import it automatically.
 * Provisioning profiles must be installed in `~/Library/MobileDevice/Provisioning Profiles`.
 * Mac Catalyst apps that share an iOS App ID use the `maccatalyst.` prefix, as Xcode does.
@@ -161,4 +161,4 @@ Nothing personal is kept in the repository.
 
 ## Licence
 
-Adventure Creator is released under the **[DILLIGAF License](LICENSE)**: use, copy, change, share or sell it however you like, with no warranty. Third-party components (fonts, NuGet packages) keep their own licences. The sound library's recordings are CC0 (public domain); see [assets/sounds/CREDITS.md](assets/sounds/CREDITS.md). The *Genesis* example uses BBC-owned characters and isn't covered.
+Adventure System is released under the **[DILLIGAF License](LICENSE)**: use, copy, change, share or sell it however you like, with no warranty. Third-party components (fonts, NuGet packages) keep their own licences. The sound library's recordings are CC0 (public domain); see [assets/sounds/CREDITS.md](assets/sounds/CREDITS.md). The *Genesis* example uses BBC-owned characters and isn't covered.

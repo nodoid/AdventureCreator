@@ -1,7 +1,7 @@
 <Project>
   <!-- Shared product information for every project in the solution. -->
   <PropertyGroup>
-    <Product>Adventure Creator</Product>
+    <Product>Adventure System</Product>
     <Authors>Paul F.Johnson</Authors>
     <Company>Paul F.Johnson</Company>
     <Copyright>Copyright © 2026 Paul F.Johnson</Copyright>

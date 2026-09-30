@@ -11,7 +11,7 @@ Each sound was converted to 22,050 Hz mono 16-bit WAV. Some were shortened (long
 (so loops restart without a click) and levelled (one-shots peak at 90 %, loops at 75 %). Those changes are
 also released under CC0.
 
-Games you make with Adventure Creator can include any of these sounds with no obligations.
+Games you make with Adventure System can include any of these sounds with no obligations.
 
 | Pack | Author | Licence | Source |
 |---|---|---|---|

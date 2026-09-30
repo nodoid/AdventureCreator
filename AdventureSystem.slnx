@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/AdventureSystem.ConsolePlayer/AdventureSystem.ConsolePlayer.csproj" />
+    <Project Path="src/AdventureSystem.Core/AdventureSystem.Core.csproj" />
+    <Project Path="src/AdventureSystem.Importers/AdventureSystem.Importers.csproj" />
+    <Project Path="src/AdventureSystem.Maui/AdventureSystem.Maui.csproj" />
+    <Project Path="src/AdventureSystem.Player/AdventureSystem.Player.csproj" />
+    <Project Path="src/AdventureSystem.Studio/AdventureSystem.Studio.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/AdventureSystem.Tests/AdventureSystem.Tests.csproj" />
+  </Folder>
+</Solution>
