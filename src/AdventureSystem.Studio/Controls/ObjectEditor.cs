@@ -46,6 +46,12 @@ public sealed class ObjectEditor : ContentView
     private readonly HashSet<string> exclude;
     private readonly Action? onStructureChanged;
     private readonly double labelWidth;
+    private readonly List<(Label? Label, View Control)> fields = new();
+    private Grid grid = new();
+    private bool stacked;
+
+    /// <summary>Narrower than this on the iPad (Split View, nested lists), labels go above their fields.</summary>
+    private const double StackBelow = 560;
 
     public ObjectEditor(object target, EditorContext ctx, IEnumerable<string>? only = null, IEnumerable<string>? exclude = null, Action? onStructureChanged = null,
         double labelWidth = 170)
@@ -56,48 +62,72 @@ public sealed class ObjectEditor : ContentView
         this.only = only?.ToHashSet();
         this.exclude = exclude?.ToHashSet() ?? new HashSet<string>();
         this.onStructureChanged = onStructureChanged;
+        if (TouchMetrics.IsTouch)
+            SizeChanged += (_, _) => { if (Narrow != stacked) Place(Narrow); };
         Build();
     }
 
+    private bool Narrow => TouchMetrics.IsTouch && Width > 0 && Width < StackBelow;
+
     public void Build()
     {
-        var grid = new Grid
-        {
-            ColumnDefinitions = { new ColumnDefinition(new GridLength(labelWidth)), new ColumnDefinition(GridLength.Star) },
-            ColumnSpacing = 12,
-            RowSpacing = 8,
-        };
-        int row = 0;
+        fields.Clear();
+        grid = new Grid { ColumnSpacing = 12, RowSpacing = 8 };
         foreach (var prop in Properties(target.GetType()))
         {
             if (only != null && !only.Contains(prop.Name)) continue;
             if (exclude.Contains(prop.Name)) continue;
             var control = CreateControl(prop);
             if (control == null) continue;
-            grid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
-
             bool fullWidth = control is ListEditorBase || control is SectionView;
-            if (fullWidth)
+            fields.Add((fullWidth ? null : new Label
+            {
+                Text = Humanize(prop.Name),
+                VerticalOptions = LayoutOptions.Start,
+                LineBreakMode = LineBreakMode.WordWrap,
+            }, control));
+        }
+        Place(Narrow);
+        Content = grid;
+    }
+
+    /// <summary>Lays the fields out beside their labels, or (narrow, on touch) under them.</summary>
+    private void Place(bool stack)
+    {
+        stacked = stack;
+        grid.Clear();
+        grid.RowDefinitions.Clear();
+        grid.ColumnDefinitions.Clear();
+        if (!stack) grid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(labelWidth)));
+        grid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+        int row = 0;
+        foreach (var (label, control) in fields)
+        {
+            grid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+            if (label == null)
             {
                 grid.Add(control, 0, row);
-                Grid.SetColumnSpan(control, 2);
+                Grid.SetColumnSpan(control, stack ? 1 : 2);
             }
             else
             {
-                var label = new Label
-                {
-                    Text = Humanize(prop.Name),
-                    VerticalOptions = LayoutOptions.Start,
-                    Margin = new Thickness(0, 8, 0, 0),
-                    HorizontalTextAlignment = TextAlignment.End,
-                    LineBreakMode = LineBreakMode.WordWrap,
-                };
+                label.HorizontalTextAlignment = stack ? TextAlignment.Start : TextAlignment.End;
+                label.Margin = stack ? new Thickness(0, 6, 0, -4) : new Thickness(0, TouchMetrics.Pick(8, 12), 0, 0);
                 grid.Add(label, 0, row);
-                grid.Add(control, 1, row);
+                if (stack) grid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+                grid.Add(control, stack ? 0 : 1, stack ? ++row : row);
             }
             row++;
         }
-        Content = grid;
+    }
+
+    /// <summary>On touch, at least a comfortable tap target tall (and wide); unchanged with a mouse.</summary>
+    internal static T Tappable<T>(T view, bool wide = false) where T : View
+    {
+        if (!TouchMetrics.IsTouch) return view;
+        view.MinimumHeightRequest = TouchMetrics.MinTarget;
+        if (wide) view.MinimumWidthRequest = TouchMetrics.MinTarget;
+        return view;
     }
 
     public static IEnumerable<PropertyInfo> Properties(Type t) =>
@@ -143,7 +173,7 @@ public sealed class ObjectEditor : ContentView
                 ed.TextChanged += (_, e) => { prop.SetValue(target, e.NewTextValue); Changed(); };
                 return ed;
             }
-            var entry = new Entry { Text = (string?)value };
+            var entry = Tappable(new Entry { Text = (string?)value });
             entry.TextChanged += (_, e) => { prop.SetValue(target, e.NewTextValue); Changed(); };
             return entry;
         }
@@ -151,7 +181,8 @@ public sealed class ObjectEditor : ContentView
         if (type == typeof(int) || type == typeof(double))
         {
             if (!prop.CanWrite) return null;
-            var entry = new Entry { Text = Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture), Keyboard = Keyboard.Numeric, WidthRequest = 120, HorizontalOptions = LayoutOptions.Start };
+            var entry = new Entry { Text = Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture), Keyboard = Keyboard.Numeric, WidthRequest = TouchMetrics.Pick(120, 140), HorizontalOptions = LayoutOptions.Start };
+            Tappable(entry);
             entry.TextChanged += (_, e) =>
             {
                 if (type == typeof(int) && int.TryParse(e.NewTextValue, out var i)) { prop.SetValue(target, i); Changed(); }
@@ -163,7 +194,7 @@ public sealed class ObjectEditor : ContentView
         if (type == typeof(bool))
         {
             if (!prop.CanWrite) return null;
-            var cb = new CheckBox { IsChecked = (bool)value!, VerticalOptions = LayoutOptions.Center };
+            var cb = Tappable(new CheckBox { IsChecked = (bool)value!, VerticalOptions = LayoutOptions.Center }, wide: true);
             cb.CheckedChanged += (_, e) => { prop.SetValue(target, e.Value); Changed(); };
             return new HorizontalStackLayout { Children = { cb } };
         }
@@ -172,7 +203,9 @@ public sealed class ObjectEditor : ContentView
         {
             if (!prop.CanWrite) return null;
             var names = Enum.GetNames(type);
-            var picker = new Picker { ItemsSource = names, SelectedItem = value?.ToString(), HorizontalOptions = LayoutOptions.Start, MinimumWidthRequest = 220 };
+            var picker = Tappable(new Picker { ItemsSource = names, SelectedItem = value?.ToString(), HorizontalOptions = LayoutOptions.Start, MinimumWidthRequest = 220 });
+            // A narrow iPad column can be less than 220 wide: fill it instead, like the text fields.
+            if (TouchMetrics.IsTouch) { picker.MinimumWidthRequest = 0; picker.HorizontalOptions = LayoutOptions.Fill; }
             picker.SelectedIndexChanged += (_, _) =>
             {
                 if (picker.SelectedItem is not string s) return;
@@ -199,7 +232,7 @@ public sealed class ObjectEditor : ContentView
                 };
                 return ed;
             }
-            var entry = new Entry { Text = string.Join(", ", list), Placeholder = "Comma separated" };
+            var entry = Tappable(new Entry { Text = string.Join(", ", list), Placeholder = "Comma separated" });
             entry.TextChanged += (_, e) =>
             {
                 list.Clear();
@@ -243,7 +276,7 @@ public sealed class ObjectEditor : ContentView
         {
             if (!prop.CanWrite || !Nullable(prop)) return new SectionView(Humanize(prop.Name), new ObjectEditor(value, ctx));
             // Optional section (e.g. an item's NPC behaviour): can be removed again.
-            var remove = new Button { Text = $"Remove {Humanize(prop.Name)}", HorizontalOptions = LayoutOptions.Start, FontSize = 12 };
+            var remove = Tappable(new Button { Text = $"Remove {Humanize(prop.Name)}", HorizontalOptions = LayoutOptions.Start, FontSize = TouchMetrics.Pick(12, 15) });
             remove.Clicked += async (_, _) =>
             {
                 if (!await ctx.PageProvider().DisplayAlertAsync("Remove", $"Remove the {Humanize(prop.Name).ToLowerInvariant()} settings?", "Remove", "Cancel")) return;
@@ -255,7 +288,7 @@ public sealed class ObjectEditor : ContentView
         }
         if (type.IsClass && type.Namespace == typeof(Adventure).Namespace && value == null && prop.CanWrite && type.GetConstructor(Type.EmptyTypes) != null)
         {
-            var add = new Button { Text = $"+ Add {Humanize(prop.Name)}", HorizontalOptions = LayoutOptions.Start };
+            var add = Tappable(new Button { Text = $"+ Add {Humanize(prop.Name)}", HorizontalOptions = LayoutOptions.Start });
             add.Clicked += (_, _) =>
             {
                 prop.SetValue(target, Activator.CreateInstance(type));
@@ -316,7 +349,8 @@ public sealed class ListEditor : ListEditorBase
         this.ctx = ctx;
         this.owner = owner;
 
-        var add = new Button { Text = "+ Add", Padding = new Thickness(10, 2), HeightRequest = 30, FontSize = 13 };
+        var add = new Button { Text = "+ Add", Padding = new Thickness(TouchMetrics.Pick(10, 16), 2), HeightRequest = TouchMetrics.Pick(30, TouchMetrics.MinTarget), FontSize = TouchMetrics.Pick(13, 15) };
+        if (TouchMetrics.IsTouch) SemanticProperties.SetDescription(add, $"Add to {title}");
         add.Clicked += (_, _) =>
         {
             var item = CreateElement();
@@ -371,7 +405,7 @@ public sealed class ListEditor : ListEditorBase
                 ctx.Changed(owner);
                 Rebuild();
             });
-            var tools = new VerticalStackLayout { Spacing = 2, Children = { up, down, remove } };
+            var tools = new VerticalStackLayout { Spacing = TouchMetrics.Pick(2, 4), Children = { up, down, remove } };
             var g = new Grid { ColumnDefinitions = { new(GridLength.Star), new(GridLength.Auto) }, ColumnSpacing = 6 };
             g.Add(editor, 0);
             g.Add(tools, 1);
@@ -399,8 +433,9 @@ public sealed class ListEditor : ListEditorBase
 
     private static Button SmallButton(string text, string tip, Action action)
     {
-        var b = new Button { Text = text, WidthRequest = 30, HeightRequest = 26, Padding = 0, FontSize = 12 };
+        var b = new Button { Text = text, WidthRequest = TouchMetrics.Pick(30, TouchMetrics.MinTarget), HeightRequest = TouchMetrics.Pick(26, TouchMetrics.MinTarget), Padding = 0, FontSize = TouchMetrics.Pick(12, 17) };
         ToolTipProperties.SetText(b, tip);
+        if (TouchMetrics.IsTouch) SemanticProperties.SetDescription(b, tip);
         b.Clicked += (_, _) => action();
         return b;
     }
@@ -412,13 +447,18 @@ public sealed class ConditionRow : ContentView
     public ConditionRow(Condition c, EditorContext ctx)
     {
         var hint = new Label { FontSize = 11, Opacity = 0.6 };
-        var aField = new ReferenceField(ctx, c.A, () => References.KindOf(c, "A"), v => { c.A = string.IsNullOrEmpty(v) ? null : v; ctx.Changed(c); }, true) { Placeholder = "A", MinimumWidthRequest = 160 };
-        var bField = new ReferenceField(ctx, c.B, () => References.KindOf(c, "B"), v => { c.B = string.IsNullOrEmpty(v) ? null : v; ctx.Changed(c); }, true) { Placeholder = "B", MinimumWidthRequest = 120 };
-        var n = new Entry { Text = c.N.ToString(), Keyboard = Keyboard.Numeric, WidthRequest = 70, Placeholder = "N" };
+        var aField = new ReferenceField(ctx, c.A, () => References.KindOf(c, "A"), v => { c.A = string.IsNullOrEmpty(v) ? null : v; ctx.Changed(c); }, true) { Placeholder = "A", MinimumWidthRequest = TouchMetrics.Pick(160, 200) };
+        var bField = new ReferenceField(ctx, c.B, () => References.KindOf(c, "B"), v => { c.B = string.IsNullOrEmpty(v) ? null : v; ctx.Changed(c); }, true) { Placeholder = "B", MinimumWidthRequest = TouchMetrics.Pick(120, 170) };
+        var n = new Entry { Text = c.N.ToString(), Keyboard = Keyboard.Numeric, WidthRequest = TouchMetrics.Pick(70, 90), Placeholder = "N" };
+        ObjectEditor.Tappable(n);
         n.TextChanged += (_, e) => { if (int.TryParse(e.NewTextValue, out var v)) { c.N = v; ctx.Changed(c); } };
-        var not = new CheckBox { IsChecked = c.Negate };
+        var not = ObjectEditor.Tappable(new CheckBox { IsChecked = c.Negate }, wide: true);
         not.CheckedChanged += (_, e) => { c.Negate = e.Value; ctx.Changed(c); };
         var type = new Picker { ItemsSource = Enum.GetNames<ConditionType>(), SelectedItem = c.Type.ToString(), MinimumWidthRequest = 190 };
+        ObjectEditor.Tappable(type);
+        var notLabel = new Label { Text = "not", VerticalOptions = LayoutOptions.Center, Margin = new Thickness(0, 0, 2, 0) };
+        // A finger can hardly hit the check box alone: the word toggles it too.
+        if (TouchMetrics.IsTouch) notLabel.GestureRecognizers.Add(new TapGestureRecognizer { Command = new Command(() => not.IsChecked = !not.IsChecked) });
         void UpdateHint() => hint.Text = References.Hint(c);
         type.SelectedIndexChanged += (_, _) =>
         {
@@ -433,7 +473,7 @@ public sealed class ConditionRow : ContentView
                 new FlexLayout
                 {
                     Wrap = Microsoft.Maui.Layouts.FlexWrap.Wrap, AlignItems = Microsoft.Maui.Layouts.FlexAlignItems.Center,
-                    Children = { new Label { Text = "not", VerticalOptions = LayoutOptions.Center, Margin = new Thickness(0, 0, 2, 0) }, not, type, aField, bField, n },
+                    Children = { notLabel, not, type, aField, bField, n },
                 },
                 hint,
             },
@@ -447,13 +487,15 @@ public sealed class ActionRow : ContentView
     public ActionRow(GameAction a, EditorContext ctx)
     {
         var hint = new Label { FontSize = 11, Opacity = 0.6 };
-        var aField = new ReferenceField(ctx, a.A, () => References.KindOf(a, "A"), v => { a.A = string.IsNullOrEmpty(v) ? null : v; ctx.Changed(a); }, true) { Placeholder = "A", MinimumWidthRequest = 160 };
-        var bField = new ReferenceField(ctx, a.B, () => References.KindOf(a, "B"), v => { a.B = string.IsNullOrEmpty(v) ? null : v; ctx.Changed(a); }, true) { Placeholder = "B", MinimumWidthRequest = 120 };
-        var n = new Entry { Text = a.N.ToString(), Keyboard = Keyboard.Numeric, WidthRequest = 70, Placeholder = "N" };
+        var aField = new ReferenceField(ctx, a.A, () => References.KindOf(a, "A"), v => { a.A = string.IsNullOrEmpty(v) ? null : v; ctx.Changed(a); }, true) { Placeholder = "A", MinimumWidthRequest = TouchMetrics.Pick(160, 200) };
+        var bField = new ReferenceField(ctx, a.B, () => References.KindOf(a, "B"), v => { a.B = string.IsNullOrEmpty(v) ? null : v; ctx.Changed(a); }, true) { Placeholder = "B", MinimumWidthRequest = TouchMetrics.Pick(120, 170) };
+        var n = new Entry { Text = a.N.ToString(), Keyboard = Keyboard.Numeric, WidthRequest = TouchMetrics.Pick(70, 90), Placeholder = "N" };
+        ObjectEditor.Tappable(n);
         n.TextChanged += (_, e) => { if (int.TryParse(e.NewTextValue, out var v)) { a.N = v; ctx.Changed(a); } };
-        var text = new Editor { Text = a.Text, Placeholder = "Text", AutoSize = EditorAutoSizeOption.TextChanges, MinimumHeightRequest = 36 };
+        var text = new Editor { Text = a.Text, Placeholder = "Text", AutoSize = EditorAutoSizeOption.TextChanges, MinimumHeightRequest = TouchMetrics.Pick(36, TouchMetrics.MinTarget) };
         text.TextChanged += (_, e) => { a.Text = string.IsNullOrEmpty(e.NewTextValue) ? null : e.NewTextValue; ctx.Changed(a); };
         var type = new Picker { ItemsSource = Enum.GetNames<ActionType>(), SelectedItem = a.Type.ToString(), MinimumWidthRequest = 190 };
+        ObjectEditor.Tappable(type);
         void Update()
         {
             hint.Text = References.Hint(a);

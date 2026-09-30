@@ -42,22 +42,27 @@ public sealed class SoundEditorView : ContentView
 
         var title = new Label { Text = string.IsNullOrWhiteSpace(sound.Name) ? sound.Id : sound.Name, FontSize = 22, FontAttributes = FontAttributes.Bold, TextColor = Theme.Accent };
 
-        waveform = new GraphicsView { Drawable = new WaveDrawable(this), HeightRequest = 150, BackgroundColor = Theme.Pane };
-        waveform.StartInteraction += (_, e) => { selectionStart = selectionEnd = SampleAt(e.Touches[0].X); waveform.Invalidate(); };
-        waveform.DragInteraction += (_, e) => { selectionEnd = SampleAt(e.Touches[0].X); UpdateTimeInfo(); waveform.Invalidate(); };
-        waveform.EndInteraction += (_, e) =>
+        waveform = new GraphicsView { Drawable = new WaveDrawable(this), HeightRequest = TouchMetrics.Pick(150, 220), BackgroundColor = Theme.Pane };
+        if (TouchMetrics.IsTouch) AddTouchSelection();
+        else
         {
-            if (e.Touches.Length > 0) selectionEnd = SampleAt(e.Touches[0].X);
-            if (Math.Abs(selectionEnd - selectionStart) < sampleRate / 200) selectionStart = selectionEnd = 0;   // a click clears
-            UpdateTimeInfo();
-            waveform.Invalidate();
-        };
+            waveform.StartInteraction += (_, e) => { selectionStart = selectionEnd = SampleAt(e.Touches[0].X); waveform.Invalidate(); };
+            waveform.DragInteraction += (_, e) => { selectionEnd = SampleAt(e.Touches[0].X); UpdateTimeInfo(); waveform.Invalidate(); };
+            waveform.EndInteraction += (_, e) =>
+            {
+                if (e.Touches.Length > 0) selectionEnd = SampleAt(e.Touches[0].X);
+                if (Math.Abs(selectionEnd - selectionStart) < sampleRate / 200) selectionStart = selectionEnd = 0;   // a click clears
+                UpdateTimeInfo();
+                waveform.Invalidate();
+            };
+        }
         var waveFrame = new Border
         {
             Content = waveform, Stroke = Theme.Border, StrokeThickness = 1, Padding = 1,
             StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 6 },
         };
-        ToolTipProperties.SetText(waveFrame, "Drag across the waveform to select part of the sound; click to clear the selection");
+        // On the iPad the line under the waveform says the same.
+        if (!TouchMetrics.IsTouch) ToolTipProperties.SetText(waveFrame, "Drag across the waveform to select part of the sound; click to clear the selection");
 
         var play = Button("▶ Play", "Play the whole sound", () => Play(selectionOnly: false));
         var playSelection = Button("▶ Selection", "Play the selected part", () => Play(selectionOnly: true));
@@ -135,6 +140,7 @@ public sealed class SoundEditorView : ContentView
         timeInfo.Text = HasSelection
             ? $"Selection {Seconds(from)} – {Seconds(to)} ({Seconds(to - from)}). Edits apply to the selection."
             : $"Length {Seconds(samples.Length)}. Drag across the waveform to select part of it; edits apply to the whole sound otherwise.";
+        if (TouchMetrics.IsTouch && HasSelection) timeInfo.Text += " Drag the handles to adjust it; tap the waveform to clear it.";
     }
 
     private string Seconds(int n) => $"{(double)n / Math.Max(1, sampleRate):0.00} s";
@@ -201,6 +207,7 @@ public sealed class SoundEditorView : ContentView
             g.Add(new Label { Text = name, FontSize = 13, TextColor = Theme.Text, VerticalOptions = LayoutOptions.Center }, 0);
             g.Add(control, 1);
             if (value != null) g.Add(value, 2);
+            if (TouchMetrics.IsTouch) g.MinimumHeightRequest = TouchMetrics.MinTarget;
             return g;
         }
 
@@ -217,8 +224,7 @@ public sealed class SoundEditorView : ContentView
             ctx.Changed(sound);
         };
         volume.DragCompleted += (_, _) => Play(false);
-        var volumeRow = Row("Volume", volume, volumeValue);
-        ToolTipProperties.SetText(volumeRow, "How loud the sound plays in the game, from 0 (silent) to 10 (full)");
+        var volumeRow = Tip(Row("Volume", volume, volumeValue), "How loud the sound plays in the game, from 0 (silent) to 10 (full)", 98);
 
         repeat.IsToggled = sound.Repeat;
         repeat.Toggled += (_, e) =>
@@ -227,8 +233,7 @@ public sealed class SoundEditorView : ContentView
             ctx.Changed(sound);
             UpdateCutOff();
         };
-        var repeatRow = Row("Repeat", repeat, new Label { Text = "", FontSize = 12 });
-        ToolTipProperties.SetText(repeatRow, "Play on a loop until it's stopped (the StopSound action, or leaving the room whose sound it is)");
+        var repeatRow = Tip(Row("Repeat", repeat, new Label { Text = "", FontSize = 12 }), "Play on a loop until it's stopped (the StopSound action, or leaving the room whose sound it is)", 98);
 
         cutOffSlider.ValueChanged += (_, e) =>
         {
@@ -242,7 +247,8 @@ public sealed class SoundEditorView : ContentView
         cutOffRow.Add(new Label { Text = "Cut off after", FontSize = 13, TextColor = Theme.Text, VerticalOptions = LayoutOptions.Center }, 0);
         cutOffRow.Add(cutOffSlider, 1);
         cutOffRow.Add(cutOffValue, 2);
-        ToolTipProperties.SetText(cutOffRow, "Stop the sound after this time (Off = play to the end). Not used while Repeat is on.");
+        if (TouchMetrics.IsTouch) cutOffRow.MinimumHeightRequest = TouchMetrics.MinTarget;
+        var cutOff = Tip(cutOffRow, "Stop the sound after this time (Off = play to the end). Not used while Repeat is on.", 98);
         UpdateCutOff();
 
         return new SectionView("Playback", new VerticalStackLayout
@@ -250,7 +256,7 @@ public sealed class SoundEditorView : ContentView
             Spacing = 8,
             Children =
             {
-                volumeRow, repeatRow, cutOffRow,
+                volumeRow, repeatRow, cutOff,
                 new Label { Text = "These apply wherever the sound plays: PlaySound actions, room sounds and the preview above.", FontSize = 11, TextColor = Theme.SecondaryText },
             },
         });
@@ -308,7 +314,8 @@ public sealed class SoundEditorView : ContentView
         libraryView.Children.Add(Heading("Sound library"));
         libraryView.Children.Add(new Label
         {
-            Text = $"{library.Count} free recordings (CC0: yours to use in any game). ▶ to listen, Use to put it in this sound. Credits: Help › Sound Library Credits.",
+            Text = $"{library.Count} free recordings (CC0: yours to use in any game). ▶ to listen, Use to put it in this sound. Credits: Help › Sound Library Credits." +
+                   (TouchMetrics.IsTouch ? " Undo puts the old sound back. 🎛 Retro synthesiser generates a beep-style effect from settings instead." : ""),
             FontSize = 12, TextColor = Theme.SecondaryText,
         });
 
@@ -318,11 +325,11 @@ public sealed class SoundEditorView : ContentView
         var tabs = new FlexLayout { Wrap = Microsoft.Maui.Layouts.FlexWrap.Wrap };
         foreach (var c in categories)
         {
-            var chip = new Chip(c) { IsSelected = !synthTab && c == libraryCategory };
+            var chip = Sized(new Chip(c) { IsSelected = !synthTab && c == libraryCategory });
             chip.Clicked += (_, _) => { synthTab = false; libraryCategory = c; BuildLibrary(); };
             tabs.Children.Add(chip);
         }
-        var synth = new Chip("🎛 Retro synthesiser", "Generate a retro beep-style effect from settings instead") { IsSelected = synthTab };
+        var synth = Sized(new Chip("🎛 Retro synthesiser", "Generate a retro beep-style effect from settings instead") { IsSelected = synthTab });
         synth.Clicked += (_, _) =>
         {
             synthTab = true;
@@ -340,10 +347,10 @@ public sealed class SoundEditorView : ContentView
         var tiles = new FlexLayout { Wrap = Microsoft.Maui.Layouts.FlexWrap.Wrap };
         foreach (var e in library.Where(e => e.Category == libraryCategory))
         {
-            var listen = new Chip("▶", "Listen");
+            var listen = Sized(new Chip("▶", "Listen"));
             listen.Clicked += async (_, _) => { if (await LibraryBytesAsync(e) is { } b) audio.Preview(b, sound.Volume); };
             // Only the sound in use is selected; using another deselects it.
-            var use = new Chip(e.Id == inUseId ? "✓ Using" : "Use", $"Use \"{e.Name}\" for this sound (Undo puts the old one back)") { IsSelected = e.Id == inUseId };
+            var use = Sized(new Chip(e.Id == inUseId ? "✓ Using" : "Use", $"Use \"{e.Name}\" for this sound (Undo puts the old one back)") { IsSelected = e.Id == inUseId });
             use.Clicked += async (_, _) => await UseLibrarySoundAsync(e);
             var text = new VerticalStackLayout
             {
@@ -351,7 +358,10 @@ public sealed class SoundEditorView : ContentView
                 Children =
                 {
                     new Label { Text = e.Name, FontSize = 13, TextColor = Theme.Text, LineBreakMode = LineBreakMode.TailTruncation },
-                    new Label { Text = $"{e.Seconds:0.0} s{(e.Loop ? " · loops" : "")}", FontSize = 11, TextColor = Theme.SecondaryText },
+                    // No tooltips on the iPad, so the tile shows the author.
+                    TouchMetrics.IsTouch
+                        ? new Label { Text = $"{e.Seconds:0.0} s{(e.Loop ? " · loops" : "")} · {e.Author}", FontSize = 11, TextColor = Theme.SecondaryText, LineBreakMode = LineBreakMode.TailTruncation }
+                        : new Label { Text = $"{e.Seconds:0.0} s{(e.Loop ? " · loops" : "")}", FontSize = 11, TextColor = Theme.SecondaryText },
                 },
             };
             var row = new Grid { ColumnDefinitions = { new(GridLength.Star), new(GridLength.Auto), new(GridLength.Auto) }, ColumnSpacing = 2 };
@@ -361,7 +371,8 @@ public sealed class SoundEditorView : ContentView
             ToolTipProperties.SetText(text, $"{e.Name} – {e.Author}, {e.Source} ({e.Licence})");
             tiles.Children.Add(new Border
             {
-                Content = row, WidthRequest = 250, HeightRequest = 50, Margin = new Thickness(0, 0, 8, 8), Padding = new Thickness(10, 4, 6, 0),
+                Content = row, WidthRequest = TouchMetrics.Pick(250, 300), HeightRequest = TouchMetrics.Pick(50, 60), Margin = new Thickness(0, 0, 8, 8),
+                Padding = TouchMetrics.IsTouch ? new Thickness(10, 4, 6, 4) : new Thickness(10, 4, 6, 0),
                 BackgroundColor = Theme.Pane, Stroke = Theme.Border, StrokeThickness = 1,
                 StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 6 },
             });
@@ -430,16 +441,16 @@ public sealed class SoundEditorView : ContentView
         var presets = new FlexLayout { Wrap = Microsoft.Maui.Layouts.FlexWrap.Wrap };
         foreach (var (name, icon) in SfxPresets.Names)
         {
-            var chip = new Chip($"{icon} {name}", $"Start again from the {name} preset");
+            var chip = Sized(new Chip($"{icon} {name}", $"Start again from the {name} preset"));
             chip.IsSelected = fx.Preset == name;
             chip.Clicked += (_, _) => StartEffect(name);
             presets.Children.Add(chip);
         }
         designer.Children.Add(presets);
 
-        var randomise = new Chip("🎲 Random " + (string.IsNullOrEmpty(fx.Preset) ? "sound" : fx.Preset.ToLowerInvariant()), "A random variation of this preset");
+        var randomise = Sized(new Chip("🎲 Random " + (string.IsNullOrEmpty(fx.Preset) ? "sound" : fx.Preset.ToLowerInvariant()), "A random variation of this preset"));
         randomise.Clicked += (_, _) => StartEffect(string.IsNullOrEmpty(fx.Preset) ? "Pickup" : fx.Preset, Random.Shared.Next(1, 1_000_000));
-        var mutate = new Chip("≈ Mutate", "Change every setting slightly");
+        var mutate = Sized(new Chip("≈ Mutate", "Change every setting slightly"));
         mutate.Clicked += (_, _) =>
         {
             var changed = SfxPresets.Mutate(sound.Effect!, Random.Shared.Next(1, 1_000_000));
@@ -447,11 +458,21 @@ public sealed class SoundEditorView : ContentView
             BuildDesigner();
             if (autoPlay.IsChecked) Play(false);
         };
+        var autoPlayLabel = new Label { Text = "Play after each change", FontSize = 12, TextColor = Theme.Text, VerticalOptions = LayoutOptions.Center };
+        if (TouchMetrics.IsTouch)
+        {
+            // The check box is small for a finger, so its label toggles it too.
+            autoPlayLabel.MinimumHeightRequest = TouchMetrics.MinTarget;
+            autoPlayLabel.VerticalTextAlignment = TextAlignment.Center;
+            autoPlayLabel.GestureRecognizers.Add(new TapGestureRecognizer { Command = new Command(() => autoPlay.IsChecked = !autoPlay.IsChecked) });
+        }
         designer.Children.Add(new FlexLayout
         {
             Wrap = Microsoft.Maui.Layouts.FlexWrap.Wrap, AlignItems = Microsoft.Maui.Layouts.FlexAlignItems.Center,
-            Children = { randomise, mutate, autoPlay, new Label { Text = "Play after each change", FontSize = 12, TextColor = Theme.Text, VerticalOptions = LayoutOptions.Center } },
+            Children = { randomise, mutate, autoPlay, autoPlayLabel },
         });
+        if (TouchMetrics.IsTouch)
+            designer.Children.Add(new Label { Text = "A preset starts again from its settings; Random makes a random variation of it, and Mutate changes every setting slightly.", FontSize = 11, TextColor = Theme.SecondaryText });
 
         var cards = new List<View>();
         cards.Add(Card("Tone",
@@ -520,8 +541,8 @@ public sealed class SoundEditorView : ContentView
         var row = new Grid { ColumnDefinitions = { new(new GridLength(70)), new(GridLength.Star) }, ColumnSpacing = 6 };
         row.Add(new Label { Text = "Wave", FontSize = 12, TextColor = Theme.Text, VerticalOptions = LayoutOptions.Center }, 0);
         row.Add(picker, 1);
-        ToolTipProperties.SetText(row, "Square: retro beeps. Sawtooth: buzzy. Triangle and Sine: soft. Noise: explosions, hits, wind.");
-        return row;
+        if (TouchMetrics.IsTouch) row.MinimumHeightRequest = TouchMetrics.MinTarget;
+        return Tip(row, "Square: retro beeps. Sawtooth: buzzy. Triangle and Sine: soft. Noise: explosions, hits, wind.", 76);
     }
 
     private View Param(string name, string unit, double min, double max, Func<double> get, Action<double> set, string tip, int decimals = 0)
@@ -543,8 +564,8 @@ public sealed class SoundEditorView : ContentView
         row.Add(new Label { Text = name, FontSize = 12, TextColor = Theme.Text, VerticalOptions = LayoutOptions.Center }, 0);
         row.Add(slider, 1);
         row.Add(value, 2);
-        ToolTipProperties.SetText(row, tip);
-        return row;
+        if (TouchMetrics.IsTouch) row.MinimumHeightRequest = TouchMetrics.MinTarget;
+        return Tip(row, tip, 76);
     }
 
     /// <summary>Re-renders the effect shortly after the last change, so dragging a slider stays smooth.</summary>
@@ -591,7 +612,7 @@ public sealed class SoundEditorView : ContentView
         var tools = new FlexLayout { Wrap = Microsoft.Maui.Layouts.FlexWrap.Wrap };
         void Tool(string icon, string name, string tip, Func<float[], float[]?> edit)
         {
-            var chip = new Chip($"{icon} {name}", tip);
+            var chip = Sized(new Chip($"{icon} {name}", tip));
             chip.Clicked += (_, _) => ApplyEdit(name, edit);
             tools.Children.Add(chip);
         }
@@ -605,10 +626,17 @@ public sealed class SoundEditorView : ContentView
         Tool("⇄", "Reverse", "Play backwards", s => { SoundEditing.Reverse(s, selectionStart, selectionEnd); return s; });
         Tool("〰", "Echo", "Add an echo (200 ms, 40 %)", s => SoundEditing.Echo(s, sampleRate, 0.2, 0.4));
         editTools.Children.Add(tools);
+        if (TouchMetrics.IsTouch)
+            editTools.Children.Add(new Label
+            {
+                Text = "Edits apply to the selection, or to the whole sound when nothing is selected (fades then use its first or last quarter). " +
+                       "Louder and Quieter change it by 3 dB; Echo adds a 200 ms echo at 40 %.",
+                FontSize = 11, TextColor = Theme.SecondaryText,
+            });
 
-        var undoChip = new Chip("↶ Undo", "Undo the last change to this sound") { Opacity = undo.Count > 0 ? 1 : 0.45 };
+        var undoChip = Sized(new Chip("↶ Undo", "Undo the last change to this sound") { Opacity = undo.Count > 0 ? 1 : 0.45 });
         undoChip.Clicked += (_, _) => UndoRedo(undo, redo);
-        var redoChip = new Chip("↷ Redo", "Redo") { Opacity = redo.Count > 0 ? 1 : 0.45 };
+        var redoChip = Sized(new Chip("↷ Redo", "Redo") { Opacity = redo.Count > 0 ? 1 : 0.45 });
         redoChip.Clicked += (_, _) => UndoRedo(redo, undo);
         editTools.Children.Add(new HorizontalStackLayout { Children = { undoChip, redoChip } });
         if (sound.Effect != null)
@@ -661,6 +689,61 @@ public sealed class SoundEditorView : ContentView
 
     private int SampleAt(double x) => waveform.Width <= 0 ? 0 : (int)Math.Clamp(x / waveform.Width * samples.Length, 0, samples.Length);
 
+    private float XAt(int sample) => samples.Length == 0 ? 0 : (float)((double)sample / samples.Length * waveform.Width);
+
+    /// <summary>
+    /// Selecting with a finger: drag across to select, drag either edge's handle to adjust the selection, tap to
+    /// clear it. A pan the scroll view takes over puts the selection back as it was.
+    /// </summary>
+    private void AddTouchSelection()
+    {
+        (int Start, int End) before = default;
+        PointF down = default;
+        bool moved = false, onHandle = false;
+        waveform.StartInteraction += (_, e) =>
+        {
+            down = e.Touches[0];
+            before = (selectionStart, selectionEnd);
+            moved = onHandle = false;
+            if (HasSelection)
+            {
+                int lo = Math.Min(selectionStart, selectionEnd), hi = Math.Max(selectionStart, selectionEnd);
+                float dLo = Math.Abs(down.X - XAt(lo)), dHi = Math.Abs(down.X - XAt(hi));
+                // Grabbing a handle keeps the other edge where it is.
+                if (Math.Min(dLo, dHi) <= TouchMetrics.MinTarget / 2)
+                {
+                    onHandle = true;
+                    (selectionStart, selectionEnd) = dLo < dHi ? (hi, lo) : (lo, hi);
+                    return;
+                }
+            }
+            selectionStart = selectionEnd = SampleAt(down.X);
+            waveform.Invalidate();
+        };
+        waveform.DragInteraction += (_, e) =>
+        {
+            moved |= Math.Abs(e.Touches[0].X - down.X) > 8;
+            if (!moved) return;
+            selectionEnd = SampleAt(e.Touches[0].X);
+            UpdateTimeInfo();
+            waveform.Invalidate();
+        };
+        waveform.EndInteraction += (_, e) =>
+        {
+            if (moved && e.Touches.Length > 0) selectionEnd = SampleAt(e.Touches[0].X);
+            if (!moved && onHandle) (selectionStart, selectionEnd) = before;                            // a tap on a handle does nothing
+            else if (!moved || Math.Abs(selectionEnd - selectionStart) < sampleRate / 200) selectionStart = selectionEnd = 0;   // a tap clears
+            UpdateTimeInfo();
+            waveform.Invalidate();
+        };
+        waveform.CancelInteraction += (_, _) =>
+        {
+            (selectionStart, selectionEnd) = before;
+            UpdateTimeInfo();
+            waveform.Invalidate();
+        };
+    }
+
     private async Task ReplaceAsync()
     {
         try
@@ -692,6 +775,24 @@ public sealed class SoundEditorView : ContentView
 
     // =================================================================== helpers
 
+    /// <summary>At least <see cref="TouchMetrics.MinTarget"/> square on the iPad; unchanged on the desktop.</summary>
+    private static Chip Sized(Chip chip)
+    {
+        if (TouchMetrics.IsTouch) chip.MinimumHeightRequest = chip.MinimumWidthRequest = TouchMetrics.MinTarget;
+        return chip;
+    }
+
+    /// <summary>A tooltip on the desktop; on the iPad, which has no tooltips, the tip is shown under the control, <paramref name="indent"/> in.</summary>
+    private static View Tip(View view, string tip, double indent)
+    {
+        if (!TouchMetrics.IsTouch) { ToolTipProperties.SetText(view, tip); return view; }
+        return new VerticalStackLayout
+        {
+            Spacing = 0,
+            Children = { view, new Label { Text = tip, FontSize = 11, TextColor = Theme.SecondaryText, Margin = new Thickness(indent, 0, 0, 0) } },
+        };
+    }
+
     private static View Heading(string text) => new VerticalStackLayout
     {
         Spacing = 4, Margin = new Thickness(0, 8, 0, 0),
@@ -717,7 +818,7 @@ public sealed class SoundEditorView : ContentView
 
     private static Chip Button(string text, string tip, Action action)
     {
-        var chip = new Chip(text, tip);
+        var chip = Sized(new Chip(text, tip));
         chip.Clicked += (_, _) => action();
         return chip;
     }
@@ -771,6 +872,25 @@ public sealed class SoundEditorView : ContentView
                 float lo = 0, hi = 0;
                 for (int i = a; i < b && i < s.Length; i++) { lo = Math.Min(lo, s[i]); hi = Math.Max(hi, s[i]); }
                 canvas.DrawLine(x + 0.5f, mid - hi * (mid - 4), x + 0.5f, mid - lo * (mid - 4));
+            }
+
+            // Handles for a finger at each edge of the selection.
+            if (TouchMetrics.IsTouch && view.HasSelection)
+            {
+                var (from, to) = view.Selection();
+                foreach (var hx in new[] { (float)from / s.Length * rect.Width, (float)to / s.Length * rect.Width })
+                {
+                    canvas.StrokeColor = Theme.Accent;
+                    canvas.StrokeSize = 2;
+                    canvas.DrawLine(hx, 0, hx, rect.Height);
+                    canvas.FillColor = Theme.Accent;
+                    canvas.StrokeColor = Colors.White;
+                    foreach (var hy in new[] { 12f, rect.Height - 12 })
+                    {
+                        canvas.FillCircle(hx, hy, 10);
+                        canvas.DrawCircle(hx, hy, 10);
+                    }
+                }
             }
         }
     }

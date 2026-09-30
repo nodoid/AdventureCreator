@@ -65,7 +65,7 @@ public sealed class PictureEditorView : ContentView
     private readonly CanvasDrawable drawable;
     private readonly Dictionary<Tool, Chip> toolChips = new();
     private readonly Label subtitle = new() { FontSize = 12, TextColor = Theme.SecondaryText };
-    private readonly Label status = new() { FontSize = 12, TextColor = Theme.SecondaryText, VerticalOptions = LayoutOptions.Center, HorizontalTextAlignment = TextAlignment.End, LineBreakMode = LineBreakMode.TailTruncation, MaxLines = 1 };
+    private readonly Label status = new() { FontSize = 12, TextColor = Theme.SecondaryText, VerticalOptions = LayoutOptions.Center, HorizontalTextAlignment = TextAlignment.End, LineBreakMode = LineBreakMode.TailTruncation, MaxLines = TouchMetrics.IsTouch ? 2 : 1 };
     private readonly HorizontalStackLayout optionsBar = new() { Spacing = 10, VerticalOptions = LayoutOptions.Center };
     private readonly VerticalStackLayout colourSection = new() { Spacing = 8 };
     private readonly VerticalStackLayout selectionSection = new() { Spacing = 8 };
@@ -92,6 +92,7 @@ public sealed class PictureEditorView : ContentView
     private readonly Label commandsHeader = new() { FontSize = 13, FontAttributes = FontAttributes.Bold, TextColor = Theme.Text, VerticalOptions = LayoutOptions.Center };
     private readonly Label commandsArrow = new() { FontSize = 13, TextColor = Theme.SecondaryText, VerticalOptions = LayoutOptions.Center, WidthRequest = 14 };
     private readonly Chip stepChip;
+    private static readonly double CommandsHeight = TouchMetrics.Pick(210, 300);
     private bool commandsExpanded;
     private bool syncingList;
 
@@ -135,26 +136,26 @@ public sealed class PictureEditorView : ContentView
             if (tools.Children.Count > 0) tools.Children.Add(new BoxView { WidthRequest = 1, HeightRequest = 22, Color = Theme.Border, Margin = new Thickness(6, 0, 10, 4), VerticalOptions = LayoutOptions.Center });
             foreach (var (t, label, tip) in group)
             {
-                var chip = new Chip(label, tip);
+                var chip = NewChip(label, tip);
                 chip.Clicked += (_, _) => SelectTool(t);
                 toolChips[t] = chip;
                 tools.Children.Add(chip);
             }
         }
-        undoChip = new Chip("↶ Undo", "Undo the last change to this picture");
+        undoChip = NewChip("↶ Undo", "Undo the last change to this picture");
         undoChip.Clicked += (_, _) => Undo();
-        redoChip = new Chip("↷ Redo", "Redo");
+        redoChip = NewChip("↷ Redo", "Redo");
         redoChip.Clicked += (_, _) => Redo();
-        gridChip = new Chip("# Grid", "Show the 8×8 character-cell grid");
+        gridChip = NewChip("# Grid", "Show the 8×8 character-cell grid");
         gridChip.Clicked += (_, _) => { showGrid = !showGrid; gridChip.IsSelected = showGrid; canvas!.Invalidate(); };
-        playChip = new Chip("▶ Animate", "Play the picture's animations");
+        playChip = NewChip("▶ Animate", "Play the picture's animations");
         playChip.Clicked += (_, _) => SetAnimating(animationTimer is not { IsRunning: true });
 
         var headerGrid = new Grid { ColumnDefinitions = { new(GridLength.Star), new(GridLength.Auto) }, ColumnSpacing = 12 };
         headerGrid.Add(headerText, 0);
         headerGrid.Add(new HorizontalStackLayout { VerticalOptions = LayoutOptions.End, Children = { playChip, undoChip, redoChip, gridChip } }, 1);
 
-        var optionsGrid = new Grid { ColumnDefinitions = { new(GridLength.Auto), new(GridLength.Star) }, ColumnSpacing = 10, MinimumHeightRequest = 30 };
+        var optionsGrid = new Grid { ColumnDefinitions = { new(GridLength.Auto), new(GridLength.Star) }, ColumnSpacing = 10, MinimumHeightRequest = TouchMetrics.Pick(30, TouchMetrics.MinTarget) };
         optionsGrid.Add(optionsBar, 0);
         optionsGrid.Add(status, 1);
 
@@ -173,6 +174,17 @@ public sealed class PictureEditorView : ContentView
             status.Text = x >= 0 && y >= 0 && x < picture.Width && y < picture.Height ? $"{x}, {y}" : "";
         };
         canvas.GestureRecognizers.Add(hover);
+        if (TouchMetrics.IsTouch)
+        {
+            // No hover on a touch screen: OnStart/OnDrag show the coordinates under the finger instead.
+            canvas.CancelInteraction += (_, _) => CancelDrag();
+#if IOS
+            canvas.StartInteraction += (_, _) => HoldScrolling(true);
+            canvas.EndInteraction += (_, _) => HoldScrolling(false);
+            canvas.CancelInteraction += (_, _) => HoldScrolling(false);
+            canvas.Loaded += (_, _) => StopDelayingTouches();
+#endif
+        }
         var canvasBorder = new Border { Content = canvas, Stroke = Theme.Border, StrokeThickness = 1, StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 6 } };
 
         // ---------------- inspector
@@ -196,6 +208,7 @@ public sealed class PictureEditorView : ContentView
                 new FlexLayout { Wrap = Microsoft.Maui.Layouts.FlexWrap.Wrap, Margin = new Thickness(0, 6, 0, 0), Children = { importBackground, importStamp } },
             },
         };
+        if (TouchMetrics.IsTouch) inspector.Children.Add(TouchHint("Background image: a PNG, JPEG or HEIC picture to draw over. Image to stamp: an image for the 🖼 Image tool."));
         inspectorContent = inspector;
         colourCard = new Border
         {
@@ -219,7 +232,7 @@ public sealed class PictureEditorView : ContentView
             SelectionMode = SelectionMode.Single,
             ItemTemplate = new DataTemplate(() =>
             {
-                var l = new Label { FontSize = 12, Padding = new Thickness(8, 2), FontFamily = DeviceInfo.Platform == DevicePlatform.WinUI ? "Consolas" : "Menlo", TextColor = Theme.Text };
+                var l = new Label { FontSize = TouchMetrics.Pick(12, 14), Padding = new Thickness(8, 2), MinimumHeightRequest = TouchMetrics.IsTouch ? TouchMetrics.MinTarget : -1, VerticalTextAlignment = TouchMetrics.IsTouch ? TextAlignment.Center : TextAlignment.Start, FontFamily = DeviceInfo.Platform == DevicePlatform.WinUI ? "Consolas" : "Menlo", TextColor = Theme.Text };
                 l.SetBinding(Label.TextProperty, ".");
                 var states = new VisualStateGroup { Name = "CommonStates" };
                 states.States.Add(new VisualState { Name = "Normal" });
@@ -237,14 +250,14 @@ public sealed class PictureEditorView : ContentView
             SetSelection(i, fromList: true);
             if (previewLimit != null) { previewLimit = Math.Max(1, i + 1); RefreshImage(); }
         };
-        stepChip = new Chip("Step view", "Show the picture only up to the selected command");
+        stepChip = NewChip(TouchMetrics.IsTouch ? "Step to selected" : "Step view", "Show the picture only up to the selected command");
         stepChip.Clicked += (_, _) =>
         {
             previewLimit = previewLimit == null ? Math.Max(1, selectedIndex + 1) : null;
             stepChip.IsSelected = previewLimit != null;
             RefreshImage();
         };
-        var clearAll = new Chip("Clear all", "Remove every drawing command");
+        var clearAll = NewChip("Clear all", "Remove every drawing command");
         clearAll.Clicked += async (_, _) =>
         {
             if (!await ctx.PageProvider().DisplayAlertAsync("Clear picture", "Remove all drawing commands?", "Clear", "Cancel")) return;
@@ -253,14 +266,14 @@ public sealed class PictureEditorView : ContentView
             selectedIndex = -1;
             Changed();
         };
-        var up = new Chip("↑ Earlier", "Move the selected command earlier (drawn underneath)");
+        var up = NewChip(TouchMetrics.IsTouch ? "↑ Earlier (under)" : "↑ Earlier", "Move the selected command earlier (drawn underneath)");
         up.Clicked += (_, _) => MoveSelected(-1);
-        var down = new Chip("↓ Later", "Move the selected command later (drawn on top)");
+        var down = NewChip(TouchMetrics.IsTouch ? "↓ Later (on top)" : "↓ Later", "Move the selected command later (drawn on top)");
         down.Clicked += (_, _) => MoveSelected(1);
-        var del = new Chip("Delete", "Delete the selected command");
+        var del = NewChip("Delete", "Delete the selected command");
         del.Clicked += (_, _) => DeleteSelected();
         var commandButtons = new VerticalStackLayout { Spacing = 0, Children = { up, down, del, stepChip, clearAll } };
-        commandsBody = new Grid { ColumnDefinitions = { new(GridLength.Star), new(GridLength.Auto) }, ColumnSpacing = 10, HeightRequest = 210, Padding = new Thickness(10, 0, 10, 10) };
+        commandsBody = new Grid { ColumnDefinitions = { new(GridLength.Star), new(GridLength.Auto) }, ColumnSpacing = 10, HeightRequest = CommandsHeight, Padding = new Thickness(10, 0, 10, 10) };
         commandsBody.Add(new Border { Content = commandList, Stroke = Theme.Border, StrokeThickness = 1, BackgroundColor = Theme.Pane }, 0);
         commandsBody.Add(commandButtons, 1);
 
@@ -270,6 +283,7 @@ public sealed class PictureEditorView : ContentView
         commandsToggle.Add(new Label { Text = "the picture as text: every shape is one command, drawn in order", FontSize = 11, TextColor = Theme.SecondaryText, VerticalOptions = LayoutOptions.Center, HorizontalTextAlignment = TextAlignment.End, LineBreakMode = LineBreakMode.TailTruncation, MaxLines = 1 }, 2);
         commandsToggle.GestureRecognizers.Add(new TapGestureRecognizer { Command = new Command(() => SetCommandsExpanded(!commandsExpanded, animate: true)) });
         ToolTipProperties.SetText(commandsToggle, "Show or hide the drawing commands");
+        if (TouchMetrics.IsTouch) commandsToggle.MinimumHeightRequest = TouchMetrics.MinTarget;
         commandsPanel = new Border
         {
             Content = new VerticalStackLayout { Children = { commandsToggle, commandsBody } },
@@ -322,7 +336,13 @@ public sealed class PictureEditorView : ContentView
         if (available <= 0) return;
         if (Content is View root && Math.Abs(root.WidthRequest - available) > 0.5) root.WidthRequest = available;
         bool narrow = available < NarrowWidth;
-        if (narrow != narrowLayout) ApplyLayout(narrow);
+        if (narrow != narrowLayout)
+        {
+            ApplyLayout(narrow);
+#if IOS
+            if (TouchMetrics.IsTouch) Dispatcher.Dispatch(StopDelayingTouches);
+#endif
+        }
         if (narrow)
         {
             double canvasWidth = available - 32;
@@ -390,9 +410,23 @@ public sealed class PictureEditorView : ContentView
         },
     };
 
+    /// <summary>A chip, at least a fingertip in size on the iPad.</summary>
+    private static Chip NewChip(string text, string? tip = null)
+    {
+        var chip = new Chip(text, tip);
+        if (TouchMetrics.IsTouch) { chip.MinimumHeightRequest = TouchMetrics.MinTarget; chip.MinimumWidthRequest = TouchMetrics.MinTarget; }
+        return chip;
+    }
+
+    /// <summary>On the iPad, where tooltips never appear, the explanation a tooltip gives on the desktop.</summary>
+    private static Label TouchHint(string text) => new() { Text = text, FontSize = 11, TextColor = Theme.SecondaryText };
+
+    /// <summary>Instructions say "tap" rather than "click" on the iPad.</summary>
+    private static string ForTouch(string text) => TouchMetrics.IsTouch ? text.Replace("Click", "Tap").Replace("click", "tap") : text;
+
     private static Chip SmallButton(string text, Action action)
     {
-        var b = new Chip(text);
+        var b = NewChip(text);
         b.Clicked += (_, _) => action();
         return b;
     }
@@ -416,17 +450,17 @@ public sealed class PictureEditorView : ContentView
         if (!animate)
         {
             commandsBody.IsVisible = expanded;
-            commandsBody.HeightRequest = 210;
+            commandsBody.HeightRequest = CommandsHeight;
             return;
         }
         this.AbortAnimation("commands");
         if (expanded) { commandsBody.HeightRequest = 0; commandsBody.IsVisible = true; }
-        double from = expanded ? 0 : 210, to = expanded ? 210 : 0;
+        double from = expanded ? 0 : CommandsHeight, to = expanded ? CommandsHeight : 0;
         new Animation(v => commandsBody.HeightRequest = v, from, to, Easing.CubicInOut)
             .Commit(this, "commands", length: 180, finished: (_, _) =>
             {
                 commandsBody.IsVisible = commandsExpanded;
-                commandsBody.HeightRequest = 210;
+                commandsBody.HeightRequest = CommandsHeight;
             });
     }
 
@@ -437,14 +471,14 @@ public sealed class PictureEditorView : ContentView
         colourSection.Children.Clear();
         var current = new Border
         {
-            WidthRequest = 30, HeightRequest = 30,
+            WidthRequest = TouchMetrics.Pick(30, TouchMetrics.MinTarget), HeightRequest = TouchMetrics.Pick(30, TouchMetrics.MinTarget),
             BackgroundColor = Colour(ink), Stroke = Theme.Border, StrokeThickness = 1,
             StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 4 },
         };
         var info = new Label
         {
             Text = selectedIndex >= 0 && PictureGeometry.IsVisual(picture.Commands[selectedIndex].Op)
-                ? $"Ink {ink}\nClick a colour to recolour the selection"
+                ? ForTouch($"Ink {ink}\nClick a colour to recolour the selection")
                 : $"Ink {ink}\nNew shapes are drawn in this colour",
             FontSize = 12, TextColor = Theme.SecondaryText, VerticalOptions = LayoutOptions.Center,
         };
@@ -456,7 +490,7 @@ public sealed class PictureEditorView : ContentView
             int index = i;
             var swatch = new Border
             {
-                WidthRequest = 24, HeightRequest = 24,
+                WidthRequest = TouchMetrics.Pick(24, TouchMetrics.MinTarget), HeightRequest = TouchMetrics.Pick(24, TouchMetrics.MinTarget),
                 Margin = new Thickness(0, 0, 4, 4),
                 BackgroundColor = Colour(i),
                 StrokeThickness = index == ink ? 3 : 1,
@@ -479,6 +513,7 @@ public sealed class PictureEditorView : ContentView
         });
         ToolTipProperties.SetText(background, "Fill the whole picture with this colour (a Clear command at the start)");
         colourSection.Children.Add(background);
+        if (TouchMetrics.IsTouch) colourSection.Children.Add(TouchHint("Use as background fills the whole picture with this colour (a Clear command at the start)."));
     }
 
     private Color Colour(int index) => index >= 0 && index < picture.Palette.Count ? Maui.PictureImages.FromArgb(picture.Palette[index]) : Colors.Transparent;
@@ -520,7 +555,7 @@ public sealed class PictureEditorView : ContentView
         {
             selectionSection.Children.Add(new Label
             {
-                Text = "Nothing selected. Use ↖ Select and click a shape on the picture to move, reshape, recolour or delete it.",
+                Text = ForTouch("Nothing selected. Use ↖ Select and click a shape on the picture to move, reshape, recolour or delete it."),
                 FontSize = 12, TextColor = Theme.SecondaryText,
             });
             return;
@@ -597,6 +632,7 @@ public sealed class PictureEditorView : ContentView
         layerRow.Add(FieldLabel("Layer"), 0);
         layerRow.Add(layer, 1);
         selectionSection.Children.Add(layerRow);
+        if (TouchMetrics.IsTouch) selectionSection.Children.Add(TouchHint("Shapes with the same layer name can be animated together."));
 
         if (c.Op == DrawOp.Text)
         {
@@ -614,7 +650,7 @@ public sealed class PictureEditorView : ContentView
             selectionSection.Children.Add(new Label { Text = $"Draws “{ctx.Adventure.FindPicture(c.SubPictureId)?.Name ?? c.SubPictureId}”. Scale is in eighths (8 = actual size).", FontSize = 12, TextColor = Theme.SecondaryText });
 
         var actions = new FlexLayout { Wrap = Microsoft.Maui.Layouts.FlexWrap.Wrap, Margin = new Thickness(0, 4, 0, 0) };
-        void Act(string label, string tip, Action a) { var chip = new Chip(label, tip); chip.Clicked += (_, _) => a(); actions.Children.Add(chip); }
+        void Act(string label, string tip, Action a) { var chip = NewChip(label, tip); chip.Clicked += (_, _) => a(); actions.Children.Add(chip); }
         Act("Duplicate", "Copy the shape, offset slightly", Duplicate);
         Act("To front", "Draw last, on top of everything", () => MoveSelectedTo(picture.Commands.Count - 1));
         Act("To back", "Draw first, underneath everything", () => MoveSelectedTo(picture.Commands.Count > 0 && picture.Commands[0].Op == DrawOp.Clear ? 1 : 0));
@@ -647,7 +683,7 @@ public sealed class PictureEditorView : ContentView
         {
             var pattern = ShadePatterns[i];
             bool selected = current != null ? current.SequenceEqual(pattern) : i == shadePattern;
-            var view = new GraphicsView { Drawable = new PatternDrawable(pattern, Colour(ink)), WidthRequest = 24, HeightRequest = 24 };
+            var view = new GraphicsView { Drawable = new PatternDrawable(pattern, Colour(ink)), WidthRequest = TouchMetrics.Pick(24, 40), HeightRequest = TouchMetrics.Pick(24, 40) };
             var frame = new Border
             {
                 Content = view, Padding = 1, Margin = new Thickness(0, 0, 4, 4),
@@ -730,7 +766,7 @@ public sealed class PictureEditorView : ContentView
             FontSize = 12, TextColor = Theme.SecondaryText,
         });
         foreach (var a in picture.Animations) animationSection.Children.Add(AnimationCard(a, layers));
-        var add = new Chip("+ Add animation", "Add a blink, move, colour-cycle or flipbook animation");
+        var add = NewChip("+ Add animation", "Add a blink, move, colour-cycle or flipbook animation");
         add.Clicked += (_, _) =>
         {
             picture.Animations.Add(new PictureAnimation
@@ -754,10 +790,10 @@ public sealed class PictureEditorView : ContentView
         var enabled = new CheckBox { IsChecked = a.Enabled, VerticalOptions = LayoutOptions.Center };
         enabled.CheckedChanged += (_, e) => { a.Enabled = e.Value; AnimationChanged(); };
         ToolTipProperties.SetText(enabled, "On or off");
-        var remove = new Chip("✕", "Delete this animation");
+        var remove = NewChip(TouchMetrics.IsTouch ? "✕ Delete" : "✕", "Delete this animation");
         remove.Clicked += (_, _) => { picture.Animations.Remove(a); AnimationChanged(rebuild: true); };
         var top = new Grid { ColumnDefinitions = { new(GridLength.Auto), new(GridLength.Star), new(GridLength.Auto) }, ColumnSpacing = 6 };
-        top.Add(enabled, 0);
+        top.Add(TouchMetrics.IsTouch ? new HorizontalStackLayout { Spacing = 2, Children = { enabled, new Label { Text = "On", FontSize = 12, VerticalOptions = LayoutOptions.Center, TextColor = Theme.Text } } } : enabled, 0);
         top.Add(kind, 1);
         top.Add(remove, 2);
         body.Children.Add(top);
@@ -809,7 +845,7 @@ public sealed class PictureEditorView : ContentView
                 }
                 colours.Completed += (_, _) => Commit();
                 colours.Unfocused += (_, _) => Commit();
-                var addInk = new Chip("+ ink", "Add the current ink colour to the cycle");
+                var addInk = NewChip(TouchMetrics.IsTouch ? "+ ink colour" : "+ ink", "Add the current ink colour to the cycle");
                 addInk.Clicked += (_, _) => { a.Colours.Add(ink); AnimationChanged(rebuild: true); };
                 Row(colours, addInk, "Colours");
                 break;
@@ -975,7 +1011,7 @@ public sealed class PictureEditorView : ContentView
         tool = t;
         pendingPoints.Clear();
         foreach (var (k, chip) in toolChips) chip.IsSelected = k == t;
-        status.Text = ToolGroups.SelectMany(g => g).First(x => x.Tool == t).Tip;
+        status.Text = ForTouch(ToolGroups.SelectMany(g => g).First(x => x.Tool == t).Tip);
         BuildOptions();
         canvas.Invalidate();
     }
@@ -999,9 +1035,9 @@ public sealed class PictureEditorView : ContentView
         }
         if (tool is Tool.Polygon or Tool.FilledPolygon && pendingPoints.Count >= 6)
         {
-            var finish = new Chip("✓ Finish shape", "Close the shape");
+            var finish = NewChip("✓ Finish shape", "Close the shape");
             finish.Clicked += (_, _) => FinishPolygon();
-            var cancel = new Chip("Cancel", "Discard the points");
+            var cancel = NewChip("Cancel", "Discard the points");
             cancel.Clicked += (_, _) => { pendingPoints.Clear(); BuildOptions(); canvas.Invalidate(); };
             optionsBar.Children.Add(finish);
             optionsBar.Children.Add(cancel);
@@ -1036,6 +1072,13 @@ public sealed class PictureEditorView : ContentView
 
     private double Tolerance => Math.Max(1.5, 5.0 / Scale);
 
+    // On touch a fingertip covers about 22 points; these convert that to picture pixels at the current scale.
+    private double TouchTolerance => Math.Max(Tolerance, 22.0 / Scale);
+    private double HandleRadius => Math.Max(2, TouchMetrics.Pick(6, 22) / Scale);
+    private double CloseReach => TouchMetrics.IsTouch ? Math.Max(3, 22.0 / Scale) : 3;
+
+    private string Coordinates((int X, int Y) pt) => pt.X >= 0 && pt.Y >= 0 && pt.X < picture.Width && pt.Y < picture.Height ? $"{pt.X}, {pt.Y}" : "";
+
     // =================================================================== interaction
 
     private void OnStart(PointF p)
@@ -1048,7 +1091,7 @@ public sealed class PictureEditorView : ContentView
             dragOrigin = exact;
             if (selectedIndex >= 0 && selectedIndex < picture.Commands.Count)
             {
-                int handle = PictureGeometry.HandleAt(picture.Commands[selectedIndex], ctx.Adventure, exact.X, exact.Y, Math.Max(2, 6.0 / Scale));
+                int handle = PictureGeometry.HandleAt(picture.Commands[selectedIndex], ctx.Adventure, exact.X, exact.Y, HandleRadius);
                 if (handle >= 0)
                 {
                     dragMode = DragMode.Handle;
@@ -1058,6 +1101,8 @@ public sealed class PictureEditorView : ContentView
                 }
             }
             int hit = PictureGeometry.HitTest(picture, ctx.Adventure, exact.X, exact.Y, Tolerance);
+            // A finger is less precise than a pointer: if nothing is right under it, take a shape within its reach.
+            if (hit < 0 && TouchMetrics.IsTouch) hit = PictureGeometry.HitTest(picture, ctx.Adventure, exact.X, exact.Y, TouchTolerance);
             if (previewLimit != null && hit >= previewLimit) hit = -1;
             SetSelection(hit);
             if (hit >= 0)
@@ -1065,8 +1110,13 @@ public sealed class PictureEditorView : ContentView
                 dragMode = DragMode.Move;
                 dragOriginal = picture.Commands[hit].Clone();
                 status.Text = $"{PictureGeometry.Describe(picture.Commands[hit].Op)} · drag to move";
+                if (TouchMetrics.IsTouch && Coordinates(pt) is { Length: > 0 } at) status.Text = $"{at} · {status.Text}";
             }
-            else dragMode = DragMode.None;
+            else
+            {
+                dragMode = DragMode.None;
+                if (TouchMetrics.IsTouch) status.Text = Coordinates(pt);
+            }
             return;
         }
 
@@ -1092,7 +1142,7 @@ public sealed class PictureEditorView : ContentView
                 var moved = dragOriginal.Clone();
                 PictureGeometry.Translate(moved, dx, dy);
                 picture.Commands[selectedIndex] = moved;
-                status.Text = $"Move {dx:+0;-0;0}, {dy:+0;-0;0}";
+                status.Text = $"Move {dx:+0;-0;0}, {dy:+0;-0;0}" + (TouchMetrics.IsTouch && Coordinates(pt) is { Length: > 0 } at ? $"  ·  {at}" : "");
                 LiveRender();
                 return;
             }
@@ -1115,6 +1165,9 @@ public sealed class PictureEditorView : ContentView
                 }
                 status.Text = dragStart is { } s ? $"{s.X}, {s.Y} → {pt.X}, {pt.Y}  ({Math.Abs(pt.X - s.X) + 1}×{Math.Abs(pt.Y - s.Y) + 1})" : $"{pt.X}, {pt.Y}";
                 canvas.Invalidate();
+                return;
+            case DragMode.None when TouchMetrics.IsTouch && tool == Tool.Select:
+                status.Text = Coordinates(pt);
                 return;
         }
     }
@@ -1193,7 +1246,7 @@ public sealed class PictureEditorView : ContentView
                 break;
             case Tool.Polygon:
             case Tool.FilledPolygon:
-                if (pendingPoints.Count >= 6 && Math.Abs(b.X - pendingPoints[0]) <= 3 && Math.Abs(b.Y - pendingPoints[1]) <= 3)
+                if (pendingPoints.Count >= 6 && Math.Abs(b.X - pendingPoints[0]) <= CloseReach && Math.Abs(b.Y - pendingPoints[1]) <= CloseReach)
                 {
                     FinishPolygon();
                     return;
@@ -1239,6 +1292,39 @@ public sealed class PictureEditorView : ContentView
         selectedIndex = picture.Commands.Count - 1;
         Changed();
     }
+
+    /// <summary>The system took over a touch (on the iPad): keep a move or reshape so far, drop a half-drawn shape.</summary>
+    private void CancelDrag()
+    {
+        var mode = dragMode;
+        dragMode = DragMode.None;
+        dragOriginal = null;
+        dragStart = dragEnd = null;
+        if (tool == Tool.Freehand) pendingPoints.Clear();
+        if (mode is DragMode.Move or DragMode.Handle && dragChanged) Changed();
+        else canvas.Invalidate();
+    }
+
+#if IOS
+    // In the narrow layout the editor scrolls; a finger on the canvas must draw rather than scroll the page.
+    private readonly List<UIKit.UIScrollView> heldScrollers = new();
+
+    private void HoldScrolling(bool hold)
+    {
+        foreach (var s in heldScrollers) s.ScrollEnabled = true;
+        heldScrollers.Clear();
+        if (!hold) return;
+        for (var v = (canvas.Handler?.PlatformView as UIKit.UIView)?.Superview; v != null; v = v.Superview)
+            if (v is UIKit.UIScrollView { ScrollEnabled: true } s) { s.ScrollEnabled = false; heldScrollers.Add(s); }
+    }
+
+    /// <summary>Lets touches reach the canvas at once, before a scroll view can claim them as a scroll.</summary>
+    private void StopDelayingTouches()
+    {
+        for (var v = (canvas.Handler?.PlatformView as UIKit.UIView)?.Superview; v != null; v = v.Superview)
+            if (v is UIKit.UIScrollView s) s.DelaysContentTouches = false;
+    }
+#endif
 
     private void FinishPolygon()
     {
@@ -1382,6 +1468,20 @@ public sealed class PictureEditorView : ContentView
                     foreach (var (hx, hy) in PictureGeometry.Handles(c, view.ctx.Adventure))
                     {
                         var hp = P(hx, hy);
+                        if (TouchMetrics.IsTouch)
+                        {
+                            // Big enough to see around a fingertip; the grab area (HandleRadius) is larger still.
+                            canvas.Antialias = true;
+                            canvas.FillColor = Colors.White.WithAlpha(0.85f);
+                            canvas.FillCircle(hp, 12);
+                            canvas.StrokeColor = Theme.Accent;
+                            canvas.StrokeSize = 2;
+                            canvas.DrawCircle(hp, 12);
+                            canvas.FillColor = Theme.Accent;
+                            canvas.FillCircle(hp, 3);
+                            canvas.Antialias = false;
+                            continue;
+                        }
                         canvas.FillColor = Colors.White;
                         canvas.FillRectangle(hp.X - 4, hp.Y - 4, 8, 8);
                         canvas.StrokeColor = Theme.Accent;
@@ -1427,6 +1527,15 @@ public sealed class PictureEditorView : ContentView
                 {
                     canvas.FillColor = Theme.Accent;
                     for (int i = 0; i + 1 < pts.Count; i += 2) canvas.FillCircle(P(pts[i], pts[i + 1]), 3.5f);
+                    // On touch, ring the first point: a tap inside the ring closes the shape.
+                    if (TouchMetrics.IsTouch && pts.Count >= 6)
+                    {
+                        canvas.StrokeColor = Theme.Accent;
+                        canvas.StrokeSize = 2;
+                        canvas.DrawCircle(P(pts[0], pts[1]), (float)(view.CloseReach * s));
+                        canvas.StrokeColor = inkColour;
+                        canvas.StrokeSize = Math.Max(1, s);
+                    }
                     if (view.dragEnd is { } cur) canvas.DrawLine(P(pts[^2], pts[^1]), P(cur.X, cur.Y));
                 }
             }

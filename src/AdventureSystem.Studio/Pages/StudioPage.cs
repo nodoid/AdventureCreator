@@ -18,9 +18,10 @@ public enum Section { Game, Map, Rooms, Items, Puzzles, Triggers, Events, Variab
 
 /// <summary>
 /// The Studio's main window: a desktop-style source list on the left, a master list, and a detail editor,
-/// with a full menu bar and keyboard shortcuts.
+/// with a full menu bar and keyboard shortcuts. On the iPad the same parts are laid out the iPad way
+/// (see StudioPage.Tablet.cs).
 /// </summary>
-public sealed class StudioPage : ContentPage
+public sealed partial class StudioPage : ContentPage
 {
     private StudioDocument document;
     private EditorContext ctx;
@@ -74,17 +75,17 @@ public sealed class StudioPage : ContentPage
         foreach (var s in Enum.GetValues<Section>())
         {
             // Source-list row (left aligned, highlight on selection and hover) rather than push buttons.
-            var label = new Label { Text = SectionTitle(s), TextColor = Theme.Text, FontSize = 14, VerticalOptions = LayoutOptions.Center };
+            var label = new Label { Text = SectionTitle(s), TextColor = Theme.Text, FontSize = TouchMetrics.Pick(14, 17), VerticalOptions = LayoutOptions.Center };
             var box = new Border
             {
                 Content = label,
-                Padding = new Thickness(10, 6),
+                Padding = TouchMetrics.IsTouch ? new Thickness(12, 11) : new Thickness(10, 6),
                 StrokeThickness = 0,
-                StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 6 },
+                StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = TouchMetrics.Pick(6, 10) },
                 BackgroundColor = Colors.Transparent,
             };
             var section0 = s;
-            box.GestureRecognizers.Add(new TapGestureRecognizer { Command = new Command(() => ShowSection(section0)) });
+            box.GestureRecognizers.Add(new TapGestureRecognizer { Command = new Command(() => { ShowSection(section0); SectionPicked(); }) });
             var hover = new PointerGestureRecognizer();
             hover.PointerEntered += (_, _) => { if (section != section0) box.BackgroundColor = Theme.Hover; };
             hover.PointerExited += (_, _) => { if (section != section0) box.BackgroundColor = Colors.Transparent; };
@@ -102,11 +103,12 @@ public sealed class StudioPage : ContentPage
             SelectionMode = SelectionMode.Single,
             ItemTemplate = new DataTemplate(() =>
             {
-                var title = new Label { FontSize = 14, TextColor = Theme.Text, LineBreakMode = LineBreakMode.TailTruncation };
+                var title = new Label { FontSize = TouchMetrics.Pick(14, 17), TextColor = Theme.Text, LineBreakMode = LineBreakMode.TailTruncation };
                 title.SetBinding(Label.TextProperty, nameof(ListRow.Title));
-                var sub = new Label { FontSize = 11, TextColor = Theme.SecondaryText, LineBreakMode = LineBreakMode.TailTruncation };
+                var sub = new Label { FontSize = TouchMetrics.Pick(11, 13), TextColor = Theme.SecondaryText, LineBreakMode = LineBreakMode.TailTruncation };
                 sub.SetBinding(Label.TextProperty, nameof(ListRow.Subtitle));
-                var stack = new VerticalStackLayout { Padding = new Thickness(10, 6), Children = { title, sub } };
+                var stack = new VerticalStackLayout { Padding = TouchMetrics.IsTouch ? new Thickness(16, 10) : new Thickness(10, 6), Children = { title, sub } };
+                if (TouchMetrics.IsTouch) AddRowMenu(stack);
                 var states = new VisualStateGroup { Name = "CommonStates" };
                 states.States.Add(new VisualState { Name = "Normal" });
                 var sel = new VisualState { Name = "Selected" };
@@ -118,7 +120,7 @@ public sealed class StudioPage : ContentPage
         };
         list.SelectionChanged += (_, e) =>
         {
-            if (e.CurrentSelection.FirstOrDefault() is ListRow row && !ReferenceEquals(row.Item, selected)) Select(row.Item);
+            if (e.CurrentSelection.FirstOrDefault() is ListRow row && !ReferenceEquals(row.Item, selected)) { Select(row.Item); ItemPicked(); }
         };
         search.TextChanged += (_, _) => RefreshList();
 
@@ -147,22 +149,17 @@ public sealed class StudioPage : ContentPage
         listPane.Add(list, 0, 2);
 
         // ---------------- layout
-        var content = new Grid
+        if (TouchMetrics.IsTouch)
         {
-            ColumnDefinitions = { new(new GridLength(200)), listColumn, new(GridLength.Star) },
-        };
-        content.Add(new ScrollView { Content = sidebar, BackgroundColor = SidebarBg }, 0);
-        content.Add(listPane, 1);
-        content.Add(detail, 2);
+            // The iPad: + / duplicate / delete are in the navigation bar and the rows' menus; no status bar.
+            header.Children.Remove(add); header.Children.Remove(dup); header.Children.Remove(del);
+            search.MinimumHeightRequest = TouchMetrics.MinTarget;
+            listTitle.FontSize = 20;
+            Content = BuildTabletLayout(new ScrollView { Content = sidebar, BackgroundColor = SidebarBg });
+        }
+        else BuildDesktopLayout();
 
-        var statusBar = new Grid { ColumnDefinitions = { new(GridLength.Star), new(GridLength.Auto) }, Padding = new Thickness(12, 4), BackgroundColor = SidebarBg };
-        statusBar.Add(statusLeft, 0);
-        statusBar.Add(statusRight, 1);
-
-        Content = new Grid { RowDefinitions = { new(GridLength.Star), new(GridLength.Auto) }, Children = { content } };
-        ((Grid)Content).Add(statusBar, 0, 1);
-
-        BuildMenus();
+        if (!TouchMetrics.IsTouch) BuildMenus();
         // Windows: the navigation bar only hosts the menus; the window's own title bar already shows the title.
         if (DeviceInfo.Platform == DevicePlatform.WinUI) NavigationPage.SetTitleView(this, new ContentView());
         AttachDocument(doc);
@@ -182,6 +179,24 @@ public sealed class StudioPage : ContentPage
             }
         }
 #endif
+    }
+
+    private void BuildDesktopLayout()
+    {
+        var content = new Grid
+        {
+            ColumnDefinitions = { new(new GridLength(200)), listColumn, new(GridLength.Star) },
+        };
+        content.Add(new ScrollView { Content = sidebar, BackgroundColor = SidebarBg }, 0);
+        content.Add(listPane, 1);
+        content.Add(detail, 2);
+
+        var statusBar = new Grid { ColumnDefinitions = { new(GridLength.Star), new(GridLength.Auto) }, Padding = new Thickness(12, 4), BackgroundColor = SidebarBg };
+        statusBar.Add(statusLeft, 0);
+        statusBar.Add(statusRight, 1);
+
+        Content = new Grid { RowDefinitions = { new(GridLength.Star), new(GridLength.Auto) }, Children = { content } };
+        ((Grid)Content).Add(statusBar, 0, 1);
     }
 
 #if DEBUG
@@ -233,7 +248,9 @@ public sealed class StudioPage : ContentPage
 
     private void UpdateTitle()
     {
-        var title = $"{document.DisplayName}{(document.Dirty ? " — Edited" : "")} — Adventure System Studio";
+        // The iPad saves by itself, and its navigation bar shows the document's name.
+        var title = TouchMetrics.IsTouch ? Path.GetFileNameWithoutExtension(document.DisplayName)
+            : $"{document.DisplayName}{(document.Dirty ? " — Edited" : "")} — Adventure System Studio";
         Title = title;
         if (Window != null) Window.Title = title;
         UpdateStatus();
@@ -311,7 +328,8 @@ public sealed class StudioPage : ContentPage
         }
         bool hasList = HasList(s);
         listPane.IsVisible = hasList;
-        listColumn.Width = hasList ? new GridLength(290) : new GridLength(0);
+        if (TouchMetrics.IsTouch) ApplyTabletLayout();
+        else listColumn.Width = hasList ? new GridLength(290) : new GridLength(0);
         listTitle.Text = SectionTitle(s)[3..].Trim();
         search.Text = "";
         selected = null;
@@ -319,9 +337,10 @@ public sealed class StudioPage : ContentPage
         if (hasList)
         {
             if (rows.Count > 0) Select(rows[0].Item);
-            else ShowDetail(new Label { Text = "Nothing here yet. Click + to add one.", Opacity = 0.6, Margin = 30 });
+            else ShowDetail(new Label { Text = NothingHere, Opacity = 0.6, Margin = 30 });
         }
         else ShowSingleEditor(s);
+        if (TouchMetrics.IsTouch) UpdateNavBar();
     }
 
     private IList? CurrentList => section switch
@@ -601,15 +620,18 @@ public sealed class StudioPage : ContentPage
             case Section.Map:
             {
                 var map = new MapView(a);
-                map.RoomClicked += room => { ShowSection(Section.Rooms); Select(room); };
-                ShowDetail(new VerticalStackLayout
+                map.RoomClicked += room => { ShowSection(Section.Rooms); Select(room); ItemPicked(); };
+                var heading = Heading("Map", "Laid out automatically from the exits. Gold border = start room, orange = door, blue dot = one-way, dashed = hidden. " +
+                                             (TouchMetrics.IsTouch ? "Tap a room to edit it; pinch to zoom." : "Click a room to edit it."));
+                if (TouchMetrics.IsTouch)
                 {
-                    Children =
-                    {
-                        Heading("Map", "Laid out automatically from the exits. Gold border = start room, orange = door, blue dot = one-way, dashed = hidden. Click a room to edit it."),
-                        map,
-                    },
-                });
+                    // The map fills the editor, so its own scroll view pans both ways (and pinch keeps the point between the fingers).
+                    var full = new Grid { ClassId = "full", Padding = new Thickness(24, 18, 24, 0), RowDefinitions = { new(GridLength.Auto), new(GridLength.Star) } };
+                    full.Add(heading, 0, 0);
+                    full.Add(map, 0, 1);
+                    ShowDetail(full);
+                }
+                else ShowDetail(new VerticalStackLayout { Children = { heading, map } });
                 break;
             }
             case Section.Vocabulary:
@@ -737,6 +759,7 @@ public sealed class StudioPage : ContentPage
             Children = { restart, walkthrough, saveBtn, loadBtn, new Label { Text = "Watch", FontAttributes = FontAttributes.Bold }, watch },
         };
         grid.Add(new ScrollView { Content = side, BackgroundColor = PaneBg }, 1);
+        if (TouchMetrics.IsTouch) SetUpTabletTestPlay(grid, side);
         ShowDetail(grid);
         testPlayer.Load(clone, new FileSaveStorage(Path.Combine(FileSystem.AppDataDirectory, "TestSaves", StandaloneExporter.SafeFileName(clone.Title))));
         testPlayer.TurnCompleted += (_, _) => UpdateWatch();
@@ -814,8 +837,10 @@ public sealed class StudioPage : ContentPage
         selected = null;
         RefreshList();
         if (rows.Count > 0) Select(rows[Math.Clamp(index, 0, rows.Count - 1)].Item);
-        else ShowDetail(new Label { Text = "Nothing here yet. Click + to add one.", Opacity = 0.6, Margin = 30 });
+        else ShowDetail(new Label { Text = NothingHere, Opacity = 0.6, Margin = 30 });
     }
+
+    private static string NothingHere => $"Nothing here yet. {(TouchMetrics.IsTouch ? "Tap" : "Click")} + to add one.";
 
     private async Task AddSoundAsync()
     {
@@ -1129,8 +1154,7 @@ public sealed class StudioPage : ContentPage
         help.Add(Item("Parser & Command Reference", () => Navigation.PushModalAsync(new ReportPage("Parser & command reference", HelpText.ParserReference(document.Adventure)))));
         help.Add(Item("Sound Library Credits", ShowSoundCreditsAsync));
         help.Add(Item("Triggers, Conditions & Actions", () => Navigation.PushModalAsync(new ReportPage("Triggers, conditions & actions", HelpText.TriggerReference()))));
-        help.Add(Item("About Adventure System Studio", () => DisplayAlertAsync("Adventure System Studio",
-            $"Version {AppInfo.Current.VersionString}\nCopyright © 2026 Paul F.Johnson\n\nCreate text and graphic adventures, import PAWS, Quill (+ Illustrator) and GAC games, and export them as standalone apps.", "OK")));
+        help.Add(Item("About Adventure System Studio", ShowAboutAsync));
 
         MenuBarItems.Add(file);
         MenuBarItems.Add(edit);
@@ -1161,7 +1185,11 @@ public sealed class StudioPage : ContentPage
     {
         var choice = await DisplayActionSheetAsync("User Guide", "Cancel", null, GuideChapters.Select(c => c.Title).ToArray());
         var chapter = GuideChapters.FirstOrDefault(c => c.Title == choice);
-        if (chapter.File == null) return;
+        if (chapter.File != null) await OpenGuideChapterAsync(chapter);
+    }
+
+    private async Task OpenGuideChapterAsync((string File, string Title) chapter)
+    {
         try
         {
             await using var stream = await FileSystem.OpenAppPackageFileAsync("docs/" + chapter.File);
@@ -1173,6 +1201,9 @@ public sealed class StudioPage : ContentPage
             await DisplayAlertAsync("User Guide", "The guide could not be opened: " + ex.Message, "OK");
         }
     }
+
+    private Task ShowAboutAsync() => DisplayAlertAsync("Adventure System Studio",
+        $"Version {AppInfo.Current.VersionString}\nCopyright © 2026 Paul F.Johnson\n\nCreate text and graphic adventures, import PAWS, Quill (+ Illustrator) and GAC games, and export them as standalone apps.", "OK");
 
     private async Task ShowSoundCreditsAsync()
     {

@@ -4,15 +4,22 @@ namespace AdventureSystem.Studio.Controls;
 
 /// <summary>
 /// Automatic map of the rooms: lays rooms out on a grid following compass exits from the start room and draws
-/// the connections. Clicking a room selects it for editing.
+/// the connections. Clicking a room selects it for editing. On the iPad a room opens on a tap (so a pan that starts on
+/// a room still scrolls), and pinching zooms.
 /// </summary>
 public sealed class MapView : ContentView
 {
     private const float CellW = 170, CellH = 90, BoxW = 130, BoxH = 48;
+    private const double MinZoom = 0.5, MaxZoom = 2.5;
     private readonly Adventure adventure;
     private readonly GraphicsView view;
+    private readonly ScrollView scroll;
     private readonly Dictionary<string, (int X, int Y)> positions = new(StringComparer.OrdinalIgnoreCase);
     private int minX, minY;
+    private readonly int mapW, mapH;
+    /// <summary>Pinch zoom (iPad only; always 1 on the desktop).</summary>
+    private double zoom = 1;
+    private bool pinching;
 
     public event Action<Room>? RoomClicked;
 
@@ -21,20 +28,82 @@ public sealed class MapView : ContentView
         this.adventure = adventure;
         Layout();
         view = new GraphicsView { Drawable = new MapDrawable(this) };
-        int w = positions.Count == 0 ? 400 : (positions.Values.Max(p => p.X) - minX + 1) * (int)CellW + 60;
-        int h = positions.Count == 0 ? 300 : (positions.Values.Max(p => p.Y) - minY + 1) * (int)CellH + 60;
-        view.WidthRequest = Math.Max(600, w);
-        view.HeightRequest = Math.Max(400, h);
-        view.StartInteraction += (_, e) =>
-        {
-            var p = e.Touches[0];
-            foreach (var (id, pos) in positions)
+        mapW = positions.Count == 0 ? 400 : (positions.Values.Max(p => p.X) - minX + 1) * (int)CellW + 60;
+        mapH = positions.Count == 0 ? 300 : (positions.Values.Max(p => p.Y) - minY + 1) * (int)CellH + 60;
+        SizeView();
+        if (TouchMetrics.IsTouch) AddTouch();
+        else
+            view.StartInteraction += (_, e) =>
             {
-                var r = BoxRect(pos);
-                if (r.Contains(p) && adventure.FindRoom(id) is { } room) RoomClicked?.Invoke(room);
-            }
+                var p = e.Touches[0];
+                foreach (var (id, pos) in positions)
+                {
+                    var r = BoxRect(pos);
+                    if (r.Contains(p) && adventure.FindRoom(id) is { } room) RoomClicked?.Invoke(room);
+                }
+            };
+        Content = scroll = new ScrollView { Orientation = ScrollOrientation.Both, Content = view };
+    }
+
+    private void SizeView()
+    {
+        view.WidthRequest = Math.Max(600, mapW * zoom);
+        view.HeightRequest = Math.Max(400, mapH * zoom);
+    }
+
+    /// <summary>
+    /// A room opens only on a tap: one finger, lifted close to where it went down. Anything else (a pan, which the
+    /// scroll view takes over, or a pinch) is left alone.
+    /// </summary>
+    private void AddTouch()
+    {
+        const float slop = 10;
+        PointF down = default;
+        bool tap = false;
+        view.StartInteraction += (_, e) => { down = e.Touches[0]; tap = e.Touches.Length == 1 && !pinching; };
+        view.DragInteraction += (_, e) => { if (e.Touches.Length != 1 || Distance(e.Touches[0], down) > slop) tap = false; };
+        view.CancelInteraction += (_, _) => tap = false;
+        view.EndInteraction += (_, e) =>
+        {
+            var p = e.Touches.Length > 0 ? e.Touches[0] : down;
+            if (!tap || pinching || Distance(p, down) > slop) return;
+            tap = false;
+            if (RoomAt(p) is { } room) RoomClicked?.Invoke(room);
         };
-        Content = new ScrollView { Orientation = ScrollOrientation.Both, Content = view };
+
+        var pinch = new PinchGestureRecognizer();
+        pinch.PinchUpdated += (_, e) =>
+        {
+            if (e.Status == GestureStatus.Started) { pinching = true; tap = false; }
+            else if (e.Status != GestureStatus.Running) { pinching = false; return; }
+            double old = zoom;
+            zoom = Math.Clamp(zoom * e.Scale, MinZoom, MaxZoom);
+            if (Math.Abs(zoom - old) < 1e-6) return;
+            // Keep the point between the fingers where it is.
+            double ox = e.ScaleOrigin.X * view.Width, oy = e.ScaleOrigin.Y * view.Height, f = zoom / old - 1;
+            SizeView();
+            view.Invalidate();
+            _ = scroll.ScrollToAsync(Math.Max(0, scroll.ScrollX + ox * f), Math.Max(0, scroll.ScrollY + oy * f), false);
+        };
+        view.GestureRecognizers.Add(pinch);
+    }
+
+    private static float Distance(PointF a, PointF b) => MathF.Sqrt((a.X - b.X) * (a.X - b.X) + (a.Y - b.Y) * (a.Y - b.Y));
+
+    /// <summary>The room under a finger at <paramref name="p"/> (view points): the nearest box within 12 points, so small boxes when zoomed out are still easy to hit.</summary>
+    private Room? RoomAt(PointF p)
+    {
+        float z = (float)zoom, x = p.X / z, y = p.Y / z, reach = 12 / z, best = float.MaxValue;
+        Room? found = null;
+        foreach (var (id, pos) in positions)
+        {
+            var r = BoxRect(pos);
+            float dx = MathF.Max(0, MathF.Max(r.Left - x, x - r.Right)), dy = MathF.Max(0, MathF.Max(r.Top - y, y - r.Bottom));
+            if (dx > reach || dy > reach || dx * dx + dy * dy >= best || adventure.FindRoom(id) is not { } room) continue;
+            best = dx * dx + dy * dy;
+            found = room;
+        }
+        return found;
     }
 
     private static readonly Dictionary<string, (int dx, int dy)> Offsets = new(StringComparer.OrdinalIgnoreCase)
@@ -103,6 +172,7 @@ public sealed class MapView : ContentView
         public void Draw(ICanvas canvas, RectF dirty)
         {
             canvas.Antialias = true;
+            if (map.zoom != 1) canvas.Scale((float)map.zoom, (float)map.zoom);
             canvas.StrokeSize = 2;
             // connections
             foreach (var room in map.adventure.Rooms)

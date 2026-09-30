@@ -27,8 +27,13 @@ public sealed class ReferenceField : ContentView
         {
             if (!suppress) setter(e.NewTextValue);
         };
-        var pick = new Button { Text = "…", WidthRequest = 40, Padding = 0 };
+        var pick = new Button { Text = "…", WidthRequest = TouchMetrics.Pick(40, TouchMetrics.MinTarget), Padding = 0 };
         ToolTipProperties.SetText(pick, "Choose from a list");
+        if (TouchMetrics.IsTouch)
+        {
+            entry.MinimumHeightRequest = pick.HeightRequest = TouchMetrics.MinTarget;
+            SemanticProperties.SetDescription(pick, "Choose from a list");
+        }
         pick.Clicked += async (_, _) => await ChooseAsync();
         var grid = new Grid { ColumnDefinitions = { new(GridLength.Star), new(GridLength.Auto) }, ColumnSpacing = 4 };
         grid.Add(entry, 0);

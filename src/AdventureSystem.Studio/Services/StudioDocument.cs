@@ -32,6 +32,21 @@ public sealed class StudioDocument
         Changed?.Invoke(what);
     }
 
+    /// <summary>
+    /// Writes the saved document where it lives (the iPad, where documents are edited in place and saved
+    /// automatically). Null where documents are saved to a path.
+    /// </summary>
+    public Action<byte[]>? Writer { get; set; }
+
+    /// <summary>Saves with <see cref="Writer"/> if there are unsaved changes.</summary>
+    public void SaveInPlace()
+    {
+        if (Writer == null || !Dirty) return;
+        Writer(AdventurePackage.SaveToBytes(Adventure));
+        Dirty = false;
+        DirtyChanged?.Invoke();
+    }
+
     public void Save(string path)
     {
         AdventurePackage.Save(Adventure, path);

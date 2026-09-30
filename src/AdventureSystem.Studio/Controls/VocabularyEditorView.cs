@@ -14,6 +14,8 @@ public sealed class VocabularyEditorView : ContentView
     private readonly EditorContext ctx;
     private readonly VerticalStackLayout root = new() { Spacing = 6 };
 
+    private static readonly double FieldFont = TouchMetrics.Pick(13, 16);
+
     private static readonly string[] DirectionNames = BuiltInLexicon.Directions.Select(d => d.Canonical).ToArray();
 
     public VocabularyEditorView(Adventure adventure, EditorContext ctx)
@@ -92,8 +94,8 @@ public sealed class VocabularyEditorView : ContentView
         if (Voc.Directions.Count == 0) chips.Children.Add(new Label { Text = "No direction words of your own yet.", FontSize = 12, TextColor = Theme.SecondaryText, Margin = new Thickness(0, 4) });
         body.Children.Add(chips);
 
-        var word = new Entry { Placeholder = "New word (e.g. fore)", FontSize = 13, WidthRequest = 220 };
-        var picker = new Picker { ItemsSource = DirectionNames, SelectedIndex = 0, FontSize = 13, WidthRequest = 160 };
+        var word = ObjectEditor.Tappable(new Entry { Placeholder = "New word (e.g. fore)", FontSize = FieldFont, WidthRequest = TouchMetrics.Pick(220, 200) });
+        var picker = ObjectEditor.Tappable(new Picker { ItemsSource = DirectionNames, SelectedIndex = 0, FontSize = FieldFont, WidthRequest = 160 });
         var add = new Chip("Add", "Add this direction word");
         void Commit()
         {
@@ -125,8 +127,8 @@ public sealed class VocabularyEditorView : ContentView
         if (Voc.Replacements.Count == 0) chips.Children.Add(new Label { Text = "No replacements of your own yet.", FontSize = 12, TextColor = Theme.SecondaryText, Margin = new Thickness(0, 4) });
         body.Children.Add(chips);
 
-        var from = new Entry { Placeholder = "When the player types…", FontSize = 13, WidthRequest = 220 };
-        var to = new Entry { Placeholder = "…understand it as", FontSize = 13, WidthRequest = 220 };
+        var from = ObjectEditor.Tappable(new Entry { Placeholder = "When the player types…", FontSize = FieldFont, WidthRequest = TouchMetrics.Pick(220, 200) });
+        var to = ObjectEditor.Tappable(new Entry { Placeholder = "…understand it as", FontSize = FieldFont, WidthRequest = TouchMetrics.Pick(220, 200) });
         var add = new Chip("Add", "Add this replacement");
         void Commit()
         {
@@ -152,7 +154,7 @@ public sealed class VocabularyEditorView : ContentView
 
     private View AddRow(string placeholder, Action<string> add)
     {
-        var entry = new Entry { Placeholder = placeholder, FontSize = 13 };
+        var entry = ObjectEditor.Tappable(new Entry { Placeholder = placeholder, FontSize = FieldFont });
         var button = new Chip("Add", "Add the words typed");
         void Commit()
         {
@@ -161,7 +163,9 @@ public sealed class VocabularyEditorView : ContentView
         }
         entry.Completed += (_, _) => Commit();
         button.Clicked += (_, _) => Commit();
-        var row = new Grid { ColumnDefinitions = { new(GridLength.Star), new(GridLength.Auto) }, ColumnSpacing = 6, WidthRequest = 460, HorizontalOptions = LayoutOptions.Start };
+        var row = new Grid { ColumnDefinitions = { new(GridLength.Star), new(GridLength.Auto) }, ColumnSpacing = 6 };
+        // A fixed width would overflow a narrow iPad editor: fill it instead.
+        if (!TouchMetrics.IsTouch) { row.WidthRequest = 460; row.HorizontalOptions = LayoutOptions.Start; }
         row.Add(entry, 0);
         row.Add(button, 1);
         return row;
@@ -176,15 +180,32 @@ public sealed class VocabularyEditorView : ContentView
     /// <summary>A word with a ✕ to remove it.</summary>
     private static View Tag(string text, Action remove)
     {
-        var x = new Label { Text = "✕", FontSize = 11, TextColor = Theme.SecondaryText, VerticalOptions = LayoutOptions.Center, Padding = new Thickness(4, 0, 0, 0) };
-        x.GestureRecognizers.Add(new TapGestureRecognizer { Command = new Command(remove) });
-        ToolTipProperties.SetText(x, "Remove");
+        View x;
+        if (TouchMetrics.IsTouch)
+        {
+            // No tooltip and no fine pointer: a full-size button, named for VoiceOver.
+            var b = new Button
+            {
+                Text = "✕", FontSize = 17, TextColor = Theme.SecondaryText, BackgroundColor = Colors.Transparent, BorderWidth = 0, Padding = 0,
+                WidthRequest = TouchMetrics.MinTarget, HeightRequest = TouchMetrics.MinTarget, VerticalOptions = LayoutOptions.Center,
+            };
+            b.Clicked += (_, _) => remove();
+            SemanticProperties.SetDescription(b, $"Remove {text}");
+            x = b;
+        }
+        else
+        {
+            var l = new Label { Text = "✕", FontSize = 11, TextColor = Theme.SecondaryText, VerticalOptions = LayoutOptions.Center, Padding = new Thickness(4, 0, 0, 0) };
+            l.GestureRecognizers.Add(new TapGestureRecognizer { Command = new Command(remove) });
+            ToolTipProperties.SetText(l, "Remove");
+            x = l;
+        }
         return new Border
         {
-            Padding = new Thickness(9, 4, 7, 4), Margin = new Thickness(0, 0, 6, 6),
+            Padding = TouchMetrics.IsTouch ? new Thickness(12, 0, 0, 0) : new Thickness(9, 4, 7, 4), Margin = new Thickness(0, 0, 6, 6),
             BackgroundColor = Theme.Chip, Stroke = Theme.ChipBorder, StrokeThickness = 1,
             StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 5 },
-            Content = new HorizontalStackLayout { Children = { new Label { Text = text, FontSize = 12, TextColor = Theme.Text, VerticalOptions = LayoutOptions.Center }, x } },
+            Content = new HorizontalStackLayout { Children = { new Label { Text = text, FontSize = TouchMetrics.Pick(12, 15), TextColor = Theme.Text, VerticalOptions = LayoutOptions.Center }, x } },
         };
     }
 

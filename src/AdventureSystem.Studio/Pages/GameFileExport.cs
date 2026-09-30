@@ -60,6 +60,17 @@ internal static class GameFileExport
                 report = $"Exported as {exporter.Name}: {result.Summary}.\n\n" +
                          (result.Warnings.Count > 0 ? "Not everything fits this format:\n• " + string.Join("\n• ", result.Warnings) : "Everything was exported.");
             }
+            if (DeviceInfo.Platform == DevicePlatform.iOS)
+            {
+                // The iPad: hand the file to the share sheet (Save to Files, AirDrop, Mail…).
+                var folder = Path.Combine(FileSystem.CacheDirectory, "Export");
+                Directory.CreateDirectory(folder);
+                var path = Path.Combine(folder, name);
+                await File.WriteAllBytesAsync(path, data);
+                await Share.Default.RequestAsync(new ShareFileRequest { Title = name, File = new ShareFile(path) });
+                if (report.Length > 0) await page.Navigation.PushModalAsync(new ReportPage("Export report", $"{name}\n\n{report}"));
+                return;
+            }
             var saved = await FileSaver.Default.SaveAsync(name, new MemoryStream(data), CancellationToken.None);
             if (!saved.IsSuccessful)
             {
