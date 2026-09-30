@@ -89,6 +89,7 @@ public sealed class SoundEditorView : ContentView
         };
 
         storedEffect = sound.Effect?.Clone();
+        synthTab = sound.Effect != null;
         Unloaded += (_, _) => regenerateTimer?.Stop();
         LoadSamples();
         BuildDesigner();
@@ -273,6 +274,10 @@ public sealed class SoundEditorView : ContentView
     private static IReadOnlyList<SoundLibraryEntry>? library;
     private static string libraryCategory = "";
     private readonly VerticalStackLayout libraryView = new() { Spacing = 8 };
+    /// <summary>Which tab is showing: the synthesiser, or a library category (only one is ever selected).</summary>
+    private bool synthTab;
+    /// <summary>The library sound last put into this sound (shown selected; only one at a time).</summary>
+    private string? inUseId;
 
     /// <summary>Names new sounds get, which choosing a library sound replaces with its own name.</summary>
     public static readonly string[] DefaultNames = { "New sound", "New sound effect" };
@@ -309,25 +314,36 @@ public sealed class SoundEditorView : ContentView
 
         var categories = SoundLibrary.Categories(library);
         if (!categories.Contains(libraryCategory)) libraryCategory = categories[0];
+        // The tabs behave as one group: selecting one deselects the others.
         var tabs = new FlexLayout { Wrap = Microsoft.Maui.Layouts.FlexWrap.Wrap };
         foreach (var c in categories)
         {
-            var chip = new Chip(c) { IsSelected = c == libraryCategory };
-            chip.Clicked += (_, _) => { libraryCategory = c; BuildLibrary(); };
+            var chip = new Chip(c) { IsSelected = !synthTab && c == libraryCategory };
+            chip.Clicked += (_, _) => { synthTab = false; libraryCategory = c; BuildLibrary(); };
             tabs.Children.Add(chip);
         }
-        var synth = new Chip("🎛 Retro synthesiser", "Generate a retro beep-style effect from settings instead");
-        synth.IsSelected = sound.Effect != null;
-        synth.Clicked += (_, _) => { if (sound.Effect == null) StartEffect("Pickup"); };
+        var synth = new Chip("🎛 Retro synthesiser", "Generate a retro beep-style effect from settings instead") { IsSelected = synthTab };
+        synth.Clicked += (_, _) =>
+        {
+            synthTab = true;
+            if (sound.Effect == null) StartEffect("Pickup");   // rebuilds the library
+            else BuildLibrary();
+        };
         tabs.Children.Add(synth);
         libraryView.Children.Add(tabs);
+        if (synthTab)
+        {
+            libraryView.Children.Add(new Label { Text = "The synthesiser's settings are below.", FontSize = 12, TextColor = Theme.SecondaryText });
+            return;
+        }
 
         var tiles = new FlexLayout { Wrap = Microsoft.Maui.Layouts.FlexWrap.Wrap };
         foreach (var e in library.Where(e => e.Category == libraryCategory))
         {
             var listen = new Chip("▶", "Listen");
             listen.Clicked += async (_, _) => { if (await LibraryBytesAsync(e) is { } b) audio.Preview(b, sound.Volume); };
-            var use = new Chip("Use", $"Use \"{e.Name}\" for this sound (Undo puts the old one back)");
+            // Only the sound in use is selected; using another deselects it.
+            var use = new Chip(e.Id == inUseId ? "✓ Using" : "Use", $"Use \"{e.Name}\" for this sound (Undo puts the old one back)") { IsSelected = e.Id == inUseId };
             use.Clicked += async (_, _) => await UseLibrarySoundAsync(e);
             var text = new VerticalStackLayout
             {
@@ -373,6 +389,8 @@ public sealed class SoundEditorView : ContentView
         if (await LibraryBytesAsync(e) is not { } bytes) { status.Text = $"\"{e.Name}\" couldn't be loaded."; return; }
         bool wasEffect = sound.Effect != null;
         Store(bytes, null);
+        inUseId = e.Id;
+        synthTab = false;
         if (DefaultNames.Contains(sound.Name)) sound.Name = e.Name;
         sound.Repeat = e.Loop;
         repeat.IsToggled = e.Loop;
@@ -390,6 +408,8 @@ public sealed class SoundEditorView : ContentView
     {
         var fx = SfxPresets.Make(preset, seed);
         Store(SfxSynth.RenderWav(fx), fx);
+        inUseId = null;
+        synthTab = true;
         BuildDesigner();
         BuildLibrary();
         if (autoPlay.IsChecked) Play(false);
@@ -606,7 +626,10 @@ public sealed class SoundEditorView : ContentView
         if (result == null) { status.Text = "Select part of the waveform first."; return; }
         bool wasEffect = sound.Effect != null;
         Store(WavFile.Encode(result, sampleRate), null);
+        inUseId = null;
+        synthTab = false;
         if (wasEffect) BuildDesigner();
+        BuildLibrary();
         status.Text = $"{name}: done." + (wasEffect ? " The sound is now a recording; Undo brings the effect back." : "");
     }
 
@@ -617,7 +640,10 @@ public sealed class SoundEditorView : ContentView
         var (wav, effect) = from[^1];
         from.RemoveAt(from.Count - 1);
         Store(wav, effect, keepUndo: false);
+        inUseId = null;
+        synthTab = sound.Effect != null;
         BuildDesigner();
+        BuildLibrary();
         status.Text = "";
     }
 
@@ -650,8 +676,11 @@ public sealed class SoundEditorView : ContentView
             sound.AssetName = name;
             sound.Effect = null;
             storedEffect = null;
+            inUseId = null;
+            synthTab = false;
             ctx.Changed(sound);
             LoadSamples();
+            BuildLibrary();
             BuildDesigner();
             BuildEditTools();
         }
