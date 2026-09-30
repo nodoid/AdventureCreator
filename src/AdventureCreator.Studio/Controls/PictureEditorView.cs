@@ -76,7 +76,9 @@ public sealed class PictureEditorView : ContentView
     private const double NarrowWidth = 780;
     private readonly View header, toolbar, optionsRow, canvasFrame;
     private readonly Border inspectorPane, commandsPanel;
-    private readonly View inspectorContent;
+    private readonly VerticalStackLayout inspectorContent;
+    private readonly View colourHeading = InspectorHeading("Colour");
+    private readonly Border colourCard;
     private readonly ScrollView inspectorScroll;
     private bool? narrowLayout;
     private readonly Maui.PictureCanvas renderer = new();
@@ -187,7 +189,7 @@ public sealed class PictureEditorView : ContentView
             Padding = new Thickness(14, 12),
             Children =
             {
-                InspectorHeading("Colour"), colourSection,
+                colourHeading, colourSection,
                 InspectorHeading("Selection"), selectionSection,
                 InspectorHeading("Animation"), animationSection,
                 InspectorHeading("Picture"), pictureSettings,
@@ -195,6 +197,11 @@ public sealed class PictureEditorView : ContentView
             },
         };
         inspectorContent = inspector;
+        colourCard = new Border
+        {
+            BackgroundColor = Theme.Pane, Stroke = Theme.Border, StrokeThickness = 1, Padding = new Thickness(12, 8),
+            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 6 },
+        };
         inspectorScroll = new ScrollView();
         inspectorPane = new Border
         {
@@ -326,17 +333,23 @@ public sealed class PictureEditorView : ContentView
     private void ApplyLayout(bool narrow)
     {
         narrowLayout = narrow;
-        foreach (var v in new[] { header, toolbar, optionsRow, canvasFrame, inspectorPane, commandsPanel })
+        foreach (var v in new[] { header, toolbar, optionsRow, colourCard, canvasFrame, inspectorPane, commandsPanel })
             if (v.Parent is Layout layout) layout.Children.Remove(v);
         inspectorScroll.Content = null;
         inspectorPane.Content = null;
+        // The palette lives in the inspector (wide) or in its own card above the canvas (narrow), so it's always in view.
+        if (colourSection.Parent is Layout colourParent) colourParent.Children.Remove(colourSection);
+        colourCard.Content = null;
+        if (narrow) colourCard.Content = colourSection;
+        else inspectorContent.Children.Insert(inspectorContent.Children.IndexOf(colourHeading) + 1, colourSection);
+        colourHeading.IsVisible = !narrow;
 
         if (narrow)
         {
             // One column: canvas, then the inspector, then the commands, all in one scrolling page.
             inspectorPane.WidthRequest = -1;
             inspectorPane.Content = inspectorContent;
-            var column = new VerticalStackLayout { Spacing = 10, Padding = new Thickness(16, 12), Children = { header, toolbar, optionsRow, canvasFrame, inspectorPane, commandsPanel } };
+            var column = new VerticalStackLayout { Spacing = 10, Padding = new Thickness(16, 12), Children = { header, toolbar, optionsRow, colourCard, canvasFrame, inspectorPane, commandsPanel } };
             Content = new ScrollView { Content = column, WidthRequest = AvailableWidth > 0 ? AvailableWidth : -1 };
             return;
         }
