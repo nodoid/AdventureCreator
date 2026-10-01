@@ -92,6 +92,20 @@
 	     which is not in git. See signing.local.props.example. -->
 	<Import Project="$(MSBuildThisFileDirectory)..\..\signing.local.props" Condition="Exists('$(MSBuildThisFileDirectory)..\..\signing.local.props')" />
 
+	<!-- Microsoft Store package (MSIX, unsigned: the Store signs it): -p:StudioStore=true (x64; add -p:StudioArch=arm64
+	     for ARM PCs). The name and display name must match those reserved in Partner Center; the publisher is in
+	     Platforms/Windows/Package.appxmanifest. After the signing import so its App ID doesn't override the Store's. -->
+	<PropertyGroup Condition="'$(StudioStore)' == 'true' And $(TargetFramework.Contains('-windows'))">
+		<StudioArch Condition="'$(StudioArch)' == ''">x64</StudioArch>
+		<RuntimeIdentifier>win-$(StudioArch)</RuntimeIdentifier>
+		<ApplicationId>49556nodoid.uk.co.allthejohnsons.advcreator</ApplicationId>
+		<ApplicationTitle>uk.co.allthejohnsons.advcreator</ApplicationTitle>
+		<WindowsPackageType>MSIX</WindowsPackageType>
+		<GenerateAppxPackageOnBuild>true</GenerateAppxPackageOnBuild>
+		<AppxPackageSigningEnabled>false</AppxPackageSigningEnabled>
+		<AppxBundle>Never</AppxBundle>
+	</PropertyGroup>
+
 	<ItemGroup>
 		<ProjectReference Include="..\AdventureSystem.Core\AdventureSystem.Core.csproj" />
 		<ProjectReference Include="..\AdventureSystem.Importers\AdventureSystem.Importers.csproj" />

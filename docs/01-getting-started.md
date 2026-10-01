@@ -35,6 +35,15 @@ dotnet publish src\AdventureSystem.Studio -f net10.0-windows10.0.19041.0 -c Rele
 
 This makes `AdventureSystemStudio-1.0-x64-Setup.exe`. Add `-p:StudioArch=arm64` to the publish for ARM PCs; the installer script itself is for x64.
 
+### The Microsoft Store packages for the Studio
+
+```bat
+dotnet publish src\AdventureSystem.Studio -f net10.0-windows10.0.19041.0 -c Release -p:StudioStore=true -p:AppxPackageDir=%CD%\releases\store-x64\
+dotnet publish src\AdventureSystem.Studio -f net10.0-windows10.0.19041.0 -c Release -p:StudioStore=true -p:StudioArch=arm64 -p:AppxPackageDir=%CD%\releases\store-arm64\
+```
+
+Upload both unsigned `.msix` files to the same submission; the Store signs them. The package name, display name and publisher match those reserved in Partner Center (in `AdventureSystem.Studio.csproj` and `Platforms/Windows/Package.appxmanifest`), and the version must go up with each new submission.
+
 ## A tour of the Studio
 
 The Studio window has three panes, like other desktop editors:
