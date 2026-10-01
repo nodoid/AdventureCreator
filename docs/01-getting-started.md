@@ -24,6 +24,17 @@ dotnet run --project src/AdventureSystem.ConsolePlayer -- --lighthouse  # play a
 The built apps are under each project's `bin/` folder, for example
 `src/AdventureSystem.Studio/bin/Debug/net10.0-maccatalyst/maccatalyst-arm64/Adventure System Studio.app`.
 
+### The Windows installer for the Studio
+
+On Windows, with [Inno Setup 6](https://jrsoftware.org/isinfo.php) installed, build a self-contained Studio (it needs neither .NET nor the Windows App SDK on the PC) and wrap it in a setup program:
+
+```bat
+dotnet publish src\AdventureSystem.Studio -f net10.0-windows10.0.19041.0 -c Release -p:StudioStandalone=true -o publish\studio-x64
+"C:\Program Files (x86)\Inno Setup 6\ISCC.exe" /DSourceDir=%CD%\publish\studio-x64 /DAppVersion=1.0 /DOutputDir=%CD%\releases build\studio-installer.iss
+```
+
+This makes `AdventureSystemStudio-1.0-x64-Setup.exe`. Add `-p:StudioArch=arm64` to the publish for ARM PCs; the installer script itself is for x64.
+
 ## A tour of the Studio
 
 The Studio window has three panes, like other desktop editors:

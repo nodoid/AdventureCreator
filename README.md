@@ -33,6 +33,7 @@ The same guide is available in the Studio under **Help › User Guide…** (⇧�
 | `tests/AdventureSystem.Tests` | xUnit tests: parser, engine, walkthroughs, graphics, packaging and all three importers. |
 | `examples/` | `Genesis.adventure` (the main test game) and `TheLighthouse.adventure`. |
 | `build/build-templates.sh`, `.ps1` | Build the player templates used for SDK-free exports. |
+| `build/studio-installer.iss` | Inno Setup script for the Studio's Windows x64 installer (build with `-p:StudioStandalone=true` first). |
 
 ## Features
 
