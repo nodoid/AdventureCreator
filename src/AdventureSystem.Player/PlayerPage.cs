@@ -19,6 +19,7 @@ public sealed class PlayerPage : ContentPage
 #endif
 	private readonly GamePlayerView player = new();
 	private readonly VerticalStackLayout chooser;
+	private readonly Button genesisButton;
 	private bool loaded;
 	private bool embedded;
 
@@ -34,8 +35,8 @@ public sealed class PlayerPage : ContentPage
 		var open = new Button { Text = "Open a game…" };
 		open.Clicked += async (_, _) => await OpenGameAsync();
 		// The Doctor Who fan adventure is for development builds only, never store releases.
-		var example = new Button { Text = "Play “Genesis” (example)", IsVisible = IsDevelopmentBuild };
-		example.Clicked += (_, _) => Play(ExampleAdventures.Genesis());
+		genesisButton = new Button { Text = "Play “Genesis” (example)", IsVisible = IsDevelopmentBuild };
+		genesisButton.Clicked += (_, _) => Play(ExampleAdventures.Genesis());
 		var example2 = new Button { Text = "Play “The Lighthouse” (example)" };
 		example2.Clicked += (_, _) => Play(ExampleAdventures.Lighthouse());
 		chooser = new VerticalStackLayout
@@ -50,7 +51,7 @@ public sealed class PlayerPage : ContentPage
 				new Label { Text = "Adventure Player", FontSize = 28, FontAttributes = FontAttributes.Bold, TextColor = Theme.Accent, HorizontalTextAlignment = TextAlignment.Center },
 				new Label { Text = "Play text and graphic adventures made with Adventure System Studio.", TextColor = Theme.Text, HorizontalTextAlignment = TextAlignment.Center },
 				open,
-				example,
+				genesisButton,
 				example2,
 			},
 		};
@@ -76,7 +77,10 @@ public sealed class PlayerPage : ContentPage
 			Play(game);
 		}
 #if DEBUG
-		// Development aid for store screenshots: AC_PLAYER_DEMO=lighthouse[;command;command…] plays the example.
+		// Development aid for store screenshots: AC_PLAYER_DEMO=lighthouse[;command;command…] plays the example,
+		// and AC_PLAYER_DEMO=choose stays on the game chooser as a store release shows it.
+		else if (Environment.GetEnvironmentVariable("AC_PLAYER_DEMO") is "choose")
+			genesisButton.IsVisible = false;
 		else if (Environment.GetEnvironmentVariable("AC_PLAYER_DEMO") is { Length: > 0 } demo)
 		{
 			var parts = demo.Split(';', StringSplitOptions.TrimEntries);

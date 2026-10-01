@@ -17,3 +17,6 @@ artifacts/
 
 # Personal code signing (see signing.local.props.example)
 signing.local.props
+
+# Store distribution builds
+releases/
