@@ -17,6 +17,13 @@ public static class MauiProgram
 				fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
 			});
 
+#if MACCATALYST
+		// In the Mac idiom UIKit draws buttons as native macOS push buttons, which ignore the Player's colours and
+		// look disabled; the iPad behavioural style keeps the accent background and white text.
+		Microsoft.Maui.Handlers.ButtonHandler.Mapper.AppendToMapping("PadStyle", (handler, _) =>
+			handler.PlatformView.PreferredBehavioralStyle = UIKit.UIBehavioralStyle.Pad);
+#endif
+
 #if DEBUG
 		builder.Logging.AddDebug();
 #endif

@@ -85,6 +85,19 @@
 		<WindowsPackageType>None</WindowsPackageType>
 	</PropertyGroup>
 
+	<!-- Microsoft Store package (MSIX, unsigned: the Store signs it): -p:PlayerStore=true (x64; add -p:PlayerArch=arm64
+	     for ARM PCs). The name must match the one reserved in Partner Center; the publisher is in
+	     Platforms/Windows/Package.appxmanifest. After the signing import so its App ID doesn't override the Store's. -->
+	<PropertyGroup Condition="'$(PlayerStore)' == 'true' And '$(GameId)' == '' And $(TargetFramework.Contains('-windows'))">
+		<PlayerArch Condition="'$(PlayerArch)' == ''">x64</PlayerArch>
+		<RuntimeIdentifier>win-$(PlayerArch)</RuntimeIdentifier>
+		<ApplicationId>49556nodoid.AdventurePlayer</ApplicationId>
+		<WindowsPackageType>MSIX</WindowsPackageType>
+		<GenerateAppxPackageOnBuild>true</GenerateAppxPackageOnBuild>
+		<AppxPackageSigningEnabled>false</AppxPackageSigningEnabled>
+		<AppxBundle>Never</AppxBundle>
+	</PropertyGroup>
+
 	<!-- The game to embed: dotnet publish -p:EmbeddedGame=/path/to/game.adventure -->
 	<ItemGroup Condition="'$(EmbeddedGame)' != ''">
 		<MauiAsset Include="$(EmbeddedGame)" LogicalName="game.adventure" />
