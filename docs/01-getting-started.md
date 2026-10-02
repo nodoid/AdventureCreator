@@ -33,16 +33,18 @@ dotnet publish src\AdventureSystem.Studio -f net10.0-windows10.0.19041.0 -c Rele
 "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" /DSourceDir=%CD%\publish\studio-x64 /DAppVersion=1.0 /DOutputDir=%CD%\releases build\studio-installer.iss
 ```
 
-This makes `AdventureSystemStudio-1.0-x64-Setup.exe`. Add `-p:StudioArch=arm64` to the publish for ARM PCs; the installer script itself is for x64.
+This makes `AdventureSystemStudio-1.0-x64-Setup.exe`, which also runs on ARM PCs under emulation. For a native ARM64 installer, add `-p:StudioArch=arm64` to the publish (into its own folder) and `/DArch=arm64` to ISCC; that makes `AdventureSystemStudio-1.0-arm64-Setup.exe`, which installs only on ARM PCs.
 
-### The Microsoft Store packages for the Studio
+### The Microsoft Store packages
 
 ```bat
 dotnet publish src\AdventureSystem.Studio -f net10.0-windows10.0.19041.0 -c Release -p:StudioStore=true -p:AppxPackageDir=%CD%\releases\store-x64\
 dotnet publish src\AdventureSystem.Studio -f net10.0-windows10.0.19041.0 -c Release -p:StudioStore=true -p:StudioArch=arm64 -p:AppxPackageDir=%CD%\releases\store-arm64\
 ```
 
-Upload both unsigned `.msix` files to the same submission; the Store signs them. The package name, display name and publisher match those reserved in Partner Center (in `AdventureSystem.Studio.csproj` and `Platforms/Windows/Package.appxmanifest`), and the version must go up with each new submission.
+The Player is the same with `-p:PlayerStore=true` (and `-p:PlayerArch=arm64`).
+
+Upload both unsigned `.msix` files to the same submission; the Store signs them. The package name, display name and publisher match those reserved in Partner Center (in each project file and its `Platforms/Windows/Package.appxmanifest`), and the version must go up with each new submission.
 
 ## A tour of the Studio
 

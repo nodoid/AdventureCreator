@@ -1,19 +1,30 @@
-; Inno Setup script for the Windows (x64) installer of Adventure System Studio, for distribution outside the
-; Microsoft Store. Build the self-contained Studio first, then compile this with ISCC:
+; Inno Setup script for the Windows installers (x64 and ARM64) of Adventure System Studio, for distribution outside
+; the Microsoft Store. Build the self-contained Studio first, then compile this with ISCC:
 ;
-;   ISCC.exe /DSourceDir=<publish folder> /DAppVersion=1.0 /DOutputDir=<folder> build\studio-installer.iss
+;   ISCC.exe /DSourceDir=<publish folder> /DAppVersion=1.0 /DOutputDir=<folder> [/DArch=arm64] build\studio-installer.iss
 ;
-; SourceDir is a self-contained, unpackaged win-x64 publish (WindowsPackageType=None, SelfContained and
-; WindowsAppSDKSelfContained), so the installed app needs neither .NET nor the Windows App SDK on the PC.
+; SourceDir is a self-contained, unpackaged publish for the same architecture (-p:StudioStandalone=true, plus
+; -p:StudioArch=arm64 for ARM), so the installed app needs neither .NET nor the Windows App SDK on the PC.
+; The x64 installer also runs on ARM PCs (under emulation); the ARM64 one installs only on ARM PCs.
 
 #ifndef SourceDir
-  #error Pass /DSourceDir=<self-contained win-x64 publish folder>
+  #error Pass /DSourceDir=<self-contained publish folder for this architecture>
 #endif
 #ifndef AppVersion
   #define AppVersion "1.0"
 #endif
 #ifndef OutputDir
   #define OutputDir "."
+#endif
+#ifndef Arch
+  #define Arch "x64"
+#endif
+#if Arch == "arm64"
+  #define ArchAllowed "arm64"
+#elif Arch == "x64"
+  #define ArchAllowed "x64compatible"
+#else
+  #error Arch must be x64 or arm64
 #endif
 
 #define AppName "Adventure System Studio"
@@ -29,12 +40,12 @@ AppCopyright=Copyright © 2026 Paul F. Johnson
 DefaultDirName={autopf}\{#AppName}
 DefaultGroupName={#AppName}
 DisableProgramGroupPage=yes
-ArchitecturesAllowed=x64compatible
-ArchitecturesInstallIn64BitMode=x64compatible
+ArchitecturesAllowed={#ArchAllowed}
+ArchitecturesInstallIn64BitMode={#ArchAllowed}
 MinVersion=10.0.17763
 PrivilegesRequiredOverridesAllowed=dialog
 OutputDir={#OutputDir}
-OutputBaseFilename=AdventureSystemStudio-{#AppVersion}-x64-Setup
+OutputBaseFilename=AdventureSystemStudio-{#AppVersion}-{#Arch}-Setup
 #ifdef SetupIcon
 SetupIconFile={#SetupIcon}
 #endif
